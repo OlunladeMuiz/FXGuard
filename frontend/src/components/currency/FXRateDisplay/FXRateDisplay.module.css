@@ -1,0 +1,105 @@
+.rateCard {
+  padding: var(--spacing-4);
+}
+
+.loading {
+  padding: var(--spacing-6);
+  text-align: center;
+  color: var(--color-neutral-500);
+}
+
+.rateHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-4);
+  padding-bottom: var(--spacing-3);
+  border-bottom: 1px solid var(--color-neutral-200);
+}
+
+.currencyPair {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+.baseCurrency,
+.quoteCurrency {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-neutral-800);
+}
+
+.arrow {
+  color: var(--color-neutral-400);
+}
+
+.rateSymbols {
+  display: flex;
+  gap: var(--spacing-2);
+}
+
+.baseSymbol,
+.quoteSymbol {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary);
+  background-color: var(--color-primary-light);
+  padding: var(--spacing-1) var(--spacing-2);
+  border-radius: var(--radius-sm);
+}
+
+.rateBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.rateLabel {
+  font-size: var(--font-size-xs);
+  color: var(--color-neutral-500);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0;
+}
+
+.rateValue {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  flex-wrap: wrap;
+}
+
+.rate {
+  color: var(--color-neutral-900);
+}
+
+.equals {
+  color: var(--color-neutral-400);
+}
+
+.rate--up .rate {
+  color: var(--color-success);
+}
+
+.rate--down .rate {
+  color: var(--color-error);
+}
+
+.rate--neutral .rate {
+  color: var(--color-neutral-700);
+}
+
+.rateFooter {
+  margin-top: var(--spacing-3);
+  padding-top: var(--spacing-3);
+  border-top: 1px solid var(--color-neutral-100);
+}
+
+.timestamp {
+  font-size: var(--font-size-xs);
+  color: var(--color-neutral-500);
+  margin: 0;
+}

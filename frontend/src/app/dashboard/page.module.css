@@ -1,0 +1,145 @@
+.dashboard {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--spacing-4);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--spacing-8);
+  padding-bottom: var(--spacing-6);
+  border-bottom: 1px solid var(--color-neutral-200);
+  flex-wrap: wrap;
+  gap: var(--spacing-4);
+}
+
+.headerContent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.title {
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-neutral-900);
+  margin: 0;
+}
+
+.subtitle {
+  font-size: var(--font-size-base);
+  color: var(--color-neutral-600);
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-3);
+  align-items: center;
+}
+
+.lastUpdated {
+  font-size: var(--font-size-sm);
+  color: var(--color-neutral-500);
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+}
+
+.section {
+  margin-bottom: var(--spacing-10);
+}
+
+.sectionTitle {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-neutral-800);
+  margin: 0 0 var(--spacing-6);
+}
+
+.balanceGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--spacing-6);
+}
+
+.ratesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--spacing-4);
+}
+
+.actionsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--spacing-4);
+}
+
+.actionsGrid h3 {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-neutral-900);
+  margin-bottom: var(--spacing-2);
+}
+
+.actionsGrid p {
+  font-size: var(--font-size-sm);
+  color: var(--color-neutral-600);
+  margin: 0;
+}
+
+.error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 50vh;
+}
+
+.error h2 {
+  font-size: var(--font-size-xl);
+  color: var(--color-error);
+  margin-bottom: var(--spacing-3);
+}
+
+.error p {
+  color: var(--color-neutral-600);
+  margin-bottom: var(--spacing-4);
+}
+
+.error button {
+  padding: var(--spacing-3) var(--spacing-6);
+  background-color: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background-color var(--transition-base);
+}
+
+.error button:hover {
+  background-color: var(--color-primary-dark);
+}
+
+@media (max-width: 768px) {
+  .dashboard {
+    padding: var(--spacing-2);
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .title {
+    font-size: var(--font-size-2xl);
+  }
+
+  .balanceGrid,
+  .ratesGrid,
+  .actionsGrid {
+    grid-template-columns: 1fr;
+  }
+}

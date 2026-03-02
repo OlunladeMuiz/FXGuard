@@ -1,0 +1,207 @@
+.wallet {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--spacing-4);
+}
+
+.header {
+  margin-bottom: var(--spacing-8);
+}
+
+.title {
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-neutral-900);
+  margin: 0 0 var(--spacing-2);
+}
+
+.subtitle {
+  font-size: var(--font-size-sm);
+  color: var(--color-neutral-500);
+  margin: 0;
+  font-family: var(--font-family-mono);
+}
+
+.section {
+  margin-bottom: var(--spacing-10);
+}
+
+.sectionTitle {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-neutral-800);
+  margin: 0 0 var(--spacing-6);
+}
+
+.balanceGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--spacing-6);
+}
+
+/* Convert Form */
+.convertForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+}
+
+.convertRow {
+  display: flex;
+  gap: var(--spacing-4);
+  flex-wrap: wrap;
+}
+
+.convertField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  flex: 1;
+  min-width: 150px;
+}
+
+.convertField label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-neutral-700);
+}
+
+/* Transactions List */
+.transactionsList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+}
+
+.transactionCard {
+  padding: var(--spacing-4);
+}
+
+.transactionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-3);
+}
+
+.transactionType {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  padding: var(--spacing-1) var(--spacing-2);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-neutral-100);
+  color: var(--color-neutral-700);
+}
+
+.type--conversion {
+  background-color: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.type--deposit {
+  background-color: var(--color-success-light);
+  color: var(--color-success);
+}
+
+.type--transfer {
+  background-color: var(--color-warning-light);
+  color: var(--color-warning);
+}
+
+.type--withdrawal {
+  background-color: var(--color-error-light);
+  color: var(--color-error);
+}
+
+.transactionStatus {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  padding: var(--spacing-1) var(--spacing-2);
+  border-radius: var(--radius-sm);
+}
+
+.status--completed {
+  background-color: var(--color-success-light);
+  color: var(--color-success);
+}
+
+.status--pending {
+  background-color: var(--color-warning-light);
+  color: var(--color-warning);
+}
+
+.status--failed,
+.status--cancelled {
+  background-color: var(--color-error-light);
+  color: var(--color-error);
+}
+
+.transactionBody {
+  margin-bottom: var(--spacing-3);
+}
+
+.transactionAmount {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-neutral-900);
+  margin: 0 0 var(--spacing-1);
+}
+
+.transactionDescription {
+  font-size: var(--font-size-sm);
+  color: var(--color-neutral-600);
+  margin: 0;
+}
+
+.transactionFooter {
+  padding-top: var(--spacing-2);
+  border-top: 1px solid var(--color-neutral-100);
+}
+
+.transactionDate {
+  font-size: var(--font-size-xs);
+  color: var(--color-neutral-500);
+  margin: 0;
+}
+
+/* Error State */
+.error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 50vh;
+}
+
+.error h2 {
+  font-size: var(--font-size-xl);
+  color: var(--color-error);
+  margin-bottom: var(--spacing-3);
+}
+
+.error p {
+  color: var(--color-neutral-600);
+  margin-bottom: var(--spacing-4);
+}
+
+@media (max-width: 768px) {
+  .wallet {
+    padding: var(--spacing-2);
+  }
+
+  .title {
+    font-size: var(--font-size-2xl);
+  }
+
+  .balanceGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .convertRow {
+    flex-direction: column;
+  }
+
+  .convertField {
+    min-width: 100%;
+  }
+}

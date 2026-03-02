@@ -1,0 +1,119 @@
+.currencyCard {
+  cursor: pointer;
+  transition: all var(--transition-base);
+  border-left: 4px solid transparent;
+}
+
+.currencyCard:hover {
+  transform: translateY(-2px);
+}
+
+.currencyCard--highlight {
+  border-left-color: var(--color-primary);
+  background: linear-gradient(
+    135deg,
+    white 0%,
+    var(--color-primary-light) 100%
+  );
+}
+
+.currencyCardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--spacing-6);
+  padding-bottom: var(--spacing-4);
+  border-bottom: 1px solid var(--color-neutral-200);
+}
+
+.currencyInfo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+}
+
+.currencyCode {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-neutral-900);
+  margin: 0;
+}
+
+.currencyName {
+  font-size: var(--font-size-sm);
+  color: var(--color-neutral-500);
+  margin: 0;
+}
+
+.currencySymbol {
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary);
+  opacity: 0.2;
+}
+
+.currencyCardBody {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-6);
+  margin-bottom: var(--spacing-4);
+}
+
+.balanceSection,
+.lockedSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.balanceLabel,
+.lockedLabel,
+.availableLabel {
+  font-size: var(--font-size-sm);
+  color: var(--color-neutral-600);
+  font-weight: var(--font-weight-medium);
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.balanceAmount,
+.lockedAmount,
+.availableAmount {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-neutral-900);
+  margin: 0;
+}
+
+.lockedAmount {
+  color: var(--color-warning);
+}
+
+.availableAmount {
+  color: var(--color-success);
+}
+
+.currencyCardFooter {
+  padding-top: var(--spacing-4);
+  border-top: 1px solid var(--color-neutral-200);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+@media (max-width: 480px) {
+  .currencyCardBody {
+    grid-template-columns: 1fr;
+  }
+
+  .currencySymbol {
+    font-size: var(--font-size-2xl);
+  }
+
+  .balanceAmount,
+  .lockedAmount,
+  .availableAmount {
+    font-size: var(--font-size-xl);
+  }
+}

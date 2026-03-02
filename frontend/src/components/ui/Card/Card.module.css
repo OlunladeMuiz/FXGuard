@@ -1,0 +1,30 @@
+.card {
+  background-color: white;
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-6);
+  transition: all var(--transition-base);
+}
+
+.card--sm {
+  box-shadow: var(--shadow-sm);
+}
+
+.card--sm:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.card--md {
+  box-shadow: var(--shadow-md);
+}
+
+.card--md:hover {
+  box-shadow: var(--shadow-lg);
+}
+
+.card--lg {
+  box-shadow: var(--shadow-lg);
+}
+
+.card--lg:hover {
+  box-shadow: var(--shadow-xl);
+}
