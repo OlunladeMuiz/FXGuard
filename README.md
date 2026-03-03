@@ -1,4 +1,4 @@
-# FXNexus - Multi-Currency Wallet Dashboard
+# FXGuard - Multi-Currency Wallet Dashboard
 
 Production-grade financial dashboard for a cross-border finance platform (multi-currency wallet system).
 
