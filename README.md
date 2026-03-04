@@ -1,68 +1,94 @@
-# FXGuard - Multi-Currency Wallet Dashboard
+# FXGuard - FX Risk Management Dashboard
 
-Production-grade financial dashboard for a cross-border finance platform (multi-currency wallet system).
+[![Next.js](https://img.shields.io/badge/Next.js-14.1.0-black)](https://nextjs.org/)
+[![React](https://img.shields.io/badge/React-18.2.0-blue)](https://reactjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.3.3-blue)](https://www.typescriptlang.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4.1-38B2AC)](https://tailwindcss.com/)
+
+Production-grade FX risk management dashboard for monitoring currency exposures, live exchange rates, and hedge recommendations.
+
+![Dashboard Preview](https://via.placeholder.com/800x400?text=FXGuard+Dashboard)
+
+## Features
+
+- **Live FX Rates** - Real-time exchange rates with auto-refresh (30s intervals)
+- **Exposure Tracking** - Monitor receivables and payables by currency
+- **Hedge Recommendations** - AI-powered suggestions for forward contracts, options, and swaps
+- **Smart Alerts** - Notifications for overdue exposures, upcoming due dates, and large positions
+- **Dark Mode** - Automatic dark/light theme based on system preferences
+- **Performance Optimized** - React.memo, useCallback, useMemo for zero unnecessary re-renders
 
 ## Tech Stack
 
-- **Framework**: Next.js 14+ (App Router)
-- **Language**: TypeScript (strict mode)
-- **Styling**: CSS Modules with global CSS variables
-- **HTTP Client**: Axios (centralized)
-- **Validation**: Zod schemas
-- **Linting**: ESLint + Prettier
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| Next.js | 14.1.0 | React framework with App Router |
+| React | 18.2.0 | UI library |
+| TypeScript | 5.3.3 | Type safety |
+| Tailwind CSS | 3.4.1 | Utility-first styling |
 
 ## Project Structure
 
 ```
 src/
-├── app/                    # Next.js App Router pages
-│   ├── layout.tsx          # Root layout
-│   ├── page.tsx            # Home page (redirects to dashboard)
-│   ├── dashboard/          # Dashboard page
-│   │   ├── page.tsx
-│   │   └── page.module.css
-│   └── wallet/             # Wallet page
-│       ├── page.tsx
-│       └── page.module.css
+├── app/
+│   ├── api/                    # API Routes
+│   │   ├── fx-rates/
+│   │   │   └── route.ts        # GET /api/fx-rates
+│   │   └── exposures/
+│   │       └── route.ts        # GET /api/exposures
+│   ├── dashboard/
+│   │   └── page.tsx            # Main dashboard page
+│   ├── layout.tsx              # Root layout
+│   ├── page.tsx                # Home (redirects to dashboard)
+│   └── globals.css             # Global styles
 │
 ├── components/
-│   ├── ui/                 # Reusable UI components
+│   ├── dashboard/              # Dashboard components
+│   │   ├── DashboardHeader.tsx
+│   │   ├── FXRatesPanel.tsx
+│   │   ├── ExposuresPanel.tsx
+│   │   ├── HedgeRecommendationsPanel.tsx
+│   │   └── AlertsPanel.tsx
+│   ├── ui/                     # Reusable UI components
 │   │   ├── Button/
 │   │   ├── Input/
 │   │   ├── Card/
 │   │   └── Loader/
-│   ├── currency/           # Currency-specific components
+│   ├── currency/               # Currency-specific components
 │   │   ├── CurrencySelector/
 │   │   ├── CurrencyBalanceCard/
 │   │   └── FXRateDisplay/
-│   └── layout/             # Layout components
+│   └── layout/                 # Layout components
 │       ├── Navbar/
 │       └── Sidebar/
 │
+├── hooks/                      # Custom React hooks
+│   ├── useFXRates.ts           # FX rates with auto-refresh
+│   ├── useExposures.ts         # Currency exposures
+│   ├── useHedgeRecommendations.ts  # Hedge suggestions
+│   ├── useWallet.ts
+│   └── useTransactions.ts
+│
 ├── lib/
-│   ├── api/                # API service layer
-│   │   ├── client.ts       # Centralized Axios instance
-│   │   ├── wallet.ts       # Wallet API service
-│   │   ├── fx.ts           # FX rates API service
-│   │   └── transactions.ts # Transactions API service
-│   ├── types/              # Domain types with Zod schemas
+│   ├── api/                    # API service layer
+│   │   ├── client.ts
+│   │   ├── wallet.ts
+│   │   ├── fx.ts
+│   │   └── transactions.ts
+│   ├── types/                  # TypeScript types
 │   │   ├── currency.ts
 │   │   ├── wallet.ts
 │   │   └── transaction.ts
-│   ├── utils/              # Utility functions
+│   ├── utils/                  # Utility functions
 │   │   ├── formatCurrency.ts
 │   │   └── calculateConversion.ts
-│   └── constants/          # Application constants
+│   └── constants/
 │       ├── currencyPairs.ts
 │       └── config.ts
 │
-├── hooks/                  # Custom React hooks
-│   ├── useWallet.ts
-│   ├── useFXRates.ts
-│   └── useTransactions.ts
-│
 └── styles/
-    └── globals.css         # Global styles with CSS variables
+    └── globals.css
 ```
 
 ## Getting Started
@@ -76,14 +102,11 @@ src/
 
 ```bash
 # Clone the repository
-git clone <repository-url>
-cd fxnexus-dashboard
+git clone https://github.com/OlunladeMuiz/FXGuard.git
+cd FXGuard
 
 # Install dependencies
 npm install
-
-# Create environment file
-cp .env.example .env.local
 ```
 
 ### Development
@@ -112,86 +135,216 @@ npm run build
 npm start
 ```
 
-## Architecture Principles
+## API Documentation
 
-### Data Flow
+### GET `/api/fx-rates`
 
+Fetches live foreign exchange rates.
+
+**Query Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `base` | string | No | Base currency (default: `USD`) |
+| `symbols` | string | Yes | Comma-separated currency codes |
+
+**Request:**
 ```
-UI Component
-    ↓
-Custom Hook (useWallet, useFXRates, useTransactions)
-    ↓
-API Service Layer (lib/api/*)
-    ↓
-Backend (FastAPI)
-    ↓
-Response Validation (Zod)
-    ↓
-Typed Return
-    ↓
-Component Render
+GET /api/fx-rates?base=USD&symbols=EUR,GBP,JPY,CHF
 ```
 
-### Non-Negotiable Rules
-
-1. **Strict TypeScript**: No `any` types allowed
-2. **Separation of Concerns**: No business logic in UI components
-3. **Service Layer**: All API calls go through the service layer
-4. **Type Safety**: All responses validated with Zod schemas
-5. **Error Handling**: Loading and error states must be handled
-6. **CSS Modules**: No inline styles, no global CSS leakage
-
-### CSS Architecture
-
-- CSS Modules for component-level styling
-- Global CSS variables in `:root` (colors, spacing, typography)
-- BEM-like naming convention
-
-```css
-.currencyCard {}
-.currencyCard__balance {}
-.currencyCard--highlight {}
+**Response:**
+```json
+{
+  "base": "USD",
+  "timestamp": "2026-03-04T14:30:00.000Z",
+  "rates": {
+    "EUR": 0.9198,
+    "GBP": 0.7902,
+    "JPY": 149.4825,
+    "CHF": 0.8796
+  }
+}
 ```
 
-### Component Design
+**Supported Currencies:** USD, EUR, GBP, JPY, CHF, CAD, AUD, NZD, CNY, INR, MXN, BRL, SGD, HKD, KRW, SEK, NOK, DKK, PLN, ZAR
 
-Components must be:
-- Pure and reusable
-- Stateless when possible
-- Strictly typed via props
-- Free of API/business logic
-- Styled only via CSS Modules
+---
 
-### Multi-Currency Support
+### GET `/api/exposures`
 
-Currency pairs are defined centrally in `lib/constants/currencyPairs.ts`. The frontend dynamically renders based on backend response - adding new pairs won't break the UI.
+Fetches all currency exposures.
 
-Supported currencies:
-- USD (US Dollar)
-- EUR (Euro)
-- GBP (British Pound)
-- NGN (Nigerian Naira)
-- CAD (Canadian Dollar)
-- AUD (Australian Dollar)
-- JPY (Japanese Yen)
-- INR (Indian Rupee)
+**Request:**
+```
+GET /api/exposures
+```
+
+**Response:**
+```json
+{
+  "exposures": [
+    {
+      "id": "exp-001",
+      "currency": "EUR",
+      "amount": 500000,
+      "type": "receivable",
+      "dueDate": "2026-04-15",
+      "counterparty": "Acme Corp EU",
+      "description": "Q1 2026 Services Invoice"
+    }
+  ],
+  "timestamp": "2026-03-04T14:30:00.000Z"
+}
+```
+
+## Custom Hooks
+
+### `useFXRates(options)`
+
+Fetches FX rates with auto-refresh and race condition handling.
+
+```typescript
+const fxOptions = useMemo(() => ({
+  base: "USD",
+  symbols: ["EUR", "GBP", "JPY"],
+  refreshMs: 30000,
+}), []);
+
+const { rates, loading, error, refetch } = useFXRates(fxOptions);
+```
+
+### `useExposures()`
+
+Fetches currency exposures with automatic error handling.
+
+```typescript
+const { exposures, loading, error, refetch } = useExposures();
+```
+
+### `useHedgeRecommendations(exposures, rates)`
+
+Generates hedge recommendations based on exposures and rates.
+
+```typescript
+const { recommendations, loading, error } = useHedgeRecommendations(exposures, rates);
+```
+
+## Performance Optimizations
+
+### Preventing Infinite Re-renders
+
+The `useFXRates` hook uses stable dependencies to prevent infinite loops:
+
+```typescript
+// ❌ Bad - array causes infinite re-renders
+useEffect(() => { ... }, [symbols]);
+
+// ✅ Good - stable string key
+const symbolsKey = useMemo(() => [...symbols].sort().join(","), [symbols]);
+useEffect(() => { ... }, [symbolsKey]);
+```
+
+### Memoization Strategy
+
+| Optimization | Usage |
+|--------------|-------|
+| `useMemo` | FX options, sorted lists, derived data |
+| `useCallback` | Event handlers, refetch functions |
+| `React.memo` | All dashboard panel components |
+| `useRef` | Mount tracking, fetch counting |
+
+### Race Condition Handling
+
+```typescript
+const fetchCountRef = useRef(0);
+
+const run = useCallback(async () => {
+  const currentFetch = ++fetchCountRef.current;
+  const data = await fetchData();
+  
+  // Ignore stale responses
+  if (currentFetch !== fetchCountRef.current) return;
+  
+  setState(data);
+}, []);
+```
+
+## Dashboard Components
+
+| Component | Description |
+|-----------|-------------|
+| `DashboardHeader` | Top navigation with base currency selector and refresh button |
+| `FXRatesPanel` | Live exchange rates display with currency flags |
+| `ExposuresPanel` | Receivables/payables sorted by due date with urgency indicators |
+| `HedgeRecommendationsPanel` | Prioritized hedge suggestions with cost estimates |
+| `AlertsPanel` | Critical, warning, and info alerts for exposures |
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      Dashboard Page                          │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │                  DashboardHeader                        ││
+│  └─────────────────────────────────────────────────────────┘│
+│  ┌──────────────────────┐  ┌──────────────────────────────┐│
+│  │    FXRatesPanel      │  │       AlertsPanel            ││
+│  │  ┌────────────────┐  │  │  ┌────────────────────────┐  ││
+│  │  │ useFXRates()   │  │  │  │ generateAlerts()       │  ││
+│  │  └────────────────┘  │  │  └────────────────────────┘  ││
+│  └──────────────────────┘  └──────────────────────────────┘│
+│  ┌──────────────────────┐  ┌──────────────────────────────┐│
+│  │   ExposuresPanel     │  │ HedgeRecommendationsPanel    ││
+│  │  ┌────────────────┐  │  │  ┌────────────────────────┐  ││
+│  │  │ useExposures() │  │  │  │ useHedgeRecommendations││  ││
+│  │  └────────────────┘  │  │  └────────────────────────┘  ││
+│  └──────────────────────┘  └──────────────────────────────┘│
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                     API Routes                               │
+│  ┌─────────────────────┐  ┌─────────────────────────────┐   │
+│  │  /api/fx-rates      │  │  /api/exposures             │   │
+│  └─────────────────────┘  └─────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+```
 
 ## Environment Variables
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `NEXT_PUBLIC_API_URL` | Backend API base URL | `http://localhost:8000/api` |
+| `NEXT_PUBLIC_API_URL` | External API base URL (optional) | Internal API routes |
 
-## Future Scalability
+## Roadmap
 
-The architecture supports expansion to:
-- Escrow system
-- Fraud risk scoring
-- FX analytics
-- Transaction history export
-- Role-based access control
-- Authentication integration
+- [x] Live FX rates with auto-refresh
+- [x] Exposure tracking (receivables/payables)
+- [x] Hedge recommendations engine
+- [x] Smart alerts system
+- [x] Dark mode support
+- [x] Performance optimizations
+- [ ] Real FX rate API integration (Open Exchange Rates, Fixer.io)
+- [ ] Database integration (PostgreSQL/MongoDB)
+- [ ] User authentication
+- [ ] Historical rate charts
+- [ ] Hedge execution functionality
+- [ ] Email/SMS notifications
+- [ ] Export reports (PDF/Excel)
+
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## License
 
-Proprietary - All rights reserved
+MIT License - see [LICENSE](LICENSE) for details.
+
+---
+
+Built with ❤️ by [OlunladeMuiz](https://github.com/OlunladeMuiz)
