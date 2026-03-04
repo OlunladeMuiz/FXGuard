@@ -1,81 +1,86 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import styles from './page.module.css';
-import { CurrencyBalanceCard } from '@/components/currency/CurrencyBalanceCard/CurrencyBalanceCard';
 import { FXRateDisplay } from '@/components/currency/FXRateDisplay/FXRateDisplay';
 import { CurrencySelector } from '@/components/currency/CurrencySelector/CurrencySelector';
 import { Loader } from '@/components/ui/Loader/Loader';
 import { Card } from '@/components/ui/Card/Card';
+import { Button } from '@/components/ui/Button/Button';
 import { CurrencyCode } from '@/types/currency';
-import { Balance } from '@/types/wallet';
-import { FXRate } from '@/types/currency';
+import { Invoice } from '@/types/invoice';
+import { InvoiceForm } from '@/components/invoices/InvoiceForm';
+import { InvoiceTable } from '@/components/invoices/InvoiceTable';
+import { RecommendationPanel } from '@/components/fx/RecommendationPanel';
+import { FXVolatilityMeter } from '@/components/fx/FXVolatilityMeter';
+import { useInvoices } from '@/hooks/useInvoices';
+import { useRecommendation } from '@/hooks/useRecommendation';
+import { useFXHistory } from '@/hooks/useFXHistory';
+import { useFXRates } from '@/hooks/useFXRates';
 
 /**
  * Dashboard Page
- * Multi-currency wallet dashboard with FX rates and balances
+ * AI-powered FX Intelligence Dashboard for SMEs
+ * Displays invoices, recommendations, volatility metrics, and conversion insights
  */
 export default function DashboardPage() {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [balances, setBalances] = useState<Balance[]>([]);
-  const [rates, setRates] = useState<FXRate[]>([]);
   const [selectedCurrency, setSelectedCurrency] = useState<CurrencyCode>('USD');
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [showInvoiceForm, setShowInvoiceForm] = useState(false);
 
-  useEffect(() => {
-    // Simulate fetching data - In production, replace with actual hooks
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        
-        // Mock data - would come from useWallet and useFXRates hooks
-        const mockBalances: Balance[] = [
-          { currency: 'USD', amount: 12500.75, locked: 500 },
-          { currency: 'EUR', amount: 8350.00, locked: 0 },
-          { currency: 'GBP', amount: 4200.50, locked: 100 },
-          { currency: 'NGN', amount: 5000000.00, locked: 0 },
-        ];
+  // Fetch invoices
+  const { 
+    invoices, 
+    loading: invoicesLoading, 
+    error: invoicesError, 
+    refetch: refetchInvoices 
+  } = useInvoices();
 
-        const mockRates: FXRate[] = [
-          { base: 'USD', quote: 'EUR', rate: 0.91, timestamp: new Date().toISOString() },
-          { base: 'USD', quote: 'GBP', rate: 0.79, timestamp: new Date().toISOString() },
-          { base: 'USD', quote: 'NGN', rate: 1550.25, timestamp: new Date().toISOString() },
-          { base: 'EUR', quote: 'USD', rate: 1.10, timestamp: new Date().toISOString() },
-          { base: 'GBP', quote: 'USD', rate: 1.27, timestamp: new Date().toISOString() },
-        ];
+  // Fetch FX rates
+  const { 
+    rates, 
+    loading: ratesLoading, 
+    lastUpdated 
+  } = useFXRates(selectedCurrency, ['NGN', 'EUR', 'GBP']);
 
-        // Simulate network delay
-        await new Promise((resolve) => setTimeout(resolve, 500));
+  // Fetch FX history for selected invoice's target currency
+  const targetCurrency = selectedInvoice?.targetCurrency || 'NGN';
+  const { 
+    history, 
+    statistics,
+    loading: historyLoading 
+  } = useFXHistory('USD', targetCurrency as CurrencyCode, '30d');
 
-        setBalances(mockBalances);
-        setRates(mockRates);
-        setLastUpdated(new Date());
-        setError(null);
-      } catch {
-        setError('Failed to load dashboard data');
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Fetch recommendation for selected invoice
+  const { 
+    recommendation, 
+    loading: recommendationLoading, 
+    error: recommendationError,
+    refresh: refreshRecommendation 
+  } = useRecommendation(selectedInvoice?.id || null);
 
-    fetchData();
+  const handleInvoiceSelect = useCallback((invoice: Invoice) => {
+    setSelectedInvoice(invoice);
   }, []);
 
-  if (loading) {
-    return <Loader message="Loading dashboard..." />;
-  }
+  const handleInvoiceCreated = useCallback(() => {
+    setShowInvoiceForm(false);
+    refetchInvoices();
+  }, [refetchInvoices]);
 
-  if (error) {
-    return (
-      <div className={styles.error}>
-        <Card>
-          <h2>Error Loading Dashboard</h2>
-          <p>{error}</p>
-          <button onClick={() => window.location.reload()}>Try Again</button>
-        </Card>
-      </div>
-    );
+  const handleRefreshRecommendation = useCallback(() => {
+    refreshRecommendation();
+  }, [refreshRecommendation]);
+
+  // Get current and average rate
+  const currentRate = statistics?.currentRate || 1550;
+  const averageRate = statistics?.averageRate || 1530;
+  const volatility = statistics?.volatility || 0.35;
+  const historicalRates = history?.data || [];
+
+  // Loading state
+  if (invoicesLoading && ratesLoading) {
+    return <Loader message="Loading dashboard..." />;
   }
 
   const filteredRates = rates.filter(
@@ -84,11 +89,12 @@ export default function DashboardPage() {
 
   return (
     <div className={styles.dashboard}>
+      {/* Header */}
       <header className={styles.header}>
         <div className={styles.headerContent}>
-          <h1 className={styles.title}>Dashboard</h1>
+          <h1 className={styles.title}>FX Intelligence Dashboard</h1>
           <p className={styles.subtitle}>
-            Multi-currency wallet overview
+            AI-powered insights for smart currency decisions
             {lastUpdated && (
               <span className={styles.lastUpdated}>
                 Last updated: {lastUpdated.toLocaleTimeString()}
@@ -102,68 +108,104 @@ export default function DashboardPage() {
             onChange={setSelectedCurrency}
             currencies={['USD', 'EUR', 'GBP', 'NGN']}
           />
+          <Button
+            variant="primary"
+            onClick={() => setShowInvoiceForm(true)}
+          >
+            Create Invoice
+          </Button>
         </div>
       </header>
 
-      <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Wallet Balances</h2>
-        <div className={styles.balanceGrid}>
-          {balances.map((balance) => (
-            <CurrencyBalanceCard
-              key={balance.currency}
-              currency={balance.currency}
-              balance={balance.amount}
-              locked={balance.locked}
-              isHighlighted={balance.currency === selectedCurrency}
+      {/* Invoice Form Modal */}
+      {showInvoiceForm && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalContent}>
+            <InvoiceForm
+              onSuccess={handleInvoiceCreated}
+              onCancel={() => setShowInvoiceForm(false)}
             />
-          ))}
+          </div>
         </div>
-      </section>
+      )}
 
-      <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>
-          Exchange Rates (Base: {selectedCurrency})
-        </h2>
-        <div className={styles.ratesGrid}>
-          {filteredRates.length > 0 ? (
-            filteredRates.map((rate) => (
-              <FXRateDisplay
-                key={`${rate.base}-${rate.quote}`}
-                baseCurrency={rate.base}
-                quoteCurrency={rate.quote}
-                rate={rate.rate}
-                lastUpdated={lastUpdated ?? undefined}
-              />
-            ))
-          ) : (
+      {/* Main Grid Layout */}
+      <div className={styles.mainGrid}>
+        {/* Left Column - Invoices */}
+        <div className={styles.leftColumn}>
+          <section className={styles.section}>
+            <InvoiceTable
+              invoices={invoices}
+              loading={invoicesLoading}
+              error={invoicesError}
+              onSelectInvoice={handleInvoiceSelect}
+              selectedInvoiceId={selectedInvoice?.id}
+            />
+          </section>
+
+          {/* FX Rates Section */}
+          <section className={styles.section}>
+            <h2 className={styles.sectionTitle}>
+              Exchange Rates (Base: {selectedCurrency})
+            </h2>
+            <div className={styles.ratesGrid}>
+              {filteredRates.length > 0 ? (
+                filteredRates.map((rate) => (
+                  <FXRateDisplay
+                    key={`${rate.base}-${rate.quote}`}
+                    baseCurrency={rate.base}
+                    quoteCurrency={rate.quote}
+                    rate={rate.rate}
+                    lastUpdated={lastUpdated ?? undefined}
+                  />
+                ))
+              ) : (
+                <Card>
+                  <p>No exchange rates available for {selectedCurrency}</p>
+                </Card>
+              )}
+            </div>
+          </section>
+
+          {/* Volatility Overview */}
+          <section className={styles.section}>
             <Card>
-              <p>No exchange rates available for {selectedCurrency}</p>
+              <div className={styles.volatilitySection}>
+                <h2 className={styles.sectionTitle}>Market Volatility</h2>
+                <FXVolatilityMeter volatility={volatility} size="lg" />
+              </div>
+            </Card>
+          </section>
+        </div>
+
+        {/* Right Column - Recommendations */}
+        <div className={styles.rightColumn}>
+          {selectedInvoice ? (
+            <RecommendationPanel
+              recommendation={recommendation}
+              loading={recommendationLoading || historyLoading}
+              error={recommendationError}
+              invoiceAmount={selectedInvoice.amount}
+              currentRate={currentRate}
+              averageRate={averageRate}
+              historicalRates={historicalRates}
+              targetCurrency={selectedInvoice.targetCurrency}
+              volatility={volatility}
+              onRefresh={handleRefreshRecommendation}
+            />
+          ) : (
+            <Card className={styles.noSelectionCard}>
+              <div className={styles.noSelection}>
+                <h3>Select an Invoice</h3>
+                <p>
+                  Choose an invoice from the table to view AI-powered 
+                  conversion recommendations and market insights.
+                </p>
+              </div>
             </Card>
           )}
         </div>
-      </section>
-
-      <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Quick Actions</h2>
-        <div className={styles.actionsGrid}>
-          <Card>
-            <h3>Convert Currency</h3>
-            <p>Exchange between your wallet currencies at live rates</p>
-          </Card>
-          <Card>
-            <h3>Send Money</h3>
-            <p>Transfer funds to other wallets or bank accounts</p>
-          </Card>
-          <Card>
-            <h3>Add Funds</h3>
-            <p>Deposit money into your multi-currency wallet</p>
-          </Card>
-          <Card>
-            <h3>View Transactions</h3>
-            <p>See your complete transaction history</p>
-          </Card>
-        </div>
-      </section>
+      </div>
     </div>
   );
 }

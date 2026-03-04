@@ -2,10 +2,10 @@ import React from 'react';
 import styles from './Input.module.css';
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
-  label?: string;
-  error?: string;
-  icon?: React.ReactNode;
-  helperText?: string;
+  label?: string | undefined;
+  error?: string | undefined;
+  icon?: React.ReactNode | undefined;
+  helperText?: string | undefined;
 }
 
 /**

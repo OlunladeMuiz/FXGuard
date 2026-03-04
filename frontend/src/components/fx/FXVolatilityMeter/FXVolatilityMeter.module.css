@@ -1,0 +1,139 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+}
+
+.container--sm {
+  gap: var(--spacing-2);
+}
+
+.container--lg {
+  gap: var(--spacing-4);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.title {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-neutral-700);
+}
+
+.container--sm .title {
+  font-size: var(--font-size-xs);
+}
+
+.container--lg .title {
+  font-size: var(--font-size-base);
+}
+
+.levelBadge {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  padding: var(--spacing-1) var(--spacing-2);
+  border-radius: var(--radius-sm);
+}
+
+.meterWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+}
+
+.meterTrack {
+  position: relative;
+  height: 12px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.container--sm .meterTrack {
+  height: 8px;
+}
+
+.container--lg .meterTrack {
+  height: 16px;
+}
+
+.meterGradient {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to right,
+    #10b981 0%,
+    #10b981 30%,
+    #f59e0b 30%,
+    #f59e0b 70%,
+    #ef4444 70%,
+    #ef4444 100%
+  );
+}
+
+.meterIndicator {
+  position: absolute;
+  top: 50%;
+  width: 4px;
+  height: 20px;
+  background-color: var(--color-neutral-900);
+  border: 2px solid white;
+  border-radius: var(--radius-sm);
+  transform: translate(-50%, -50%);
+  box-shadow: var(--shadow-md);
+  transition: left var(--transition-base);
+}
+
+.container--sm .meterIndicator {
+  width: 3px;
+  height: 14px;
+}
+
+.container--lg .meterIndicator {
+  width: 5px;
+  height: 26px;
+}
+
+.meterLabels {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 var(--spacing-1);
+}
+
+.meterLabel {
+  font-size: var(--font-size-xs);
+  color: var(--color-neutral-500);
+}
+
+.container--sm .meterLabel {
+  font-size: 10px;
+}
+
+.valueDisplay {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: var(--spacing-2);
+}
+
+.valueNumber {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-neutral-900);
+}
+
+.container--sm .valueNumber {
+  font-size: var(--font-size-base);
+}
+
+.container--lg .valueNumber {
+  font-size: var(--font-size-2xl);
+}
+
+.valueLabel {
+  font-size: var(--font-size-xs);
+  color: var(--color-neutral-500);
+}

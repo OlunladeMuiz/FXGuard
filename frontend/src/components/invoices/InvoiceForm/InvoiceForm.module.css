@@ -1,0 +1,111 @@
+.formCard {
+  padding: var(--spacing-6);
+  max-width: 600px;
+}
+
+.formTitle {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-neutral-900);
+  margin-bottom: var(--spacing-6);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+  flex: 1;
+}
+
+.formRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-4);
+}
+
+@media (max-width: 600px) {
+  .formRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+.label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-neutral-700);
+  margin-bottom: var(--spacing-1);
+}
+
+.select {
+  padding: var(--spacing-2) var(--spacing-3);
+  border: 1px solid var(--color-neutral-300);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-base);
+  background-color: white;
+  color: var(--color-neutral-900);
+  cursor: pointer;
+  transition: border-color var(--transition-fast);
+}
+
+.select:hover {
+  border-color: var(--color-neutral-400);
+}
+
+.select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-light);
+}
+
+.select:disabled {
+  background-color: var(--color-neutral-100);
+  cursor: not-allowed;
+  color: var(--color-neutral-500);
+}
+
+.helperText {
+  font-size: var(--font-size-xs);
+  color: var(--color-neutral-500);
+  margin-top: var(--spacing-1);
+}
+
+.errorText {
+  font-size: var(--font-size-xs);
+  color: var(--color-error);
+  margin-top: var(--spacing-1);
+}
+
+.formActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-3);
+  margin-top: var(--spacing-4);
+  padding-top: var(--spacing-4);
+  border-top: 1px solid var(--color-neutral-200);
+}
+
+.successMessage {
+  background-color: var(--color-success-light);
+  color: var(--color-success);
+  padding: var(--spacing-3) var(--spacing-4);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  margin-bottom: var(--spacing-4);
+}
+
+.errorMessage {
+  background-color: var(--color-error-light);
+  color: var(--color-error);
+  padding: var(--spacing-3) var(--spacing-4);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  margin-bottom: var(--spacing-4);
+}

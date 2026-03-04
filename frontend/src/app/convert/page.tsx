@@ -147,7 +147,7 @@ export default function ConvertPage() {
                 1 {fromCurrency} = {currentRate.rate.toFixed(4)} {toCurrency}
               </span>
             </div>
-            <div className={styles.rateRow}>
+            <div className={styles.rateRow}>             
               <span>Fee (0.1%):</span>
               <span className={styles.rateValue}>
                 {formatCurrency(convertedAmount * 0.001, toCurrency)}

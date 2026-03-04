@@ -123,6 +123,99 @@
   background-color: var(--color-primary-dark);
 }
 
+/* Main Grid Layout */
+.mainGrid {
+  display: grid;
+  grid-template-columns: 1fr 400px;
+  gap: var(--spacing-6);
+}
+
+.leftColumn {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-6);
+}
+
+.rightColumn {
+  position: sticky;
+  top: var(--spacing-4);
+  height: fit-content;
+}
+
+/* Volatility Section */
+.volatilitySection {
+  padding: var(--spacing-4);
+}
+
+.volatilitySection .sectionTitle {
+  margin-bottom: var(--spacing-4);
+}
+
+/* No Selection Card */
+.noSelectionCard {
+  padding: var(--spacing-8);
+}
+
+.noSelection {
+  text-align: center;
+}
+
+.noSelection h3 {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-neutral-700);
+  margin-bottom: var(--spacing-2);
+}
+
+.noSelection p {
+  font-size: var(--font-size-sm);
+  color: var(--color-neutral-500);
+  line-height: var(--line-height-relaxed);
+  max-width: 280px;
+  margin: 0 auto;
+}
+
+/* Modal Overlay */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--z-modal);
+  padding: var(--spacing-4);
+}
+
+.modalContent {
+  max-width: 600px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: slideIn 0.2s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 1024px) {
+  .mainGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .rightColumn {
+    position: static;
+  }
+}
+
 @media (max-width: 768px) {
   .dashboard {
     padding: var(--spacing-2);
@@ -143,3 +236,4 @@
     grid-template-columns: 1fr;
   }
 }
+
