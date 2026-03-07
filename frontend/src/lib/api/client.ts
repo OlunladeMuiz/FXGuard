@@ -18,11 +18,12 @@ const client: AxiosInstance = axios.create({
  */
 client.interceptors.request.use(
   (config) => {
-    // Future: Add authentication token
-    // const token = getAuthToken();
-    // if (token) {
-    //   config.headers.Authorization = `Bearer ${token}`;
-    // }
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('access_token');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    }
     return config;
   },
   (error: AxiosError) => {

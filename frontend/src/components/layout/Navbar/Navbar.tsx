@@ -1,320 +1,318 @@
-'use client';
+﻿'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
-import { usePathname } from 'next/navigation';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import styles from './Navbar.module.css';
+import { getUser } from '@/lib/api/auth';
 
-interface NavItem {
-  href: string;
-  label: string;
-  icon: React.ReactNode;
-}
+const marketingLinks = [
+  { href: '#features', label: 'Features' },
+  { href: '#solutions', label: 'Solutions' },
+  { href: '#pricing', label: 'Pricing' },
+  { href: '#resources', label: 'Resources' },
+];
 
-const navItems: NavItem[] = [
+const appLinks = [
+  { href: '/dashboard', label: 'Dashboard', icon: 'dashboard' },
+  { href: '/invoice-generator', label: 'Invoice Generator', icon: 'invoice' },
+  { href: '/fx-analytics', label: 'FX Analytics', icon: 'analytics' },
+  { href: '/settings', label: 'Settings', icon: 'settings' },
+];
+
+// Navigation items for hamburger menu
+const navMenuItems = [
   {
-    href: '/dashboard',
+    id: 'dashboard',
     label: 'Dashboard',
+    href: '/dashboard',
     icon: (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="3" y="3" width="7" height="7" />
-        <rect x="14" y="3" width="7" height="7" />
-        <rect x="14" y="14" width="7" height="7" />
-        <rect x="3" y="14" width="7" height="7" />
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <rect x="3" y="3" width="7" height="9" />
+        <rect x="14" y="3" width="7" height="5" />
+        <rect x="14" y="12" width="7" height="9" />
+        <rect x="3" y="16" width="7" height="5" />
       </svg>
     ),
   },
   {
-    href: '/wallet',
+    id: 'invoice-generator',
+    label: 'Invoices',
+    href: '/invoice-generator',
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+        <path d="M14 2v6h6" />
+        <line x1="16" y1="13" x2="8" y2="13" />
+        <line x1="16" y1="17" x2="8" y2="17" />
+        <line x1="10" y1="9" x2="8" y2="9" />
+      </svg>
+    ),
+  },
+  {
+    id: 'fx-analytics',
+    label: 'FX Analytics',
+    href: '/fx-analytics',
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M3 3v18h18" />
+        <path d="m19 9-5 5-4-4-3 3" />
+      </svg>
+    ),
+  },
+  {
+    id: 'wallet',
     label: 'Wallet',
+    href: '/wallet',
     icon: (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
-        <path d="M3 5v14a2 2 0 0 0 2 2h16v-5" />
-        <path d="M18 12a2 2 0 0 0 0 4h4v-4Z" />
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M21 4H3a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z" />
+        <path d="M17 12a2 2 0 1 0 0 4 2 2 0 0 0 0-4z" />
       </svg>
     ),
   },
   {
-    href: '/transactions',
+    id: 'transactions',
     label: 'Transactions',
+    href: '/transactions',
     icon: (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <polyline points="20 6 9 17 4 12" />
+        <line x1="4" y1="6" x2="20" y2="6" />
+        <line x1="4" y1="12" x2="9" y2="12" />
       </svg>
     ),
   },
   {
-    href: '/convert',
-    label: 'Convert',
+    id: 'settings',
+    label: 'Settings',
+    href: '/settings',
     icon: (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M16 3l4 4-4 4" />
-        <path d="M20 7H4" />
-        <path d="M8 21l-4-4 4-4" />
-        <path d="M4 17h16" />
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <circle cx="12" cy="12" r="3" />
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
       </svg>
     ),
   },
 ];
 
-/**
- * Navbar Component
- * Modern navigation header with glassmorphism effect, mobile menu, and user dropdown
- */
 export const Navbar: React.FC = () => {
   const pathname = usePathname();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const userMenuRef = useRef<HTMLDivElement>(null);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [displayName, setDisplayName] = useState('User');
+  const menuRef = useRef<HTMLDivElement>(null);
 
-  // Close user menu when clicking outside
+  // Close menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
-        setIsUserMenuOpen(false);
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setMenuOpen(false);
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    if (menuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
 
-  // Close mobile menu on route change
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [menuOpen]);
+
+  // Close menu on route change
   useEffect(() => {
-    setIsMobileMenuOpen(false);
+    setMenuOpen(false);
   }, [pathname]);
 
-  const isActiveLink = (href: string) => {
-    if (href === '/') return pathname === '/';
-    return pathname.startsWith(href);
-  };
+  useEffect(() => {
+    const userData = getUser();
+    if (userData?.email) {
+      const emailPrefix = userData.email.split('@')[0] || '';
+      // Try to split by common separators like . or _ and capitalize
+      const nameParts = emailPrefix.split(/[._-]/);
+      if (nameParts.length >= 2 && nameParts[0] && nameParts[1]) {
+        const firstName = nameParts[0].charAt(0).toUpperCase() + nameParts[0].slice(1);
+        const lastName = nameParts[1].charAt(0).toUpperCase() + nameParts[1].slice(1);
+        setDisplayName(`${firstName} ${lastName}`);
+      } else if (emailPrefix) {
+        setDisplayName(emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1));
+      }
+    }
+  }, []);
+
+  const isMarketing = pathname === '/';
+  const isAuth = pathname.startsWith('/login') || pathname.startsWith('/signup');
+  const isMinimal = pathname.startsWith('/currency-settings');
+
+  const activeTab = useMemo(() => {
+    if (pathname.startsWith('/dashboard')) return '/dashboard';
+    if (pathname.startsWith('/fx-analytics')) return '/fx-analytics';
+    if (pathname.startsWith('/invoice-generator')) return '/invoice-generator';
+    if (pathname.startsWith('/settings')) return '/settings';
+    return '/dashboard';
+  }, [pathname]);
+
+  if (isAuth || isMinimal) return null;
 
   return (
-    <>
-      <header className={styles.navbar}>
-        <div className={styles.navbarContent}>
-          {/* Logo */}
-          <div className={styles.navbarBrand}>
-            <Link href="/" className={styles.logo}>
-              <div className={styles.logoIcon}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-                </svg>
-              </div>
-              <span className={styles.logoText}>FX<span className={styles.logoAccent}>Guard</span></span>
-            </Link>
-          </div>
-
-          {/* Desktop Navigation */}
-          <nav className={styles.navbarMenu}>
-            {navItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`${styles.navLink} ${isActiveLink(item.href) ? styles.navLinkActive : ''}`}
-              >
-                <span className={styles.navLinkIcon}>{item.icon}</span>
-                <span className={styles.navLinkText}>{item.label}</span>
-              </Link>
-            ))}
-          </nav>
-
-          {/* Search Bar */}
-          <div className={styles.searchContainer}>
-            <svg className={styles.searchIcon} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="11" cy="11" r="8" />
-              <path d="m21 21-4.35-4.35" />
+    <header className={styles.navbar}>
+      <div className={styles.container}>
+        <Link href="/" className={styles.brand}>
+          <span className={styles.logo} aria-hidden>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 18V6" />
+              <path d="M20 18V6" />
+              <path d="M7 13l3-3 4 4 3-3" />
             </svg>
-            <input
-              type="text"
-              placeholder="Search..."
-              className={styles.searchInput}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            <kbd className={styles.searchShortcut}>⌘K</kbd>
-          </div>
+          </span>
+          <span className={styles.brandText}>FXGuard</span>
+        </Link>
 
-          {/* Actions */}
-          <div className={styles.navbarActions}>
-            {/* Notification Button */}
-            <button className={styles.notificationBtn} aria-label="Notifications">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-              </svg>
-              <span className={styles.notificationBadge}>3</span>
-            </button>
-
-            {/* User Menu */}
-            <div className={styles.userMenuContainer} ref={userMenuRef}>
+        {isMarketing ? (
+          <>
+            <nav className={styles.navLinks}>
+              {marketingLinks.map((link) => (
+                <a key={link.href} href={link.href} className={styles.navLink}>
+                  {link.label}
+                </a>
+              ))}
+            </nav>
+            <div className={styles.actions}>
+              <Link href="/login" className={styles.linkButton}>Log in</Link>
+              <Link href="/signup" className={styles.primaryButton}>Get Started</Link>
               <button
-                className={styles.userButton}
-                onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                aria-expanded={isUserMenuOpen}
+                className={styles.mobileToggle}
+                onClick={() => setMobileOpen((prev) => !prev)}
+                aria-label="Toggle menu"
               >
-                <div className={styles.userAvatar}>
-                  <span className={styles.avatarText}>JD</span>
-                </div>
-                <div className={styles.userInfo}>
-                  <span className={styles.userName}>John Doe</span>
-                  <span className={styles.userRole}>Admin</span>
-                </div>
-                <svg
-                  className={`${styles.chevron} ${isUserMenuOpen ? styles.chevronRotated : ''}`}
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
+                <span />
+                <span />
+                <span />
+              </button>
+            </div>
+            {mobileOpen && (
+              <div className={styles.mobileMenu}>
+                {marketingLinks.map((link) => (
+                  <a key={link.href} href={link.href} className={styles.mobileLink}>
+                    {link.label}
+                  </a>
+                ))}
+                <Link href="/login" className={styles.mobileLink}>Log in</Link>
+                <Link href="/signup" className={styles.mobileCta}>Get Started</Link>
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            <nav className={styles.tabs}>
+              {appLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={`${styles.tab} ${activeTab === link.href ? styles.tabActive : ''}`}
                 >
-                  <path d="m6 9 6 6 6-6" />
+                  {link.icon === 'dashboard' && (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="3" y="3" width="7" height="9" />
+                      <rect x="14" y="3" width="7" height="5" />
+                      <rect x="14" y="12" width="7" height="9" />
+                      <rect x="3" y="16" width="7" height="5" />
+                    </svg>
+                  )}
+                  {link.icon === 'invoice' && (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                      <path d="M14 2v6h6" />
+                    </svg>
+                  )}
+                  {link.icon === 'analytics' && (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M3 3v18h18" />
+                      <path d="m19 9-5 5-4-4-3 3" />
+                    </svg>
+                  )}
+                  {link.icon === 'settings' && (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="12" cy="12" r="3" />
+                      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                    </svg>
+                  )}
+                  {link.label}
+                </Link>
+              ))}
+            </nav>
+            <div className={styles.appActions}>
+              <div className={styles.search}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="8" />
+                  <path d="m21 21-4.35-4.35" />
                 </svg>
+                <input
+                  placeholder={pathname.startsWith('/invoice-generator') ? 'Search invoices, clients...' : 'Search currencies, pairs...'}
+                />
+              </div>
+              <button className={styles.iconButton} aria-label="Notifications">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                </svg>
+                <span className={styles.dot} />
               </button>
 
-              {isUserMenuOpen && (
-                <div className={styles.userDropdown}>
-                  <div className={styles.dropdownHeader}>
-                    <div className={styles.userAvatarLarge}>
-                      <span className={styles.avatarTextLarge}>JD</span>
-                    </div>
-                    <div>
-                      <p className={styles.dropdownName}>John Doe</p>
-                      <p className={styles.dropdownEmail}>john@fxguard.com</p>
-                    </div>
-                  </div>
-                  <div className={styles.dropdownDivider} />
-                  <Link href="/profile" className={styles.dropdownItem}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
-                      <circle cx="12" cy="7" r="4" />
-                    </svg>
-                    Profile
-                  </Link>
-                  <Link href="/settings" className={styles.dropdownItem}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
-                      <circle cx="12" cy="12" r="3" />
-                    </svg>
-                    Settings
-                  </Link>
-                  <Link href="/help" className={styles.dropdownItem}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="12" cy="12" r="10" />
-                      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-                      <path d="M12 17h.01" />
-                    </svg>
-                    Help Center
-                  </Link>
-                  <div className={styles.dropdownDivider} />
-                  <button className={styles.dropdownItemDanger}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                      <polyline points="16,17 21,12 16,7" />
-                      <line x1="21" y1="12" x2="9" y2="12" />
-                    </svg>
-                    Sign Out
-                  </button>
+              {/* Hamburger Menu */}
+              <div className={styles.hamburgerWrapper} ref={menuRef}>
+                <button
+                  className={`${styles.hamburgerBtn} ${menuOpen ? styles.hamburgerBtnOpen : ''}`}
+                  onClick={() => setMenuOpen(!menuOpen)}
+                  aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+                  aria-expanded={menuOpen}
+                >
+                  <span className={styles.hamburgerLine} />
+                  <span className={styles.hamburgerLine} />
+                  <span className={styles.hamburgerLine} />
+                </button>
+
+                {menuOpen && (
+                  <>
+                    <div className={styles.menuBackdrop} onClick={() => setMenuOpen(false)} />
+                    <nav className={styles.dropdownMenu}>
+                      <ul className={styles.menuList}>
+                        {navMenuItems.map((item) => {
+                          const isActive = pathname.startsWith(item.href);
+                          return (
+                            <li key={item.id} className={styles.menuItem}>
+                              <Link
+                                href={item.href}
+                                className={`${styles.menuLink} ${isActive ? styles.menuLinkActive : ''}`}
+                                onClick={() => setMenuOpen(false)}
+                              >
+                                <span className={styles.menuIcon}>{item.icon}</span>
+                                <span className={styles.menuLabel}>{item.label}</span>
+                              </Link>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </nav>
+                  </>
+                )}
+              </div>
+
+              <div className={styles.user}>
+                <img
+                  src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=64&q=80"
+                  alt="User"
+                />
+                <div>
+                  <div className={styles.userName}>{displayName}</div>
+                  <div className={styles.userRole}>Admin</div>
                 </div>
-              )}
+              </div>
             </div>
-
-            {/* Mobile Menu Toggle */}
-            <button
-              className={styles.mobileMenuBtn}
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              aria-label="Toggle menu"
-              aria-expanded={isMobileMenuOpen}
-            >
-              <span className={`${styles.hamburger} ${isMobileMenuOpen ? styles.hamburgerOpen : ''}`}>
-                <span></span>
-                <span></span>
-                <span></span>
-              </span>
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* Mobile Menu Overlay */}
-      <div
-        className={`${styles.mobileOverlay} ${isMobileMenuOpen ? styles.mobileOverlayVisible : ''}`}
-        onClick={() => setIsMobileMenuOpen(false)}
-      />
-
-      {/* Mobile Menu */}
-      <nav className={`${styles.mobileMenu} ${isMobileMenuOpen ? styles.mobileMenuOpen : ''}`}>
-        <div className={styles.mobileMenuHeader}>
-          <span className={styles.mobileMenuTitle}>Menu</span>
-          <button
-            className={styles.mobileCloseBtn}
-            onClick={() => setIsMobileMenuOpen(false)}
-            aria-label="Close menu"
-          >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M18 6L6 18M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-
-        {/* Mobile Search */}
-        <div className={styles.mobileSearchContainer}>
-          <svg className={styles.searchIcon} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="11" cy="11" r="8" />
-            <path d="m21 21-4.35-4.35" />
-          </svg>
-          <input
-            type="text"
-            placeholder="Search..."
-            className={styles.mobileSearchInput}
-          />
-        </div>
-
-        <div className={styles.mobileNavLinks}>
-          {navItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`${styles.mobileNavLink} ${isActiveLink(item.href) ? styles.mobileNavLinkActive : ''}`}
-            >
-              <span className={styles.mobileNavIcon}>{item.icon}</span>
-              <span>{item.label}</span>
-              {isActiveLink(item.href) && (
-                <span className={styles.activeIndicator}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="20,6 9,17 4,12" />
-                  </svg>
-                </span>
-              )}
-            </Link>
-          ))}
-        </div>
-
-        <div className={styles.mobileMenuFooter}>
-          <div className={styles.mobileUserInfo}>
-            <div className={styles.userAvatarLarge}>
-              <span className={styles.avatarTextLarge}>JD</span>
-            </div>
-            <div>
-              <p className={styles.mobileUserName}>John Doe</p>
-              <p className={styles.mobileUserEmail}>john@fxguard.com</p>
-            </div>
-          </div>
-          <button className={styles.mobileLogoutBtn}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-              <polyline points="16,17 21,12 16,7" />
-              <line x1="21" y1="12" x2="9" y2="12" />
-            </svg>
-            Sign Out
-          </button>
-        </div>
-      </nav>
-    </>
+          </>
+        )}
+      </div>
+    </header>
   );
 };
