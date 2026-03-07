@@ -1,12 +1,16 @@
-import '@/styles/globals.css';
+﻿import '@/styles/globals.css';
 import type { Metadata } from 'next';
-import { Navbar } from '@/components/layout/Navbar/Navbar';
-import { Sidebar } from '@/components/layout/Sidebar/Sidebar';
+import { Plus_Jakarta_Sans } from 'next/font/google';
+import { ConditionalNavbar } from '@/components';
+
+const plusJakarta = Plus_Jakarta_Sans({
+  subsets: ['latin'],
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
-  title: 'FXNexus - Multi-Currency Wallet Dashboard',
-  description:
-    'Production-grade financial dashboard for cross-border finance platform',
+  title: 'FXGuard - Smart FX Optimization',
+  description: 'Global invoicing and smart FX optimization platform',
 };
 
 interface RootLayoutProps {
@@ -16,14 +20,9 @@ interface RootLayoutProps {
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="en">
-      <body>
-        <Navbar />
-        <div style={{ display: 'flex' }}>
-          <Sidebar />
-          <main style={{ flex: 1, padding: 'var(--spacing-6)' }}>
-            {children}
-          </main>
-        </div>
+      <body className={plusJakarta.className}>
+        <ConditionalNavbar />
+        <main className="app-main">{children}</main>
       </body>
     </html>
   );

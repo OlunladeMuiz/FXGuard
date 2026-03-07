@@ -1,6 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import styles from './Sidebar.module.css';
 
 interface SidebarItem {
@@ -8,11 +10,6 @@ interface SidebarItem {
   label: string;
   icon: React.ReactNode;
   href: string;
-}
-
-interface SidebarProps {
-  isCollapsed?: boolean;
-  onToggleCollapse?: () => void;
 }
 
 const navItems: SidebarItem[] = [
@@ -26,6 +23,31 @@ const navItems: SidebarItem[] = [
         <rect x="14" y="3" width="7" height="5" />
         <rect x="14" y="12" width="7" height="9" />
         <rect x="3" y="16" width="7" height="5" />
+      </svg>
+    ),
+  },
+  {
+    id: 'invoice-generator',
+    label: 'Invoices',
+    href: '/invoice-generator',
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+        <path d="M14 2v6h6" />
+        <line x1="16" y1="13" x2="8" y2="13" />
+        <line x1="16" y1="17" x2="8" y2="17" />
+        <line x1="10" y1="9" x2="8" y2="9" />
+      </svg>
+    ),
+  },
+  {
+    id: 'fx-analytics',
+    label: 'FX Analytics',
+    href: '/fx-analytics',
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M3 3v18h18" />
+        <path d="m19 9-5 5-4-4-3 3" />
       </svg>
     ),
   },
@@ -53,65 +75,88 @@ const navItems: SidebarItem[] = [
     ),
   },
   {
-    id: 'convert',
-    label: 'Convert',
-    href: '/convert',
+    id: 'settings',
+    label: 'Settings',
+    href: '/settings',
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <polyline points="17 1 21 5 17 9" />
-        <path d="M3 11V9a4 4 0 0 1 4-4h14" />
-        <polyline points="7 23 3 19 7 15" />
-        <path d="M21 13v2a4 4 0 0 1-4 4H3" />
+        <circle cx="12" cy="12" r="3" />
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
       </svg>
     ),
   },
 ];
 
 /**
- * Sidebar Component
- * Navigation sidebar for the dashboard
+ * Sidebar Component - Hamburger Menu Style
+ * Shows a hamburger icon that expands to show navigation items
  */
-export const Sidebar: React.FC<SidebarProps> = ({
-  isCollapsed = false,
-  onToggleCollapse,
-}) => {
-  return (
-    <aside className={`${styles.sidebar} ${isCollapsed ? styles['sidebar--collapsed'] : ''}`}>
-      <nav className={styles.sidebarNav}>
-        <ul className={styles.sidebarList}>
-          {navItems.map((item) => (
-            <li key={item.id} className={styles.sidebarItem}>
-              <a href={item.href} className={styles.sidebarLink}>
-                <span className={styles.sidebarIcon}>{item.icon}</span>
-                {!isCollapsed && (
-                  <span className={styles.sidebarLabel}>{item.label}</span>
-                )}
-              </a>
-            </li>
-          ))}
-        </ul>
-      </nav>
+export const Sidebar: React.FC = () => {
+  const [isOpen, setIsOpen] = useState(false);
+  const pathname = usePathname();
+  const menuRef = useRef<HTMLDivElement>(null);
 
-      {onToggleCollapse && (
-        <button
-          onClick={onToggleCollapse}
-          className={styles.collapseBtn}
-          aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            style={{ transform: isCollapsed ? 'rotate(180deg)' : 'none' }}
-          >
-            <polyline points="11 17 6 12 11 7" />
-            <polyline points="18 17 13 12 18 7" />
-          </svg>
-        </button>
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
+
+  // Close menu on route change
+  useEffect(() => {
+    setIsOpen(false);
+  }, [pathname]);
+
+  return (
+    <div className={styles.hamburgerContainer} ref={menuRef}>
+      {/* Hamburger Button */}
+      <button
+        className={`${styles.hamburgerBtn} ${isOpen ? styles.hamburgerBtnOpen : ''}`}
+        onClick={() => setIsOpen(!isOpen)}
+        aria-label={isOpen ? 'Close menu' : 'Open menu'}
+        aria-expanded={isOpen}
+      >
+        <span className={styles.hamburgerLine} />
+        <span className={styles.hamburgerLine} />
+        <span className={styles.hamburgerLine} />
+      </button>
+
+      {/* Dropdown Menu */}
+      {isOpen && (
+        <>
+          <div className={styles.backdrop} onClick={() => setIsOpen(false)} />
+          <nav className={styles.dropdownMenu}>
+            <ul className={styles.menuList}>
+              {navItems.map((item) => {
+                const isActive = pathname.startsWith(item.href);
+                return (
+                  <li key={item.id} className={styles.menuItem}>
+                    <Link
+                      href={item.href}
+                      className={`${styles.menuLink} ${isActive ? styles.menuLinkActive : ''}`}
+                      onClick={() => setIsOpen(false)}
+                    >
+                      <span className={styles.menuIcon}>{item.icon}</span>
+                      <span className={styles.menuLabel}>{item.label}</span>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </nav>
+        </>
       )}
-    </aside>
+    </div>
   );
 };

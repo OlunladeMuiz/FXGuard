@@ -1,0 +1,131 @@
+﻿.page {
+  background: var(--page-bg);
+  padding: var(--spacing-12) 0;
+}
+
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 var(--spacing-6);
+}
+
+.header {
+  text-align: center;
+  margin-bottom: var(--spacing-6);
+}
+
+.brand {
+  font-weight: var(--font-weight-bold);
+  margin-bottom: var(--spacing-3);
+}
+
+.header p {
+  color: var(--text-secondary);
+}
+
+.stepper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-3);
+  margin-top: var(--spacing-4);
+}
+
+.stepDone,
+.stepActive {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: white;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stepLine {
+  width: 60px;
+  height: 2px;
+  background: var(--color-primary);
+}
+
+.card {
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-8);
+  box-shadow: var(--shadow-sm);
+  display: grid;
+  gap: var(--spacing-6);
+}
+
+.label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.input,
+.select {
+  width: 100%;
+  padding: 0.65rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  margin-top: var(--spacing-2);
+}
+
+.helper {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  margin-top: var(--spacing-2);
+}
+
+.currencyGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--spacing-3);
+  margin-top: var(--spacing-4);
+}
+
+.currencyTile {
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: var(--spacing-3);
+  display: grid;
+  gap: var(--spacing-1);
+  font-size: var(--font-size-sm);
+}
+
+.gridTwo {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--spacing-4);
+  margin-top: var(--spacing-4);
+}
+
+.integration {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--color-neutral-50);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-4);
+}
+
+.primary {
+  background: var(--color-primary);
+  color: white;
+  padding: 0.6rem 1.2rem;
+  border-radius: 10px;
+}
+
+@media (max-width: 768px) {
+  .currencyGrid,
+  .gridTwo {
+    grid-template-columns: 1fr;
+  }
+
+  .integration {
+    flex-direction: column;
+    gap: var(--spacing-3);
+  }
+}
