@@ -1,39 +1,11 @@
 ﻿'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import styles from './page.module.css';
 import { fetchRealFXHistory, fetchRealFXRate } from '@/lib/api/fx';
 import { FXHistoryPoint } from '@/lib/types/fx';
 
-const insights = [
-  {
-    title: 'Optimal Conversion Window',
-    percent: 95,
-    text: 'Next 3-5 days show favorable USD strength patterns based on economic indicators.',
-    link: 'Why this recommendation?',
-    color: 'blue',
-  },
-  {
-    title: 'Hedging Recommendation',
-    percent: 78,
-    text: 'Consider hedging 40% of USD exposure given current volatility levels.',
-    link: 'Hedging strategy details',
-    color: 'orange',
-  },
-  {
-    title: 'Rate Alert Setup',
-    percent: 88,
-    text: 'Set alert for USD/EUR at 0.9180 for optimal conversion opportunity.',
-    hasButton: true,
-    color: 'green',
-  },
-];
-
-const alerts = [
-  { title: 'USD/EUR Rate', subtitle: 'Target: 0.9180', color: 'yellow' },
-  { title: 'Volatility Spike', subtitle: 'Threshold: >2%', color: 'blue' },
-];
-
+// Currency distribution (portfolio data - would come from user's actual portfolio in production)
 const currencyDistribution = [
   { currency: 'USD', percent: 65.2, amount: '$45,230', color: '#3b82f6' },
   { currency: 'EUR', percent: 28.7, amount: '€18,450', color: '#22c55e' },
@@ -162,6 +134,82 @@ export default function FxAnalyticsHub() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Generate dynamic insights based on real market data
+  const insights = useMemo(() => {
+    if (!chartData) return [];
+    
+    const { changePercent, currentRate } = chartData;
+    const { level: volLevel, average: avgVol } = volatilityStats;
+    
+    // Calculate trend strength (based on recent price movement)
+    const trendStrength = Math.min(Math.abs(changePercent) * 20, 100);
+    const isUptrend = changePercent > 0;
+    
+    // Calculate conversion window score based on trend and volatility
+    const conversionScore = volLevel === 'Low' ? 95 : volLevel === 'Medium' ? 75 : 55;
+    
+    // Calculate hedging recommendation based on volatility
+    const hedgingPercent = volLevel === 'High' ? 60 : volLevel === 'Medium' ? 40 : 20;
+    const hedgingScore = volLevel === 'High' ? 92 : volLevel === 'Medium' ? 78 : 58;
+    
+    // Calculate target rate (2% favorable from current)
+    const targetRate = isUptrend 
+      ? (currentRate * 1.02).toFixed(4) 
+      : (currentRate * 0.98).toFixed(4);
+    
+    return [
+      {
+        title: 'Optimal Conversion Window',
+        percent: Math.round(conversionScore),
+        text: volLevel === 'Low' 
+          ? `Current ${selectedPair?.label} volatility is low (${avgVol.toFixed(2)}%). Good time for conversion.`
+          : volLevel === 'Medium'
+          ? `Moderate volatility (${avgVol.toFixed(2)}%). Consider timing your conversion carefully.`
+          : `High volatility detected (${avgVol.toFixed(2)}%). Consider waiting or hedging.`,
+        link: 'Why this recommendation?',
+        color: 'blue',
+      },
+      {
+        title: 'Hedging Recommendation',
+        percent: Math.round(hedgingScore),
+        text: `Consider hedging ${hedgingPercent}% of exposure given ${volLevel.toLowerCase()} volatility (${avgVol.toFixed(2)}% avg).`,
+        link: 'Hedging strategy details',
+        color: 'orange',
+      },
+      {
+        title: 'Rate Alert Setup',
+        percent: Math.round(trendStrength + 50),
+        text: `Set alert for ${selectedPair?.label} at ${targetRate} for optimal conversion opportunity.`,
+        hasButton: true,
+        color: 'green',
+      },
+    ];
+  }, [chartData, volatilityStats, selectedPair]);
+
+  // Generate dynamic alerts based on real market data
+  const alerts = useMemo(() => {
+    if (!chartData) return [];
+    
+    const { currentRate } = chartData;
+    const { average: avgVol, level: volLevel } = volatilityStats;
+    
+    // Target rate is 2% favorable
+    const targetRate = (currentRate * 0.98).toFixed(4);
+    
+    return [
+      { 
+        title: `${selectedPair?.label} Rate`, 
+        subtitle: `Target: ${targetRate}`, 
+        color: 'yellow' as const 
+      },
+      { 
+        title: 'Volatility Alert', 
+        subtitle: `Current: ${avgVol.toFixed(2)}% (${volLevel})`, 
+        color: 'blue' as const 
+      },
+    ];
+  }, [chartData, volatilityStats, selectedPair]);
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);

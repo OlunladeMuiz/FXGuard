@@ -293,6 +293,13 @@
 /* Hamburger Menu Styles */
 .hamburgerWrapper {
   position: relative;
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .hamburgerWrapper {
+    display: block;
+  }
 }
 
 .hamburgerBtn {

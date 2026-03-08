@@ -23,18 +23,21 @@ interface StatData {
   icon: string;
 }
 
-const watchlist = [
-  { pair: 'EUR/GBP', status: 'Watching', currentRate: '0.8574', targetRate: '0.8600', progress: 85 },
-  { pair: 'USD/JPY', status: 'Target Hit', currentRate: '148.25', targetRate: '148.00', progress: 100 },
-  { pair: 'GBP/CAD', status: 'Watching', currentRate: '1.7845', targetRate: '1.7500', progress: 42 },
-];
+interface WatchlistItem {
+  pair: string;
+  status: string;
+  currentRate: string;
+  targetRate: string;
+  progress: number;
+}
 
-const spreads = [
-  { pair: 'EUR/USD', bid: '1.08465', ask: '1.08475', spread: '1.0 pips', status: 'Tight' },
-  { pair: 'GBP/USD', bid: '1.26535', ask: '1.26555', spread: '2.0 pips', status: 'Normal' },
-  { pair: 'USD/JPY', bid: '148.245', ask: '148.260', spread: '1.5 pips', status: 'Tight' },
-  { pair: 'AUD/USD', bid: '0.65415', ask: '0.65435', spread: '2.0 pips', status: 'Normal' },
-];
+interface SpreadItem {
+  pair: string;
+  bid: string;
+  ask: string;
+  spread: string;
+  status: string;
+}
 
 const invoices = [
   { status: 'Pending', client: 'Acme Corp', avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=32&h=32&fit=crop', currency: 'EUR', amount: '€12,450', dueDate: 'Dec 28, 2024' },
@@ -48,6 +51,8 @@ export default function DashboardPage() {
   const [selectedPeriod, setSelectedPeriod] = useState('This Month');
   const [statusFilter, setStatusFilter] = useState('All Status');
   const [user, setUser] = useState<User | null>(null);
+  const [watchlist, setWatchlist] = useState<WatchlistItem[]>([]);
+  const [spreads, setSpreads] = useState<SpreadItem[]>([]);
   const [fxRates, setFxRates] = useState<FXRateData[]>([]);
   const [statsData, setStatsData] = useState<StatData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -137,6 +142,68 @@ export default function DashboardPage() {
           { label: 'FX Savings (MTD)', value: '$2,340', change: '+$890', changeType: 'positive', subtitle: 'From optimal timing', icon: 'savings' },
           { label: 'Pending Invoices', value: '3', change: '1 urgent', changeType: 'warning', subtitle: '$12,450 total value', icon: 'invoices' },
         ]);
+
+        // Generate real watchlist based on current rates
+        const eurGbpRate = data.rates.GBP / data.rates.EUR;
+        const gbpCadRate = data.rates.CAD / data.rates.GBP;
+        const eurGbpTarget = eurGbpRate * 1.01; // 1% above current
+        const gbpCadTarget = gbpCadRate * 0.98; // 2% below current
+        
+        setWatchlist([
+          { 
+            pair: 'EUR/GBP', 
+            status: 'Watching', 
+            currentRate: (1 / eurGbpRate).toFixed(4), 
+            targetRate: (1 / eurGbpTarget).toFixed(4), 
+            progress: Math.round((1 / eurGbpRate) / (1 / eurGbpTarget) * 100) 
+          },
+          { 
+            pair: 'EUR/USD', 
+            status: eurChange >= 0 ? 'Target Hit' : 'Watching', 
+            currentRate: eurRate.toFixed(4), 
+            targetRate: (eurRate * 0.99).toFixed(4), 
+            progress: eurChange >= 0 ? 100 : 85 
+          },
+          { 
+            pair: 'GBP/CAD', 
+            status: 'Watching', 
+            currentRate: (1 / gbpCadRate).toFixed(4), 
+            targetRate: (1 / gbpCadTarget).toFixed(4), 
+            progress: 42 
+          },
+        ]);
+
+        // Generate real spreads based on current rates (simulated bid/ask as ±0.0001)
+        setSpreads([
+          { 
+            pair: 'EUR/USD', 
+            bid: (eurRate - 0.00005).toFixed(5), 
+            ask: (eurRate + 0.00005).toFixed(5), 
+            spread: '1.0 pips', 
+            status: 'Tight' 
+          },
+          { 
+            pair: 'GBP/USD', 
+            bid: (gbpRate - 0.0001).toFixed(5), 
+            ask: (gbpRate + 0.0001).toFixed(5), 
+            spread: '2.0 pips', 
+            status: 'Normal' 
+          },
+          { 
+            pair: 'CAD/USD', 
+            bid: (cadRate - 0.00007).toFixed(5), 
+            ask: (cadRate + 0.00008).toFixed(5), 
+            spread: '1.5 pips', 
+            status: 'Tight' 
+          },
+          { 
+            pair: 'AUD/USD', 
+            bid: (audRate - 0.0001).toFixed(5), 
+            ask: (audRate + 0.0001).toFixed(5), 
+            spread: '2.0 pips', 
+            status: 'Normal' 
+          },
+        ]);
         
       } catch (error) {
         console.error('Failed to fetch FX rates:', error);
@@ -150,6 +217,18 @@ export default function DashboardPage() {
           { label: 'Average FX Rate', value: '1.0847', change: '-0.8%', changeType: 'negative', subtitle: 'EUR/USD (7 days avg)', icon: 'rate' },
           { label: 'FX Savings (MTD)', value: '$2,340', change: '+$890', changeType: 'positive', subtitle: 'From optimal timing', icon: 'savings' },
           { label: 'Pending Invoices', value: '3', change: '1 urgent', changeType: 'warning', subtitle: '$12,450 total value', icon: 'invoices' },
+        ]);
+        // Fallback watchlist and spreads
+        setWatchlist([
+          { pair: 'EUR/GBP', status: 'Watching', currentRate: '0.8574', targetRate: '0.8600', progress: 85 },
+          { pair: 'EUR/USD', status: 'Watching', currentRate: '1.0847', targetRate: '1.0750', progress: 90 },
+          { pair: 'GBP/CAD', status: 'Watching', currentRate: '1.7845', targetRate: '1.7500', progress: 42 },
+        ]);
+        setSpreads([
+          { pair: 'EUR/USD', bid: '1.08465', ask: '1.08475', spread: '1.0 pips', status: 'Tight' },
+          { pair: 'GBP/USD', bid: '1.26535', ask: '1.26555', spread: '2.0 pips', status: 'Normal' },
+          { pair: 'CAD/USD', bid: '0.74245', ask: '0.74260', spread: '1.5 pips', status: 'Tight' },
+          { pair: 'AUD/USD', bid: '0.65415', ask: '0.65435', spread: '2.0 pips', status: 'Normal' },
         ]);
       } finally {
         setLoading(false);
