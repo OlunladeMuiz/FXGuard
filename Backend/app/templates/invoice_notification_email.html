@@ -1,31 +1,141 @@
+<!DOCTYPE html>
 <html>
-    <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px;">
-            <h2 style="color: #333;">Invoice Notification</h2>
-            
-            <p style="color: #555; font-size: 16px;">
-                Hi {client_name},
-            </p>
-            
-            <p style="color: #555; font-size: 16px;">
-                We've created an invoice for you. Here are the details:
-            </p>
-            
-            <div style="background-color: #ffffff; padding: 20px; border: 1px solid #dee2e6; border-radius: 8px; margin: 20px 0;">
-                <p style="color: #666;"><strong>Invoice Number:</strong> {invoice_number}</p>
-                <p style="color: #666;"><strong>Amount:</strong> {amount} {currency}</p>
-                <p style="color: #666;"><strong>Due Date:</strong> {due_date}</p>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+            body {
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                margin: 0;
+                padding: 20px;
+            }
+            .container {
+                max-width: 600px;
+                margin: 0 auto;
+                background-color: #ffffff;
+                border-radius: 12px;
+                overflow: hidden;
+                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            }
+            .header {
+                background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+                padding: 40px 20px;
+                text-align: center;
+                color: white;
+            }
+            .header h1 {
+                margin: 0;
+                font-size: 28px;
+                font-weight: 600;
+            }
+            .content {
+                padding: 30px 20px;
+            }
+            .greeting {
+                color: #1f2937;
+                font-size: 16px;
+                line-height: 1.6;
+                margin-bottom: 10px;
+            }
+            .message-text {
+                color: #4b5563;
+                font-size: 14px;
+                line-height: 1.8;
+                margin: 15px 0;
+            }
+            .details-box {
+                background: linear-gradient(135deg, #dbeafe 0%, #e0e7ff 100%);
+                padding: 20px;
+                border: 1px solid #2563eb;
+                border-radius: 8px;
+                margin: 20px 0;
+            }
+            .detail-row {
+                display: flex;
+                justify-content: space-between;
+                padding: 12px 0;
+                border-bottom: 1px solid rgba(37, 99, 235, 0.1);
+                color: #1f2937;
+                font-size: 15px;
+            }
+            .detail-row:last-child {
+                border-bottom: none;
+            }
+            .detail-label {
+                font-weight: 600;
+                color: #1e40af;
+            }
+            .detail-value {
+                color: #4b5563;
+            }
+            .support-box {
+                background-color: #eff6ff;
+                border-left: 4px solid #2563eb;
+                padding: 15px;
+                border-radius: 6px;
+                color: #4b5563;
+                font-size: 14px;
+                margin: 20px 0;
+            }
+            .divider {
+                border: none;
+                border-top: 1px solid #e5e7eb;
+                margin: 25px 0;
+            }
+            .footer {
+                text-align: center;
+                color: #9ca3af;
+                font-size: 12px;
+                padding: 0 20px 20px;
+            }
+            .footer-logo {
+                color: #2563eb;
+                font-weight: 600;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>📄 Invoice Notification</h1>
             </div>
-            
-            <p style="color: #555; font-size: 16px;">
-                Please reach out if you have any questions.
-            </p>
-            
-            <hr style="border: none; border-top: 1px solid #dee2e6; margin: 20px 0;">
-            
-            <p style="color: #999; font-size: 12px;">
-                © 2026 FXGuard. All rights reserved.
-            </p>
+            <div class="content">
+                <p class="greeting">Hi {client_name},</p>
+                
+                <p class="message-text">
+                    An invoice has been created for you. Here are the key details:
+                </p>
+                
+                <div class="details-box">
+                    <div class="detail-row">
+                        <span class="detail-label">Invoice Number:</span>
+                        <span class="detail-value">{invoice_number}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Amount:</span>
+                        <span class="detail-value">{amount} {currency}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Due Date:</span>
+                        <span class="detail-value">{due_date}</span>
+                    </div>
+                </div>
+                
+                <div class="support-box">
+                    💬 If you have any questions or need clarification about this invoice, please don't hesitate to reach out!
+                </div>
+                
+                <p class="message-text">
+                    Thank you for your business. We appreciate your prompt attention to this invoice.
+                </p>
+                
+                <hr class="divider">
+                
+                <div class="footer">
+                    <p><span class="footer-logo">© 2026 FXGuard</span><br>All rights reserved. | Secure Invoice Management</p>
+                </div>
+            </div>
         </div>
     </body>
 </html>

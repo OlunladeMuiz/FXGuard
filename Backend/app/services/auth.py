@@ -52,11 +52,13 @@ def register_user(db: Session, payload: RegisterRequest) -> User:
         )
 
     otp = generate_otp()
+    otp_expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
     user = User(
         id=hashlib.sha256(payload.email.encode()).hexdigest()[:16],
         email=payload.email,
         password=hash_password(payload.password),
         verification_code=otp,
+        verification_code_expires_at=otp_expires_at,
         company_name=payload.company_name
     )
     db.add(user) 
@@ -81,6 +83,14 @@ def verify_otp(db: Session, payload: VerifyOtpRequest) -> User:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email already verified",
         )
+    
+    # Check if OTP has expired
+    if user.verification_code_expires_at and datetime.now(timezone.utc) > user.verification_code_expires_at:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="OTP has expired. Please request a new one.",
+        )
+    
     if user.verification_code != payload.otp:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -89,6 +99,7 @@ def verify_otp(db: Session, payload: VerifyOtpRequest) -> User:
 
     user.is_verified = True
     user.verification_code = None
+    user.verification_code_expires_at = None
     db.commit()
     db.refresh(user)
     return user
@@ -103,7 +114,9 @@ def resend_otp(db: Session, payload: ResendOtpRequest) -> int:
         )
 
     otp = generate_otp()
+    otp_expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
     user.verification_code = otp
+    user.verification_code_expires_at = otp_expires_at
     db.commit()
     db.refresh(user)
     
