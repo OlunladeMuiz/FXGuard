@@ -29,7 +29,7 @@ def register_user(payload: RegisterRequest, db: Session = Depends(get_db)):
 @router.post("/verify-otp", response_model=MessageResponse)
 def verify_otp(payload: VerifyOtpRequest, db: Session = Depends(get_db)):
     otp = verify_user_otp(db=db, payload=payload)
-    return MessageResponse(message="Email verified successfully", user=otp)
+    return MessageResponse(message="Email verified successfully")
 
 
 @router.post("/resend-otp", response_model=OTPResponse)
