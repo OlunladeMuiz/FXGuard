@@ -1,171 +1,66 @@
 <!DOCTYPE html>
-<html>
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <style>
-            body {
-                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                margin: 0;
-                padding: 20px;
-            }
-            .container {
-                max-width: 600px;
-                margin: 0 auto;
-                background-color: #ffffff;
-                border-radius: 12px;
-                overflow: hidden;
-                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
-            }
-            .header {
-                background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
-                padding: 40px 20px;
-                text-align: center;
-                color: white;
-            }
-            .header h1 {
-                margin: 0;
-                font-size: 28px;
-                font-weight: 600;
-            }
-            .content {
-                padding: 30px 20px;
-            }
-            .greeting {
-                color: #1f2937;
-                font-size: 16px;
-                line-height: 1.6;
-                margin-bottom: 10px;
-            }
-            .success-message {
-                color: #047857;
-                background-color: #ecfdf5;
-                border-left: 4px solid #10b981;
-                padding: 12px 15px;
-                border-radius: 6px;
-                margin: 20px 0;
-                font-weight: 500;
-            }
-            .details-box {
-                background: linear-gradient(135deg, #dbeafe 0%, #e0e7ff 100%);
-                padding: 20px;
-                border: 1px solid #2563eb;
-                border-radius: 8px;
-                margin: 20px 0;
-            }
-            .detail-row {
-                display: flex;
-                justify-content: space-between;
-                padding: 10px 0;
-                border-bottom: 1px solid rgba(37, 99, 235, 0.1);
-                color: #1f2937;
-                font-size: 14px;
-            }
-            .detail-row:last-child {
-                border-bottom: none;
-            }
-            .detail-label {
-                font-weight: 600;
-                color: #1e40af;
-            }
-            .detail-value {
-                color: #4b5563;
-            }
-            .info-text {
-                color: #4b5563;
-                font-size: 14px;
-                line-height: 1.8;
-                margin: 15px 0;
-            }
-            .button-container {
-                text-align: center;
-                margin: 30px 0;
-            }
-            .view-button {
-                background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
-                color: white;
-                padding: 14px 40px;
-                text-decoration: none;
-                border-radius: 8px;
-                font-weight: 600;
-                display: inline-block;
-                transition: transform 0.2s ease;
-                box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
-            }
-            .view-button:hover {
-                transform: translateY(-2px);
-            }
-            .divider {
-                border: none;
-                border-top: 1px solid #e5e7eb;
-                margin: 25px 0;
-            }
-            .footer {
-                text-align: center;
-                color: #9ca3af;
-                font-size: 12px;
-                padding: 0 20px 20px;
-            }
-            .footer-logo {
-                color: #2563eb;
-                font-weight: 600;
-            }
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <div class="header">
-                <h1>✅ Invoice Created Successfully</h1>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice Created</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto Mono', 'Helvetica Neue', sans-serif; background-color: #f3f4f6;">
+    <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+        <!-- Header with Logo -->
+        <div style="height: 250px; background-image: url('https://res.cloudinary.com/osemen/image/upload/v1773748729/FX_GUARD_bghucs.jpg'); background-size: cover; background-position: center; background-repeat: no-repeat;"></div>
+        
+        <!-- Main Content -->
+        <div style="padding: 40px 30px; color: #1f2937;">
+            <h1 style="color: #1e40af; font-size: 24px; margin-top: 0; margin-bottom: 10px;">Invoice Created Successfully</h1>
+            <p style="color: #6b7280; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">Hi {user_name},</p>
+            
+            <p style="color: #4b5563; font-size: 15px; line-height: 1.6; margin-bottom: 20px;">
+                Your invoice has been created successfully and is ready for review. Here are the details:
+            </p>
+            
+            <!-- Invoice Details -->
+            <div style="background-color: #f9fafb; padding: 20px; border-left: 4px solid #2563eb; border-radius: 4px; margin-bottom: 20px;">
+                <table style="width: 100%; font-size: 14px; color: #4b5563; border-collapse: collapse;">
+                    <tr style="border-bottom: 1px solid #e5e7eb;">
+                        <td style="padding: 10px 0; font-weight: 600; color: #1e40af;">Invoice Number:</td>
+                        <td style="padding: 10px 0; text-align: right;">{invoice_number}</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #e5e7eb;">
+                        <td style="padding: 10px 0; font-weight: 600; color: #1e40af;">Client Name:</td>
+                        <td style="padding: 10px 0; text-align: right;">{client_name}</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #e5e7eb;">
+                        <td style="padding: 10px 0; font-weight: 600; color: #1e40af;">Due Date:</td>
+                        <td style="padding: 10px 0; text-align: right;">{due_date}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 10px 0; font-weight: 600; color: #1e40af;">Line Items:</td>
+                        <td style="padding: 10px 0; text-align: right;">{items_count}</td>
+                    </tr>
+                </table>
             </div>
-            <div class="content">
-                <p class="greeting">Hi {user_name},</p>
-                
-                <div class="success-message">
-                    🎉 Your invoice has been created successfully!
-                </div>
-                
-                <p class="info-text">
-                    Here are the details of your new invoice:
-                </p>
-                
-                <div class="details-box">
-                    <div class="detail-row">
-                        <span class="detail-label">Invoice Number:</span>
-                        <span class="detail-value">{invoice_number}</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="detail-label">Client Name:</span>
-                        <span class="detail-value">{client_name}</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="detail-label">Amount:</span>
-                        <span class="detail-value">{amount} {currency}</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="detail-label">Due Date:</span>
-                        <span class="detail-value">{due_date}</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="detail-label">Line Items:</span>
-                        <span class="detail-value">{items_count}</span>
-                    </div>
-                </div>
-                
-                <p class="info-text">
-                    You're ready to send this invoice to your client. Log in to FXGuard to view the full details or make any modifications if needed.
-                </p>
-                
-                <div class="button-container">
-                    <a href="https://fxguard.app/invoices/{invoice_number}" class="view-button">View Invoice</a>
-                </div>
-                
-                <hr class="divider">
-                
-                <div class="footer">
-                    <p><span class="footer-logo">© 2026 FXGuard</span><br>All rights reserved. | Secure Invoice Management</p>
-                </div>
+            
+            <!-- Line Items Section -->
+            {line_items_html}
+            
+            <!-- Financial Summary -->
+            {summary_html}
+            
+            <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin-top: 20px;">
+                You can log in to FXGuard to view or edit this invoice anytime. The client will be notified separately about this invoice.
+            </p>
+            
+            <!-- CTA Button -->
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="https://fxguard.app/invoices/{invoice_number}" style="background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%); color: white; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 15px; display: inline-block;">View Invoice</a>
             </div>
+            
+            <p style="color: #9ca3af; font-size: 13px; line-height: 1.6; margin-top: 30px; border-top: 1px solid #e5e7eb; padding-top: 20px;">
+                © 2026 FXGuard. All rights reserved.<br/>
+                This email was sent to {user_name} because an invoice was created in your FXGuard account.
+            </p>
         </div>
-    </body>
+    </div>
+</body>
 </html>

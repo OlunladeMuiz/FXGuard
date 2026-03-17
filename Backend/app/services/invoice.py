@@ -18,6 +18,43 @@ from app.utils.email_service import EmailService
 logger = logging.getLogger(__name__)
 
 
+def parse_payment_details(payment_details: str) -> dict:
+    """
+    Parse payment details string into components
+    Format: "Account Name: XXX, Bank: XXX, Account Number: XXX"
+    
+    Args:
+        payment_details: Raw payment details string
+        
+    Returns:
+        Dict with keys: account_name, bank, account_number
+    """
+    result = {
+        'account_name': '',
+        'bank': '',
+        'account_number': ''
+    }
+    
+    if not payment_details:
+        return result
+    
+    try:
+        # Split by comma
+        parts = [part.strip() for part in payment_details.split(',')]
+        
+        for part in parts:
+            if 'Account Name:' in part:
+                result['account_name'] = part.split(':', 1)[1].strip()
+            elif 'Bank:' in part:
+                result['bank'] = part.split(':', 1)[1].strip()
+            elif 'Account Number:' in part:
+                result['account_number'] = part.split(':', 1)[1].strip()
+    except Exception as e:
+        logger.warning(f"Error parsing payment details: {str(e)}")
+    
+    return result
+
+
 class InvoiceService:
     """Service for handling invoice operations"""
     
@@ -93,26 +130,80 @@ class InvoiceService:
         db.commit()
         db.refresh(invoice)
         
-        # Send invoice creation notification email to the user
+        # Send invoice emails
         try:
             due_date_str = invoice.due_date.strftime("%b %d, %Y") if invoice.due_date else "Not specified"
-            email_sent = EmailService.send_invoice_created_notification(
+            
+            # Calculate invoice totals
+            subtotal = sum(item.quantity * item.unit_price for item in invoice.items)
+            discount_amount = invoice.discount or 0
+            subtotal_after_discount = subtotal - discount_amount
+            tax_amount = subtotal_after_discount * (invoice.tax_rate / 100) if invoice.tax_rate else 0
+            final_total = subtotal_after_discount + tax_amount
+            
+            # Format line items for email
+            line_items = []
+            for item in invoice.items:
+                item_total = item.quantity * item.unit_price
+                line_items.append({
+                    'description': item.description,
+                    'quantity': item.quantity,
+                    'unit_price': f"{item.unit_price:.2f}",
+                    'total': f"{item_total:.2f}"
+                })
+            
+            # Send invoice creation notification email to the user who created it
+            user_email_sent = EmailService.send_invoice_created_notification(
                 to_email=user.email,
                 user_name=getattr(user, 'first_name', user.email.split('@')[0]),
                 invoice_number=invoice.invoice_number,
                 client_name=invoice.client_name,
-                amount=invoice.amount,
                 currency=invoice.currency,
                 due_date=due_date_str,
-                items_count=len(invoice.items)
+                items_count=len(invoice.items),
+                line_items=line_items,
+                subtotal=f"{subtotal:.2f}",
+                discount=f"{discount_amount:.2f}",
+                tax_rate=invoice.tax_rate or 0,
+                tax_amount=f"{tax_amount:.2f}",
+                total=f"{final_total:.2f}"
             )
-            if email_sent:
-                logger.info(f"Invoice creation email sent successfully to {user.email}")
+            if user_email_sent:
+                logger.info(f"Invoice creation email sent successfully to user {user.email}")
             else:
-                logger.warning(f"Failed to send invoice creation email to {user.email}")
+                logger.warning(f"Failed to send invoice creation email to user {user.email}")
+            
+            # Parse payment details
+            payment_details_parsed = parse_payment_details(invoice.payment_details)
+            
+            # Send invoice notification email to the client
+            client_email_sent = EmailService.send_invoice_email(
+                to_email=invoice.client_email,
+                client_name=invoice.client_name,
+                invoice_number=invoice.invoice_number,
+                currency=invoice.currency,
+                due_date=due_date_str,
+                amount=invoice.amount,
+                description=invoice.description,
+                payment_method=invoice.payment_method,
+                account_name=payment_details_parsed['account_name'],
+                bank=payment_details_parsed['bank'],
+                account_number=payment_details_parsed['account_number'],
+                tax_rate=invoice.tax_rate,
+                line_items=line_items,
+                subtotal=f"{subtotal:.2f}",
+                discount=f"{discount_amount:.2f}",
+                tax_amount=f"{tax_amount:.2f}",
+                total=f"{final_total:.2f}"
+            )
+            if client_email_sent:
+                logger.info(f"Invoice notification email sent successfully to client {invoice.client_email}")
+            else:
+                logger.warning(f"Failed to send invoice notification email to client {invoice.client_email}")
+        
         except Exception as e:
             # Log email error but don't fail the invoice creation
-            logger.error(f"Error sending invoice creation email: {type(e).__name__}: {str(e)}", exc_info=True)
+            logger.error(f"Error sending invoice emails: {type(e).__name__}: {str(e)}", exc_info=True)
         
         return invoice
     

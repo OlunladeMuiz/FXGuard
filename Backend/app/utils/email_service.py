@@ -151,33 +151,101 @@ class EmailService:
         to_email: str,
         client_name: str,
         invoice_number: str,
-        amount: float,
         currency: str,
-        due_date: str
+        due_date: str,
+        amount: float = None,
+        description: str = None,
+        payment_method: str = None,
+        account_name: str = None,
+        bank: str = None,
+        account_number: str = None,
+        tax_rate: float = 0,
+        line_items: list = None,
+        subtotal: str = "0.00",
+        discount: str = "0.00",
+        tax_amount: str = "0.00",
+        total: str = "0.00"
     ) -> bool:
         """
-        Send invoice notification email
+        Send invoice notification email to client
         
         Args:
             to_email: Client's email address
             client_name: Client's name
             invoice_number: Invoice number
-            amount: Invoice amount
             currency: Currency code
             due_date: Payment due date
+            amount: Invoice amount (legacy, use total instead)
+            description: Invoice description (optional)
+            payment_method: Payment method details (optional)
+            tax_rate: Tax rate applied (optional)
+            line_items: List of dicts with description, quantity, unit_price, total
+            subtotal: Invoice subtotal
+            discount: Discount amount
+            tax_amount: Calculated tax amount
+            total: Final total after discount and tax
         
         Returns:
             bool: True if email sent successfully, False otherwise
         """
         subject = f"Invoice {invoice_number} from FXGuard"
         
+        # Format line items HTML
+        line_items_html = ""
+        if line_items:
+            line_items_html = '<div style="margin: 20px 0;"><h3 style="color: #1f2937; font-size: 15px; margin-top: 0;">Line Items:</h3>'
+            line_items_html += '<table style="width: 100%; border-collapse: collapse; margin-bottom: 15px;">'
+            line_items_html += '<tr style="background-color: #dbeafe; border-bottom: 2px solid #2563eb;">'
+            line_items_html += '<th style="padding: 10px; text-align: left; font-weight: 600; color: #1e40af;">Description</th>'
+            line_items_html += '<th style="padding: 10px; text-align: center; font-weight: 600; color: #1e40af;">Qty</th>'
+            line_items_html += '<th style="padding: 10px; text-align: right; font-weight: 600; color: #1e40af;">Unit Price</th>'
+            line_items_html += '<th style="padding: 10px; text-align: right; font-weight: 600; color: #1e40af;">Total</th>'
+            line_items_html += '</tr>'
+            
+            for item in line_items:
+                line_items_html += '<tr style="border-bottom: 1px solid #e5e7eb;">'
+                line_items_html += f'<td style="padding: 10px; color: #4b5563;">{item["description"]}</td>'
+                line_items_html += f'<td style="padding: 10px; text-align: center; color: #4b5563;">{item["quantity"]}</td>'
+                line_items_html += f'<td style="padding: 10px; text-align: right; color: #4b5563;">{item["unit_price"]}</td>'
+                line_items_html += f'<td style="padding: 10px; text-align: right; color: #4b5563; font-weight: 600;">{item["total"]}</td>'
+                line_items_html += '</tr>'
+            
+            line_items_html += '</table></div>'
+        
+        # Format summary HTML
+        summary_html = f'''<div style="background: linear-gradient(135deg, #dbeafe 0%, #e0e7ff 100%); padding: 20px; border: 2px solid #2563eb; border-radius: 8px; margin: 20px 0;">
+            <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(37, 99, 235, 0.2); color: #1f2937; font-size: 15px;">
+                <span style="font-weight: 600; color: #1e40af;">Subtotal:</span>
+                <span style="color: #4b5563;">{subtotal} {currency}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(37, 99, 235, 0.2); color: #1f2937; font-size: 15px;">
+                <span style="font-weight: 600; color: #1e40af;">Discount:</span>
+                <span style="color: #4b5563;">-{discount} {currency}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(37, 99, 235, 0.2); color: #1f2937; font-size: 15px;">
+                <span style="font-weight: 600; color: #1e40af;">Tax ({tax_rate}%):</span>
+                <span style="color: #4b5563;">+{tax_amount} {currency}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 10px 0; color: #1f2937; font-size: 18px;">
+                <span style="font-weight: 700; color: #1e40af;">Total Due:</span>
+                <span style="color: #047857; font-weight: 700;">{total} {currency}</span>
+            </div>
+        </div>'''
+        
         html_body = EmailService.load_template(
             "invoice_notification_email",
             client_name=client_name,
             invoice_number=invoice_number,
-            amount=amount,
             currency=currency,
-            due_date=due_date
+            due_date=due_date,
+            description=description or "Invoice",
+            payment_method=payment_method or "To be determined",
+            account_name=account_name or "Not provided",
+            bank=bank or "Not provided",
+            account_number=account_number or "Not provided",
+            tax_rate=f"{tax_rate:.2f}" if tax_rate else "0",
+            line_items_html=line_items_html,
+            summary_html=summary_html
         )
         
         text_body = f"""
@@ -188,8 +256,14 @@ class EmailService:
         We've created an invoice for you:
         
         Invoice Number: {invoice_number}
-        Amount: {amount} {currency}
+        Description: {description or 'Invoice'}
         Due Date: {due_date}
+        Payment Method: {payment_method or 'To be determined'}
+        
+        Subtotal: {subtotal} {currency}
+        Discount: -{discount} {currency}
+        Tax ({tax_rate}%): +{tax_amount} {currency}
+        Total Due: {total} {currency}
         
         Please reach out if you have any questions.
         
@@ -204,10 +278,15 @@ class EmailService:
         user_name: str,
         invoice_number: str,
         client_name: str,
-        amount: float,
         currency: str,
         due_date: str,
-        items_count: int = 0
+        items_count: int = 0,
+        line_items: list = None,
+        subtotal: str = "0.00",
+        discount: str = "0.00",
+        tax_rate: float = 0,
+        tax_amount: str = "0.00",
+        total: str = "0.00"
     ) -> bool:
         """
         Send invoice creation notification to the user who created it
@@ -217,25 +296,73 @@ class EmailService:
             user_name: User's name
             invoice_number: Invoice number
             client_name: Client's name
-            amount: Invoice amount
             currency: Currency code
             due_date: Payment due date
             items_count: Number of line items in the invoice
+            line_items: List of dicts with description, quantity, unit_price, total
+            subtotal: Invoice subtotal
+            discount: Discount amount
+            tax_rate: Tax rate percentage
+            tax_amount: Calculated tax amount
+            total: Final total after discount and tax
         
         Returns:
             bool: True if email sent successfully, False otherwise
         """
         subject = f"Invoice {invoice_number} Created Successfully"
         
+        # Format line items HTML
+        line_items_html = ""
+        if line_items:
+            line_items_html = '<div style="margin: 20px 0;"><h3 style="color: #1f2937; font-size: 15px; margin-top: 0;">Line Items:</h3>'
+            line_items_html += '<table style="width: 100%; border-collapse: collapse; margin-bottom: 15px;">'
+            line_items_html += '<tr style="background-color: #dbeafe; border-bottom: 2px solid #2563eb;">'
+            line_items_html += '<th style="padding: 10px; text-align: left; font-weight: 600; color: #1e40af;">Description</th>'
+            line_items_html += '<th style="padding: 10px; text-align: center; font-weight: 600; color: #1e40af;">Qty</th>'
+            line_items_html += '<th style="padding: 10px; text-align: right; font-weight: 600; color: #1e40af;">Unit Price</th>'
+            line_items_html += '<th style="padding: 10px; text-align: right; font-weight: 600; color: #1e40af;">Total</th>'
+            line_items_html += '</tr>'
+            
+            for item in line_items:
+                line_items_html += '<tr style="border-bottom: 1px solid #e5e7eb;">'
+                line_items_html += f'<td style="padding: 10px; color: #4b5563;">{item["description"]}</td>'
+                line_items_html += f'<td style="padding: 10px; text-align: center; color: #4b5563;">{item["quantity"]}</td>'
+                line_items_html += f'<td style="padding: 10px; text-align: right; color: #4b5563;">{item["unit_price"]}</td>'
+                line_items_html += f'<td style="padding: 10px; text-align: right; color: #4b5563; font-weight: 600;">{item["total"]}</td>'
+                line_items_html += '</tr>'
+            
+            line_items_html += '</table></div>'
+        
+        # Format summary HTML
+        summary_html = f'''<div style="background: linear-gradient(135deg, #dbeafe 0%, #e0e7ff 100%); padding: 20px; border: 2px solid #2563eb; border-radius: 8px; margin: 20px 0;">
+            <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(37, 99, 235, 0.2); color: #1f2937; font-size: 15px;">
+                <span style="font-weight: 600; color: #1e40af;">Subtotal:</span>
+                <span style="color: #4b5563;">{subtotal} {currency}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(37, 99, 235, 0.2); color: #1f2937; font-size: 15px;">
+                <span style="font-weight: 600; color: #1e40af;">Discount:</span>
+                <span style="color: #4b5563;">-{discount} {currency}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(37, 99, 235, 0.2); color: #1f2937; font-size: 15px;">
+                <span style="font-weight: 600; color: #1e40af;">Tax ({tax_rate}%):</span>
+                <span style="color: #4b5563;">+{tax_amount} {currency}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 10px 0; color: #1f2937; font-size: 18px;">
+                <span style="font-weight: 700; color: #1e40af;">Total Due:</span>
+                <span style="color: #047857; font-weight: 700;">{total} {currency}</span>
+            </div>
+        </div>'''
+        
         html_body = EmailService.load_template(
             "invoice_created_email",
             user_name=user_name,
             invoice_number=invoice_number,
             client_name=client_name,
-            amount=amount,
             currency=currency,
             due_date=due_date,
-            items_count=items_count
+            items_count=items_count,
+            line_items_html=line_items_html,
+            summary_html=summary_html
         )
         
         text_body = f"""
@@ -247,9 +374,13 @@ class EmailService:
         
         Invoice Number: {invoice_number}
         Client Name: {client_name}
-        Amount: {amount} {currency}
         Due Date: {due_date}
         Line Items: {items_count}
+        
+        Subtotal: {subtotal} {currency}
+        Discount: -{discount} {currency}
+        Tax ({tax_rate}%): +{tax_amount} {currency}
+        Total Due: {total} {currency}
         
         You can view more details by logging in to FXGuard.
         
