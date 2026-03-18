@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice Created</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto Mono', 'Helvetica Neue', sans-serif; background-color: #f3f4f6;">
+    <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+        <!-- Header with Logo -->
+        <div style="height: 250px; background-image: url('https://res.cloudinary.com/osemen/image/upload/v1773748729/FX_GUARD_bghucs.jpg'); background-size: cover; background-position: center; background-repeat: no-repeat;"></div>
+        
+        <!-- Main Content -->
+        <div style="padding: 40px 30px; color: #1f2937;">
+            <h1 style="color: #1e40af; font-size: 24px; margin-top: 0; margin-bottom: 10px;">Invoice Created Successfully</h1>
+            <p style="color: #6b7280; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">Hi {user_name},</p>
+            
+            <p style="color: #4b5563; font-size: 15px; line-height: 1.6; margin-bottom: 20px;">
+                Your invoice has been created successfully and is ready for review. Here are the details:
+            </p>
+            
+            <!-- Invoice Details -->
+            <div style="background-color: #f9fafb; padding: 20px; border-left: 4px solid #2563eb; border-radius: 4px; margin-bottom: 20px;">
+                <table style="width: 100%; font-size: 14px; color: #4b5563; border-collapse: collapse;">
+                    <tr style="border-bottom: 1px solid #e5e7eb;">
+                        <td style="padding: 10px 0; font-weight: 600; color: #1e40af;">Invoice Number:</td>
+                        <td style="padding: 10px 0; text-align: right;">{invoice_number}</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #e5e7eb;">
+                        <td style="padding: 10px 0; font-weight: 600; color: #1e40af;">Client Name:</td>
+                        <td style="padding: 10px 0; text-align: right;">{client_name}</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #e5e7eb;">
+                        <td style="padding: 10px 0; font-weight: 600; color: #1e40af;">Due Date:</td>
+                        <td style="padding: 10px 0; text-align: right;">{due_date}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 10px 0; font-weight: 600; color: #1e40af;">Line Items:</td>
+                        <td style="padding: 10px 0; text-align: right;">{items_count}</td>
+                    </tr>
+                </table>
+            </div>
+            
+            <!-- Line Items Section -->
+            {line_items_html}
+            
+            <!-- Financial Summary -->
+            {summary_html}
+            
+            <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin-top: 20px;">
+                You can log in to FXGuard to view or edit this invoice anytime. The client will be notified separately about this invoice.
+            </p>
+            
+            <!-- CTA Button -->
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="https://fxguard.app/invoices/{invoice_number}" style="background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%); color: white; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 15px; display: inline-block;">View Invoice</a>
+            </div>
+            
+            <p style="color: #9ca3af; font-size: 13px; line-height: 1.6; margin-top: 30px; border-top: 1px solid #e5e7eb; padding-top: 20px;">
+                © 2026 FXGuard. All rights reserved.<br/>
+                This email was sent to {user_name} because an invoice was created in your FXGuard account.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

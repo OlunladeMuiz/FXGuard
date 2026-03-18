@@ -3,6 +3,7 @@ from pydantic import BaseModel, EmailStr, model_validator
 
 class RegisterRequest(BaseModel):
     email: EmailStr
+    company_name: str
     password: str
     password_confirmation: str
 
@@ -16,6 +17,7 @@ class RegisterRequest(BaseModel):
 class User(BaseModel):
     id: str
     email: str
+    company_name: str | None = None
     verification_code: int | None = None
 
     class Config:
