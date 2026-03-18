@@ -13,3 +13,5 @@ class User(Base):
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc)) 
     verification_code = Column(Integer, nullable=True)
+    verification_code_expires_at = Column(DateTime, nullable=True)
+    company_name = Column(String)

@@ -1,4 +1,5 @@
-from fastapi import HTTPException, status
+from fastapi import HTTPException, status, Depends
+from fastapi.security import HTTPBearer
 from sqlalchemy.orm import Session
 import bcrypt
 import hashlib
@@ -7,6 +8,8 @@ import os
 from datetime import datetime, timedelta, timezone
 from app.models.auth import User
 from app.schemas.auth import RegisterRequest, VerifyOtpRequest, ResendOtpRequest, LoginRequest
+from app.db.database import get_db
+from app.utils.email_service import EmailService
 import random
 
 SECRET_KEY = os.getenv("SECRET_KEY", "change-me-in-production")
@@ -48,15 +51,23 @@ def register_user(db: Session, payload: RegisterRequest) -> User:
             detail="Email already registered",
         )
 
+    otp = generate_otp()
+    otp_expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
     user = User(
         id=hashlib.sha256(payload.email.encode()).hexdigest()[:16],
         email=payload.email,
         password=hash_password(payload.password),
-        verification_code=generate_otp()
+        verification_code=otp,
+        verification_code_expires_at=otp_expires_at,
+        company_name=payload.company_name
     )
     db.add(user) 
     db.commit()
     db.refresh(user)
+    
+    # Send OTP email
+    EmailService.send_otp_email(payload.email, otp, payload.company_name)
+    
     return user
 
 
@@ -72,6 +83,14 @@ def verify_otp(db: Session, payload: VerifyOtpRequest) -> User:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email already verified",
         )
+    
+    # Check if OTP has expired
+    if user.verification_code_expires_at and datetime.now(timezone.utc) > user.verification_code_expires_at:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="OTP has expired. Please request a new one.",
+        )
+    
     if user.verification_code != payload.otp:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -80,12 +99,13 @@ def verify_otp(db: Session, payload: VerifyOtpRequest) -> User:
 
     user.is_verified = True
     user.verification_code = None
+    user.verification_code_expires_at = None
     db.commit()
     db.refresh(user)
     return user
 
 
-def resend_otp(db: Session, payload: ResendOtpRequest) -> User:
+def resend_otp(db: Session, payload: ResendOtpRequest) -> int:
     user = db.query(User).filter(User.email == payload.email).first()
     if not user:
         raise HTTPException(
@@ -93,10 +113,17 @@ def resend_otp(db: Session, payload: ResendOtpRequest) -> User:
             detail="User not found",
         )
 
-    user.verification_code = generate_otp()
+    otp = generate_otp()
+    otp_expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
+    user.verification_code = otp
+    user.verification_code_expires_at = otp_expires_at
     db.commit()
     db.refresh(user)
-    return user.verification_code
+    
+    # Send OTP email
+    EmailService.send_otp_email(payload.email, otp, user.company_name)
+    
+    return otp
 
 
 def login_user(db: Session, payload: LoginRequest) -> dict:
@@ -115,3 +142,51 @@ def login_user(db: Session, payload: LoginRequest) -> dict:
     access_token = create_access_token({"sub": user.id, "email": user.email})
     refresh_token = create_refresh_token({"sub": user.id, "email": user.email})
     return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer", "user": user}
+
+
+security = HTTPBearer()
+
+
+def get_current_user(credentials = Depends(security), db: Session = Depends(get_db)) -> User:
+    """
+    Get the current authenticated user from the JWT token.
+    
+    Args:
+        credentials: HTTP Bearer credentials from the Authorization header
+        db: Database session (injected through dependency)
+    
+    Returns:
+        User object if token is valid
+        
+    Raises:
+        HTTPException: If token is invalid or user not found
+    """
+    token = credentials.credentials
+    
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: str = payload.get("sub")
+        if user_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token",
+            )
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token has expired",
+        )
+    except jwt.InvalidTokenError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token",
+        )
+    
+    user = db.query(User).filter(User.id == user_id).first()
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found",
+        )
+    
+    return user
