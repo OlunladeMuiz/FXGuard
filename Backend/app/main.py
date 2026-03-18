@@ -4,7 +4,7 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.router import router
-from app.db.database import Base, engine
+from app.db.database import initialize_database
 
 # Configure logging
 logging.basicConfig(
@@ -17,7 +17,7 @@ app = FastAPI()
 # CORS configuration for frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:3001"],
+    allow_origins=["http://localhost:3000", "http://localhost:3001", "http://localhost:8000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -25,4 +25,4 @@ app.add_middleware(
 
 app.include_router(router, prefix="/api")
 
-Base.metadata.create_all(bind=engine)
+initialize_database()
