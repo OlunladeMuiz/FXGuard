@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import styles from './page.module.css';
 import { login, setAuthTokens, setUser } from '@/lib/api/auth';
+import { formatApiError } from '@/lib/api/errors';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -25,14 +26,7 @@ export default function LoginPage() {
       setUser(response.user);
       router.push('/dashboard');
     } catch (err: unknown) {
-      let errorMessage = 'Login failed. Please check your credentials.';
-      if (err && typeof err === 'object' && 'response' in err) {
-        const axiosErr = err as { response?: { data?: { detail?: string } } };
-        errorMessage = axiosErr.response?.data?.detail || errorMessage;
-      } else if (err instanceof Error) {
-        errorMessage = err.message;
-      }
-      setError(errorMessage);
+      setError(formatApiError(err, 'Login failed. Please check your credentials.'));
     } finally {
       setLoading(false);
     }

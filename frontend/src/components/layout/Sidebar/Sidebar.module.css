@@ -61,7 +61,14 @@
   height: 100vh;
   background: rgba(0, 0, 0, 0.3);
   z-index: -1;
-  animation: fadeIn 0.2s ease;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.backdropOpen {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 @keyframes fadeIn {
@@ -80,7 +87,18 @@
   border-radius: var(--radius-lg, 12px);
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
   padding: var(--spacing-2, 8px);
-  animation: slideDown 0.2s ease;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-10px);
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+
+.dropdownMenuOpen {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
 }
 
 @keyframes slideDown {

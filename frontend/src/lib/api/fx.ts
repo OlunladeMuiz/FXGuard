@@ -20,7 +20,96 @@ import { calculateVolatility } from '@/utils/calculations';
 const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === 'true' || false;
 
 // Frankfurter API base URL (free, no API key needed)
-const FRANKFURTER_API = 'https://api.frankfurter.app';
+const FRANKFURTER_API = 'https://api.frankfurter.dev/v1';
+
+const FRANKFURTER_SUPPORTED_CURRENCIES = new Set([
+  'AUD', 'BRL', 'CAD', 'CHF', 'CNY', 'CZK', 'DKK', 'EUR', 'GBP', 'HKD',
+  'HUF', 'IDR', 'ILS', 'INR', 'ISK', 'JPY', 'KRW', 'MXN', 'MYR', 'NOK',
+  'NZD', 'PHP', 'PLN', 'RON', 'SEK', 'SGD', 'THB', 'TRY', 'USD', 'ZAR',
+]);
+
+const FALLBACK_USD_REFERENCE_RATES: Record<string, number> = {
+  USD: 1,
+  EUR: 0.91,
+  GBP: 0.79,
+  NGN: 1550,
+  CAD: 1.35,
+  AUD: 1.52,
+};
+
+interface FrankfurterSnapshot {
+  date: string;
+  rates: Record<string, number>;
+}
+
+function buildFrankfurterUrl(path: string, base: string, symbols: string[]): string {
+  const url = new URL(`${FRANKFURTER_API}/${path}`);
+  url.searchParams.set('base', base);
+  if (symbols.length > 0) {
+    url.searchParams.set('symbols', symbols.join(','));
+  }
+  return url.toString();
+}
+
+function getFallbackSnapshot(base: string, quotes: string[]): FrankfurterSnapshot | null {
+  const baseReferenceRate = FALLBACK_USD_REFERENCE_RATES[base];
+  if (!baseReferenceRate) {
+    return null;
+  }
+
+  const rates = quotes.reduce<Record<string, number>>((acc, quote) => {
+    const quoteReferenceRate = FALLBACK_USD_REFERENCE_RATES[quote];
+    if (!quoteReferenceRate) {
+      return acc;
+    }
+
+    acc[quote] = quoteReferenceRate / baseReferenceRate;
+    return acc;
+  }, {});
+
+  if (Object.keys(rates).length !== quotes.length) {
+    return null;
+  }
+
+  return {
+    date: new Date().toISOString().slice(0, 10),
+    rates,
+  };
+}
+
+async function fetchFrankfurterSnapshot(
+  base: string,
+  quotes: string[],
+  path = 'latest',
+): Promise<FrankfurterSnapshot> {
+  const normalizedBase = base.toUpperCase();
+  const normalizedQuotes = quotes.map((quote) => quote.toUpperCase());
+  const hasUnsupportedCurrency = [normalizedBase, ...normalizedQuotes].some(
+    (currency) => !FRANKFURTER_SUPPORTED_CURRENCIES.has(currency),
+  );
+
+  if (hasUnsupportedCurrency) {
+    const fallback = getFallbackSnapshot(normalizedBase, normalizedQuotes);
+    if (fallback) {
+      return fallback;
+    }
+
+    throw new Error(`Unsupported Frankfurter currency pair: ${normalizedBase}/${normalizedQuotes.join(',')}`);
+  }
+
+  const response = await fetch(buildFrankfurterUrl(path, normalizedBase, normalizedQuotes));
+
+  if (!response.ok) {
+    throw new Error(`Frankfurter API error: ${response.status}`);
+  }
+
+  const data = await response.json();
+
+  return {
+    date: data.date ?? new Date().toISOString().slice(0, 10),
+    rates: data.rates ?? {},
+  };
+}
 
 interface FetchRatesParams {
   base: CurrencyCode;
@@ -299,6 +388,8 @@ export const fetchRealFXHistory = async (
   quote: string,
   period: '1d' | '7d' | '30d' | '90d' | '1y' = '7d'
 ): Promise<FXHistoryResponse> => {
+  const normalizedBase = base.toUpperCase();
+  const normalizedQuote = quote.toUpperCase();
   const periodDays: Record<string, number> = {
     '1d': 1,
     '7d': 7,
@@ -312,11 +403,15 @@ export const fetchRealFXHistory = async (
   const startDate = new Date();
   startDate.setDate(endDate.getDate() - days);
 
-  const formatDate = (d: Date) => d.toISOString().split('T')[0];
+  const formatDate = (d: Date) => d.toISOString().slice(0, 10);
 
   try {
     // Fetch historical rates from Frankfurter API
-    const url = `${FRANKFURTER_API}/${formatDate(startDate)}..${formatDate(endDate)}?from=${base}&to=${quote}`;
+    const url = buildFrankfurterUrl(
+      `${formatDate(startDate)}..${formatDate(endDate)}`,
+      normalizedBase,
+      [normalizedQuote],
+    );
     const response = await fetch(url);
     
     if (!response.ok) {
@@ -332,7 +427,7 @@ export const fetchRealFXHistory = async (
       const sortedDates = Object.keys(data.rates).sort();
       
       for (const dateStr of sortedDates) {
-        const rate = data.rates[dateStr][quote];
+        const rate = data.rates[dateStr][normalizedQuote];
         if (rate !== undefined) {
           rateValues.push(rate);
           
@@ -361,8 +456,8 @@ export const fetchRealFXHistory = async (
     const standardDeviation = Math.sqrt(avgSquaredDiff);
 
     return {
-      base: base as CurrencyCode,
-      quote: quote as CurrencyCode,
+      base: normalizedBase as CurrencyCode,
+      quote: normalizedQuote as CurrencyCode,
       period: period as '7d' | '30d' | '90d' | '1y',
       data: rates,
       statistics: {
@@ -376,7 +471,7 @@ export const fetchRealFXHistory = async (
   } catch (error) {
     console.error('[Frankfurter API] Error fetching FX history:', error);
     // Fallback to mock data if API fails
-    return generateMockFXHistory(base as CurrencyCode, quote as CurrencyCode, period === '1d' ? '7d' : period as '7d' | '30d' | '90d' | '1y');
+    return generateMockFXHistory(normalizedBase as CurrencyCode, normalizedQuote as CurrencyCode, period === '1d' ? '7d' : period as '7d' | '30d' | '90d' | '1y');
   }
 };
 
@@ -390,21 +485,46 @@ export const fetchRealFXRate = async (
   base: string,
   quote: string
 ): Promise<{ rate: number; date: string }> => {
+  const normalizedQuote = quote.toUpperCase();
   try {
-    const url = `${FRANKFURTER_API}/latest?from=${base}&to=${quote}`;
-    const response = await fetch(url);
-    
-    if (!response.ok) {
-      throw new Error(`Frankfurter API error: ${response.status}`);
-    }
-
-    const data = await response.json();
+    const data = await fetchFrankfurterSnapshot(base, [quote]);
     return {
-      rate: data.rates[quote],
+      rate: data.rates[normalizedQuote],
       date: data.date,
     };
   } catch (error) {
     console.error('[Frankfurter API] Error fetching current rate:', error);
+    throw error;
+  }
+};
+
+export const fetchRealFXRateOnDate = async (
+  base: string,
+  quote: string,
+  date: string,
+): Promise<{ rate: number; date: string }> => {
+  const normalizedQuote = quote.toUpperCase();
+  try {
+    const data = await fetchFrankfurterSnapshot(base, [quote], date);
+    return {
+      rate: data.rates[normalizedQuote],
+      date: data.date,
+    };
+  } catch (error) {
+    console.error('[Frankfurter API] Error fetching dated rate:', error);
+    throw error;
+  }
+};
+
+export const fetchRealFXSnapshot = async (
+  base: string,
+  quotes: string[],
+  date = 'latest',
+): Promise<FrankfurterSnapshot> => {
+  try {
+    return await fetchFrankfurterSnapshot(base, quotes, date);
+  } catch (error) {
+    console.error('[Frankfurter API] Error fetching snapshot:', error);
     throw error;
   }
 };

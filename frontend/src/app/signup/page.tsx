@@ -5,9 +5,11 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import styles from './page.module.css';
 import { register } from '@/lib/api/auth';
+import { formatApiError } from '@/lib/api/errors';
 
 export default function SignupPage() {
   const router = useRouter();
+  const [companyName, setCompanyName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [passwordConfirmation, setPasswordConfirmation] = useState('');
@@ -30,9 +32,20 @@ export default function SignupPage() {
       return;
     }
 
+    const normalizedCompanyName = companyName.trim();
+    if (!normalizedCompanyName) {
+      setError('Company name is required');
+      return;
+    }
+
     setLoading(true);
     try {
-      const response = await register({ email, password, password_confirmation: passwordConfirmation });
+      const response = await register({
+        company_name: normalizedCompanyName,
+        email: email.trim(),
+        password,
+        password_confirmation: passwordConfirmation,
+      });
       // Store OTP temporarily for development (in production, this would be sent via email)
       if (response.user.verification_code) {
         alert(`Your verification code is: ${response.user.verification_code}\n(In production, this would be sent to your email)`);
@@ -40,14 +53,7 @@ export default function SignupPage() {
       // Redirect to OTP verification page
       router.push(`/verify-otp?email=${encodeURIComponent(email)}`);
     } catch (err: unknown) {
-      let errorMessage = 'Registration failed. Please try again.';
-      if (err && typeof err === 'object' && 'response' in err) {
-        const axiosErr = err as { response?: { data?: { detail?: string } } };
-        errorMessage = axiosErr.response?.data?.detail || errorMessage;
-      } else if (err instanceof Error) {
-        errorMessage = err.message;
-      }
-      setError(errorMessage);
+      setError(formatApiError(err, 'Registration failed. Please try again.'));
     } finally {
       setLoading(false);
     }
@@ -86,7 +92,12 @@ export default function SignupPage() {
                 <path d="M14 15h2" />
               </svg>
             </span>
-            <input placeholder="Your company name" />
+            <input
+              placeholder="Your company name"
+              value={companyName}
+              onChange={(e) => setCompanyName(e.target.value)}
+              required
+            />
           </div>
 
           <label>Business Email<span className={styles.required}>*</span></label>

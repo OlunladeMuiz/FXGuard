@@ -1,33 +1,57 @@
 import importlib.util
+import logging
+import os
 from pathlib import Path
 from sqlalchemy import create_engine, inspect, text
+from sqlalchemy.exc import OperationalError, SQLAlchemyError
 from sqlalchemy.orm import sessionmaker, declarative_base
 from dotenv import load_dotenv
-import os
 
-load_dotenv()
+logger = logging.getLogger(__name__)
 
 BASE_DIR = Path(__file__).resolve().parents[2]
+DEFAULT_SQLITE_PATH = (BASE_DIR / "test.db").resolve()
+DEFAULT_SQLITE_URL = f"sqlite:///{DEFAULT_SQLITE_PATH}"
+
+load_dotenv(BASE_DIR / ".env")
 
 
-def _resolve_database_url(raw_url: str) -> str:
-    if raw_url.startswith("postgresql://"):
+def _resolve_database_url(raw_url: str | None) -> str:
+    configured_url = (raw_url or "").strip()
+    if not configured_url:
+        return DEFAULT_SQLITE_URL
+
+    if configured_url.startswith("postgres://"):
+        configured_url = configured_url.replace("postgres://", "postgresql://", 1)
+
+    if configured_url.startswith("postgresql://"):
         if importlib.util.find_spec("psycopg2") is None and importlib.util.find_spec("psycopg") is not None:
-            return raw_url.replace("postgresql://", "postgresql+psycopg://", 1)
+            return configured_url.replace("postgresql://", "postgresql+psycopg://", 1)
+        if importlib.util.find_spec("psycopg2") is None and importlib.util.find_spec("psycopg") is None:
+            raise RuntimeError(
+                "DATABASE_URL points to PostgreSQL, but no PostgreSQL driver is installed. "
+                "Install either psycopg2 or psycopg."
+            )
 
-    if not raw_url.startswith("sqlite:///"):
-        return raw_url
+        return configured_url
 
-    sqlite_path = raw_url.removeprefix("sqlite:///")
+    if not configured_url.startswith("sqlite:///"):
+        return configured_url
+
+    sqlite_path = configured_url.removeprefix("sqlite:///")
     if Path(sqlite_path).is_absolute():
-        return raw_url
+        return configured_url
 
     return f"sqlite:///{(BASE_DIR / sqlite_path).resolve()}"
 
 
-DATABASE_URL = _resolve_database_url(os.getenv("DATABASE_URL", "sqlite:///./test.db"))
+def _create_engine(database_url: str):
+    connect_args = {"check_same_thread": False} if database_url.startswith("sqlite") else {}
+    return create_engine(database_url, connect_args=connect_args)
 
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {})
+
+DATABASE_URL = _resolve_database_url(os.getenv("DATABASE_URL", "sqlite:///./test.db"))
+engine = _create_engine(DATABASE_URL)
 
 SessionLocal = sessionmaker(
     autocommit=False,
@@ -38,7 +62,28 @@ SessionLocal = sessionmaker(
 Base = declarative_base()
 
 
+def _ensure_database_connection() -> None:
+    if not DATABASE_URL.startswith("postgresql"):
+        return
+
+    try:
+        with engine.connect() as connection:
+            connection.execute(text("SELECT 1"))
+    except OperationalError as exc:
+        raise RuntimeError(
+            "Could not connect to the configured PostgreSQL database. "
+            "Local development is configured to use PostgreSQL only."
+        ) from exc
+    except SQLAlchemyError as exc:
+        raise RuntimeError(
+            "PostgreSQL initialization failed. Local development is configured to use PostgreSQL only."
+        ) from exc
+
+
 def _sync_user_columns() -> None:
+    if not DATABASE_URL.startswith("sqlite"):
+        return
+
     with engine.begin() as connection:
         inspector = inspect(connection)
         if "users" not in inspector.get_table_names():
@@ -65,6 +110,7 @@ def _sync_user_columns() -> None:
 
 
 def initialize_database() -> None:
+    _ensure_database_connection()
     Base.metadata.create_all(bind=engine)
     _sync_user_columns()
 

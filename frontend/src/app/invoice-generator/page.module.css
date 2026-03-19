@@ -15,8 +15,8 @@
 
 .layout {
   display: grid;
-  grid-template-columns: 800px 400px;
-  gap: var(--spacing-8);
+  grid-template-columns: minmax(0, 1.8fr) minmax(320px, 1fr);
+  gap: clamp(var(--spacing-5), 3vw, var(--spacing-8));
   margin-top: var(--spacing-6);
   align-items: start;
 }
@@ -25,6 +25,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--spacing-6);
+  min-width: 0;
 }
 
 .previewColumn {
@@ -33,9 +34,7 @@
   gap: var(--spacing-6);
   position: sticky;
   top: 90px;
-}
-.card{
-  padding: 0px 30000px;
+  min-width: 0;
 }
 
 .card,
@@ -45,12 +44,32 @@
   border-radius: var(--radius-xl);
   padding: var(--spacing-6);
   box-shadow: var(--shadow-xs);
+  min-width: 0;
 }
 
 .cardSplit {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--spacing-6);
+}
+
+.message {
+  margin-top: var(--spacing-4);
+  padding: var(--spacing-4);
+  border-radius: var(--radius-lg);
+  font-size: var(--font-size-sm);
+}
+
+.successMessage {
+  background: var(--color-success-light);
+  color: var(--color-success);
+  border: 1px solid color-mix(in srgb, var(--color-success) 18%, white);
+}
+
+.errorMessage {
+  background: color-mix(in srgb, var(--color-error) 10%, white);
+  color: var(--color-error);
+  border: 1px solid color-mix(in srgb, var(--color-error) 18%, white);
 }
 
 .gridTwo {
@@ -77,10 +96,13 @@
 .textarea,
 .addressInput {
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   padding: 0.65rem 0.75rem;
   border-radius: 10px;
   border: 1px solid var(--border-color);
   background: white;
+  box-sizing: border-box;
 }
 
 .textarea {
@@ -104,6 +126,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: var(--spacing-3);
+  flex-wrap: wrap;
 }
 
 .addButton {
@@ -111,11 +135,12 @@
   color: white;
   border-radius: 999px;
   padding: 0.4rem 0.8rem;
+  max-width: 100%;
 }
 
 .lineHeader {
   display: grid;
-  grid-template-columns: 1.5fr 0.5fr 0.6fr 0.6fr 0.3fr;
+  grid-template-columns: minmax(0, 1.5fr) minmax(72px, 0.5fr) minmax(88px, 0.6fr) minmax(88px, 0.6fr) 44px;
   gap: var(--spacing-3);
   font-size: var(--font-size-xs);
   color: var(--text-secondary);
@@ -124,19 +149,22 @@
 
 .lineRow {
   display: grid;
-  grid-template-columns: 1.5fr 0.5fr 0.6fr 0.6fr 0.3fr;
+  grid-template-columns: minmax(0, 1.5fr) minmax(72px, 0.5fr) minmax(88px, 0.6fr) minmax(88px, 0.6fr) 44px;
   gap: var(--spacing-3);
   align-items: center;
   margin-top: var(--spacing-3);
+  min-width: 0;
 }
 
 .lineRow strong {
   text-align: right;
+  overflow-wrap: anywhere;
 }
 
 .trash {
   background: none;
   color: var(--color-error);
+  justify-self: end;
 }
 
 .inlineInput {
@@ -187,6 +215,7 @@
 .actions {
   display: flex;
   gap: var(--spacing-3);
+  flex-wrap: wrap;
 }
 
 .primary,
@@ -200,6 +229,8 @@
   padding: 0.85rem 1.2rem;
   border-radius: 10px;
   font-weight: var(--font-weight-medium);
+  min-width: min(100%, 180px);
+  max-width: 100%;
 }
 
 .primary {
@@ -249,12 +280,14 @@
   margin-top: var(--spacing-4);
   font-size: 11px;
   background: white;
+  min-width: 0;
 }
 
 .previewTop {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
+  gap: var(--spacing-3);
   margin-bottom: var(--spacing-5);
   padding-bottom: var(--spacing-4);
   border-bottom: 1px solid var(--border-color);
@@ -281,6 +314,7 @@
 
 .previewInvoiceLabel {
   text-align: right;
+  min-width: 0;
 }
 
 .previewInvoiceLabel strong {
@@ -293,6 +327,7 @@
 .previewInvoiceLabel span {
   color: var(--text-secondary);
   font-size: 11px;
+  overflow-wrap: anywhere;
 }
 
 .previewAddresses {
@@ -312,11 +347,13 @@
 .previewAddresses strong {
   color: var(--text-primary);
   font-size: 11px;
+  overflow-wrap: anywhere;
 }
 
 .previewAddresses span {
   color: var(--text-secondary);
   font-size: 10px;
+  overflow-wrap: anywhere;
 }
 
 .addressLabel {
@@ -348,6 +385,7 @@
 
 .previewDates strong {
   font-size: 11px;
+  overflow-wrap: anywhere;
 }
 
 .previewTable {
@@ -357,6 +395,7 @@
 .previewTableHeader {
   display: flex;
   justify-content: space-between;
+  gap: var(--spacing-3);
   padding-bottom: var(--spacing-2);
   border-bottom: 1px solid var(--border-color);
   color: var(--text-secondary);
@@ -367,10 +406,19 @@
 .previewTableRow {
   display: flex;
   justify-content: space-between;
+  gap: var(--spacing-3);
   padding: 6px 0;
   color: var(--text-secondary);
   font-size: 10px;
   border-bottom: 1px solid var(--color-neutral-100);
+}
+
+.previewTableHeader span,
+.previewTableRow span,
+.previewPayment span,
+.fxInfo span,
+.fxInfo strong {
+  overflow-wrap: anywhere;
 }
 
 .previewTotals {
@@ -452,9 +500,17 @@
   color: var(--color-success);
 }
 
+.red {
+  color: var(--color-error);
+}
+
 @media (max-width: 1100px) {
   .layout {
     grid-template-columns: 1fr;
+  }
+
+  .previewColumn {
+    position: static;
   }
 
   .cardSplit {
@@ -466,18 +522,103 @@
   }
 }
 
+@media (max-width: 900px) {
+  .container {
+    padding: 0 var(--spacing-5);
+  }
+
+  .lineHeader {
+    display: none;
+  }
+
+  .lineRow {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    padding: var(--spacing-4);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    background: var(--color-neutral-50);
+  }
+
+  .lineRow > :first-child {
+    grid-column: 1 / -1;
+  }
+
+  .lineRow > :nth-child(4) {
+    align-self: center;
+  }
+}
+
 @media (max-width: 768px) {
+  .container {
+    padding: 0 var(--spacing-4);
+  }
+
+  .page {
+    padding: var(--spacing-8) 0 var(--spacing-12);
+  }
+
   .gridTwo,
   .gridFour {
     grid-template-columns: 1fr;
   }
 
-  .lineHeader,
-  .lineRow {
+  .previewAddresses,
+  .previewDates {
     grid-template-columns: 1fr;
+  }
+
+  .previewTop,
+  .previewHeader,
+  .previewTableHeader,
+  .previewTableRow,
+  .fxInfo > div,
+  .totalBox > div {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   .actions {
     flex-direction: column;
+  }
+
+  .primary,
+  .secondary,
+  .success {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 560px) {
+  .card,
+  .cardSplit,
+  .previewBox {
+    padding: var(--spacing-4);
+  }
+
+  .lineRow {
+    grid-template-columns: 1fr;
+  }
+
+  .lineRow > :first-child {
+    grid-column: auto;
+  }
+
+  .lineRow strong,
+  .trash {
+    justify-self: start;
+    text-align: left;
+  }
+
+  .inlineInput {
+    grid-template-columns: 1fr;
+  }
+
+  .previewBrand {
+    font-size: var(--font-size-sm);
+  }
+
+  .previewInvoiceLabel {
+    text-align: left;
   }
 }

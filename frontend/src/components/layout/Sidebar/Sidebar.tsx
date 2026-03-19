@@ -122,8 +122,9 @@ export const Sidebar: React.FC = () => {
     <div className={styles.hamburgerContainer} ref={menuRef}>
       {/* Hamburger Button */}
       <button
+        type="button"
         className={`${styles.hamburgerBtn} ${isOpen ? styles.hamburgerBtnOpen : ''}`}
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => setIsOpen((prev) => !prev)}
         aria-label={isOpen ? 'Close menu' : 'Open menu'}
         aria-expanded={isOpen}
       >
@@ -133,30 +134,33 @@ export const Sidebar: React.FC = () => {
       </button>
 
       {/* Dropdown Menu */}
-      {isOpen && (
-        <>
-          <div className={styles.backdrop} onClick={() => setIsOpen(false)} />
-          <nav className={styles.dropdownMenu}>
-            <ul className={styles.menuList}>
-              {navItems.map((item) => {
-                const isActive = pathname.startsWith(item.href);
-                return (
-                  <li key={item.id} className={styles.menuItem}>
-                    <Link
-                      href={item.href}
-                      className={`${styles.menuLink} ${isActive ? styles.menuLinkActive : ''}`}
-                      onClick={() => setIsOpen(false)}
-                    >
-                      <span className={styles.menuIcon}>{item.icon}</span>
-                      <span className={styles.menuLabel}>{item.label}</span>
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </nav>
-        </>
-      )}
+      <div
+        className={`${styles.backdrop} ${isOpen ? styles.backdropOpen : ''}`}
+        onClick={() => setIsOpen(false)}
+        aria-hidden={!isOpen}
+      />
+      <nav
+        className={`${styles.dropdownMenu} ${isOpen ? styles.dropdownMenuOpen : ''}`}
+        aria-hidden={!isOpen}
+      >
+        <ul className={styles.menuList}>
+          {navItems.map((item) => {
+            const isActive = pathname.startsWith(item.href);
+            return (
+              <li key={item.id} className={styles.menuItem}>
+                <Link
+                  href={item.href}
+                  className={`${styles.menuLink} ${isActive ? styles.menuLinkActive : ''}`}
+                  onClick={() => setIsOpen(false)}
+                >
+                  <span className={styles.menuIcon}>{item.icon}</span>
+                  <span className={styles.menuLabel}>{item.label}</span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
     </div>
   );
 };

@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import styles from './page.module.css';
-import { getUser, User } from '@/lib/api/auth';
+import { AUTH_USER_UPDATED_EVENT, getUser, getUserDisplayName, User } from '@/lib/api/auth';
+import { fetchRealFXSnapshot } from '@/lib/api/fx';
 
 interface FXRateData {
   pair: string;
@@ -40,9 +41,6 @@ const invoices = [
   { status: 'Pending', client: 'Acme Corp', avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=32&h=32&fit=crop', currency: 'EUR', amount: '€12,450', dueDate: 'Dec 28, 2024' },
 ];
 
-// Frankfurter API base URL
-const FRANKFURTER_API = 'https://api.frankfurter.app';
-
 export default function DashboardPage() {
   const [selectedPair, setSelectedPair] = useState('EUR/USD');
   const [selectedPeriod, setSelectedPeriod] = useState('This Month');
@@ -53,24 +51,34 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const userData = getUser();
-    setUser(userData);
+    const syncUser = (event?: Event) => {
+      const updatedUser =
+        event instanceof CustomEvent ? (event.detail as User | null | undefined) : undefined;
+      setUser(updatedUser ?? getUser());
+    };
+
+    syncUser();
+    window.addEventListener(AUTH_USER_UPDATED_EVENT, syncUser);
+    window.addEventListener('storage', syncUser);
+
+    return () => {
+      window.removeEventListener(AUTH_USER_UPDATED_EVENT, syncUser);
+      window.removeEventListener('storage', syncUser);
+    };
   }, []);
 
   useEffect(() => {
     const fetchRealFXRates = async () => {
       try {
         // Fetch current rates
-        const response = await fetch(`${FRANKFURTER_API}/latest?from=USD&to=EUR,GBP,CAD,AUD`);
-        const data = await response.json();
+        const data = await fetchRealFXSnapshot('USD', ['EUR', 'GBP', 'CAD', 'AUD']);
         
         // Fetch yesterday's rates for change calculation
         const yesterday = new Date();
         yesterday.setDate(yesterday.getDate() - 2);
-        const yesterdayStr = yesterday.toISOString().split('T')[0];
+        const yesterdayStr = yesterday.toISOString().slice(0, 10);
         
-        const histResponse = await fetch(`${FRANKFURTER_API}/${yesterdayStr}?from=USD&to=EUR,GBP,CAD,AUD`);
-        const histData = await histResponse.json();
+        const histData = await fetchRealFXSnapshot('USD', ['EUR', 'GBP', 'CAD', 'AUD'], yesterdayStr);
         
         // Calculate rates and changes for each pair
         const ratesArray: FXRateData[] = [];
@@ -159,8 +167,7 @@ export default function DashboardPage() {
     fetchRealFXRates();
   }, []);
 
-  // Extract display name from email (part before @)
-  const displayName = user?.email ? user.email.split('@')[0] : 'User';
+  const displayName = getUserDisplayName(user);
 
   return (
     <div className={styles.dashboard}>

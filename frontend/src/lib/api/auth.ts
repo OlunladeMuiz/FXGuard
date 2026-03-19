@@ -1,6 +1,10 @@
 import client from './client';
 
+export const AUTH_USER_UPDATED_EVENT = 'fxguard:user-updated';
+const USER_STORAGE_KEY = 'user';
+
 export interface RegisterPayload {
+  company_name: string;
   email: string;
   password: string;
   password_confirmation: string;
@@ -23,7 +27,47 @@ export interface ResendOtpPayload {
 export interface User {
   id: string;
   email: string;
+  company_name?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  phone?: string | null;
+  time_zone?: string | null;
   verification_code?: number | null;
+}
+
+function titleCase(value: string): string {
+  if (!value) {
+    return '';
+  }
+
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+export function getUserDisplayName(user: User | null): string {
+  if (!user) {
+    return 'User';
+  }
+
+  const firstName = user.first_name?.trim() ?? '';
+  const lastName = user.last_name?.trim() ?? '';
+  const fullName = [firstName, lastName].filter(Boolean).join(' ').trim();
+
+  if (fullName) {
+    return fullName;
+  }
+
+  const emailPrefix = user.email.split('@')[0] || '';
+  const nameParts = emailPrefix.split(/[._-]/).filter(Boolean);
+
+  if (nameParts.length >= 2) {
+    return `${titleCase(nameParts[0] ?? '')} ${titleCase(nameParts[1] ?? '')}`.trim();
+  }
+
+  if (emailPrefix) {
+    return titleCase(emailPrefix);
+  }
+
+  return 'User';
 }
 
 export interface RegisterResponse {
@@ -107,7 +151,7 @@ export function clearAuthTokens(): void {
   if (typeof window !== 'undefined') {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
-    localStorage.removeItem('user');
+    localStorage.removeItem(USER_STORAGE_KEY);
   }
 }
 
@@ -116,7 +160,8 @@ export function clearAuthTokens(): void {
  */
 export function setUser(user: User): void {
   if (typeof window !== 'undefined') {
-    localStorage.setItem('user', JSON.stringify(user));
+    localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
+    window.dispatchEvent(new CustomEvent(AUTH_USER_UPDATED_EVENT, { detail: user }));
   }
 }
 
@@ -125,7 +170,7 @@ export function setUser(user: User): void {
  */
 export function getUser(): User | null {
   if (typeof window !== 'undefined') {
-    const userData = localStorage.getItem('user');
+    const userData = localStorage.getItem(USER_STORAGE_KEY);
     if (userData) {
       try {
         return JSON.parse(userData) as User;

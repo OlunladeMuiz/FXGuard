@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import styles from './page.module.css';
 import { verifyOtp, resendOtp } from '@/lib/api/auth';
+import { formatApiError } from '@/lib/api/errors';
 
 export default function VerifyOtpPage() {
   const router = useRouter();
@@ -36,14 +37,7 @@ export default function VerifyOtpPage() {
         router.push('/login?verified=true');
       }, 2000);
     } catch (err: unknown) {
-      let errorMessage = 'Verification failed. Please try again.';
-      if (err && typeof err === 'object' && 'response' in err) {
-        const axiosErr = err as { response?: { data?: { detail?: string } } };
-        errorMessage = axiosErr.response?.data?.detail || errorMessage;
-      } else if (err instanceof Error) {
-        errorMessage = err.message;
-      }
-      setError(errorMessage);
+      setError(formatApiError(err, 'Verification failed. Please try again.'));
     } finally {
       setLoading(false);
     }
@@ -58,14 +52,7 @@ export default function VerifyOtpPage() {
       const response = await resendOtp({ email });
       setSuccess(`OTP resent successfully! Your new code is: ${response.otp}`);
     } catch (err: unknown) {
-      let errorMessage = 'Failed to resend OTP. Please try again.';
-      if (err && typeof err === 'object' && 'response' in err) {
-        const axiosErr = err as { response?: { data?: { detail?: string } } };
-        errorMessage = axiosErr.response?.data?.detail || errorMessage;
-      } else if (err instanceof Error) {
-        errorMessage = err.message;
-      }
-      setError(errorMessage);
+      setError(formatApiError(err, 'Failed to resend OTP. Please try again.'));
     } finally {
       setResending(false);
     }
