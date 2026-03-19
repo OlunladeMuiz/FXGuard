@@ -81,9 +81,6 @@ def _ensure_database_connection() -> None:
 
 
 def _sync_user_columns() -> None:
-    if not DATABASE_URL.startswith("sqlite"):
-        return
-
     with engine.begin() as connection:
         inspector = inspect(connection)
         if "users" not in inspector.get_table_names():

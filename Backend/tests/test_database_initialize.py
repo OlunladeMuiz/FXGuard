@@ -70,6 +70,10 @@ class InitializeDatabaseTests(unittest.TestCase):
 
         self.assertIn("verification_code_expires_at", columns)
         self.assertIn("company_name", columns)
+        self.assertIn("first_name", columns)
+        self.assertIn("last_name", columns)
+        self.assertIn("phone", columns)
+        self.assertIn("time_zone", columns)
 
     def test_resolve_database_url_prefers_psycopg_for_postgres_urls(self) -> None:
         raw_url = "postgres://user:password@localhost:5432/fxguard"

@@ -18,6 +18,10 @@ class User(BaseModel):
     id: str
     email: str
     company_name: str | None = None
+    first_name: str | None = None
+    last_name: str | None = None
+    phone: str | None = None
+    time_zone: str | None = None
     verification_code: int | None = None
 
     class Config:
@@ -47,6 +51,14 @@ class LoginResponse(BaseModel):
     refresh_token: str
     token_type: str = "bearer"
     user: User
+
+
+class ProfileUpdateRequest(BaseModel):
+    email: EmailStr | None = None
+    first_name: str | None = None
+    last_name: str | None = None
+    phone: str | None = None
+    time_zone: str | None = None
 
 
 class MessageResponse(BaseModel):

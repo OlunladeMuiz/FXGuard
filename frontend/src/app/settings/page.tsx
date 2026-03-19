@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import styles from './page.module.css';
-import { getUser, setUser } from '@/lib/api/auth';
+import { getUser, setUser, updateProfile } from '@/lib/api/auth';
 
 const icons = {
   user: (
@@ -125,18 +125,31 @@ export default function SettingsPage() {
     setLastName('');
   }, []);
 
-  const handleSaveProfile = () => {
+  const handleSaveProfile = async () => {
     const currentUser = getUser();
     if (!currentUser) return;
 
-    setUser({
-      ...currentUser,
-      email: email.trim(),
-      first_name: firstName.trim(),
-      last_name: lastName.trim(),
-      phone: phone.trim(),
-      time_zone: timeZone,
-    });
+    try {
+      const updatedUser = await updateProfile({
+        email: email.trim(),
+        first_name: firstName.trim() || null,
+        last_name: lastName.trim() || null,
+        phone: phone.trim() || null,
+        time_zone: timeZone.trim() || null,
+      });
+
+      setUser({
+        ...currentUser,
+        ...updatedUser,
+      });
+      setEmail(updatedUser.email);
+      setFirstName(updatedUser.first_name?.trim() ?? '');
+      setLastName(updatedUser.last_name?.trim() ?? '');
+      setPhone(updatedUser.phone?.trim() ?? '');
+      setTimeZone(updatedUser.time_zone?.trim() || 'UTC-5 (Eastern Time)');
+    } catch (error) {
+      console.error('Failed to save profile:', error);
+    }
   };
 
   const activeLabel = useMemo(

@@ -5,14 +5,17 @@ from app.db.database import get_db
 from app.schemas.auth import (
     RegisterRequest, RegisterResponse,
     VerifyOtpRequest, ResendOtpRequest,
-    LoginRequest, LoginResponse, MessageResponse, OTPResponse
+    LoginRequest, LoginResponse, MessageResponse, OTPResponse, User, ProfileUpdateRequest
 )
 from app.services.auth import (
     register_user as create_user,
     verify_otp as verify_user_otp,
     resend_otp as resend_user_otp,
     login_user,
+    update_user_profile,
+    get_current_user,
 )
+from app.models.auth import User as UserModel
 
 router = APIRouter()
 
@@ -41,3 +44,12 @@ def resend_otp(payload: ResendOtpRequest, db: Session = Depends(get_db)):
 @router.post("/login", response_model=LoginResponse)
 def login(payload: LoginRequest, db: Session = Depends(get_db)):
     return login_user(db=db, payload=payload)
+
+
+@router.put("/profile", response_model=User)
+def update_profile(
+    payload: ProfileUpdateRequest,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user),
+):
+    return update_user_profile(db=db, current_user=current_user, payload=payload)
