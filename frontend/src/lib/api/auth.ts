@@ -24,6 +24,14 @@ export interface ResendOtpPayload {
   email: string;
 }
 
+export interface UpdateProfilePayload {
+  email?: string;
+  first_name?: string | null;
+  last_name?: string | null;
+  phone?: string | null;
+  time_zone?: string | null;
+}
+
 export interface User {
   id: string;
   email: string;
@@ -121,6 +129,14 @@ export async function verifyOtp(payload: VerifyOtpPayload): Promise<MessageRespo
  */
 export async function resendOtp(payload: ResendOtpPayload): Promise<OTPResponse> {
   const response = await client.post<OTPResponse>('/auth/resend-otp', payload);
+  return response.data;
+}
+
+/**
+ * Update current user profile
+ */
+export async function updateProfile(payload: UpdateProfilePayload): Promise<User> {
+  const response = await client.put<User>('/auth/profile', payload);
   return response.data;
 }
 

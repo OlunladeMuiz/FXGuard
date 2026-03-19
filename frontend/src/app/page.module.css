@@ -5,6 +5,8 @@
 .page {
   background: #f8fafc;
   min-height: 100vh;
+  --landing-copy-color: #0f172a;
+  --landing-copy-weight: 500;
 }
 
 /* ===================================
@@ -154,7 +156,8 @@
 
 .heroSubtitle {
   font-size: 1.1rem;
-  color: #64748b;
+  color: var(--landing-copy-color);
+  font-weight: var(--landing-copy-weight);
   line-height: 1.6;
   margin-bottom: 2rem;
   max-width: 770px;
@@ -642,7 +645,8 @@
 
 .featureSubtitle {
   font-size: 1rem;
-  color: #64748b;
+  color: var(--landing-copy-color);
+  font-weight: var(--landing-copy-weight);
   max-width: 600px;
   margin: 0 auto 3rem;
   line-height: 1.6;
@@ -741,7 +745,8 @@
 
 .featureCard p {
   font-size: 0.85rem;
-  color: #64748b;
+  color: var(--landing-copy-color);
+  font-weight: var(--landing-copy-weight);
   line-height: 1.5;
 }
 
@@ -769,7 +774,8 @@
 
 .volatilityDesc {
   font-size: 0.95rem;
-  color: #64748b;
+  color: var(--landing-copy-color);
+  font-weight: var(--landing-copy-weight);
   line-height: 1.6;
   margin-bottom: 2rem;
 }
@@ -807,7 +813,8 @@
 
 .volatilityFeature p {
   font-size: 0.85rem;
-  color: #64748b;
+  color: var(--landing-copy-color);
+  font-weight: var(--landing-copy-weight);
   line-height: 1.5;
 }
 
@@ -1079,7 +1086,8 @@
 .inputGroup label {
   display: block;
   font-size: 0.85rem;
-  color: #64748b;
+  color: var(--landing-copy-color);
+  font-weight: var(--landing-copy-weight);
   margin-bottom: 0.5rem;
 }
 
@@ -1135,7 +1143,8 @@
 }
 
 .rateRow span:first-child {
-  color: #64748b;
+  color: var(--landing-copy-color);
+  font-weight: var(--landing-copy-weight);
 }
 
 .rateBlue {
@@ -1298,9 +1307,31 @@
 
 .faqAnswer p {
   font-size: 0.9rem;
-  color: #64748b;
+  color: var(--landing-copy-color);
   line-height: 1.6;
-  font-weight: 700;
+  font-weight: var(--landing-copy-weight);
+}
+
+.navLinks a,
+.loginLink,
+.mobileNavLinks a,
+.mobileLoginLink,
+.forecastSubtitle,
+.invoiceTable th,
+.invoiceTable td,
+.calcField label,
+.calcInput .currencySymbol,
+.calcCurrency label,
+.featureDateLabel,
+.transferUser,
+.savingsLabel,
+.ratePair,
+.graphYAxis,
+.graphXAxis,
+.timeLabel,
+.faqIcon {
+  color: var(--landing-copy-color);
+  font-weight: var(--landing-copy-weight);
 }
 
 /* ===================================

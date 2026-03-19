@@ -7,7 +7,13 @@ import jwt
 import os
 from datetime import datetime, timedelta, timezone
 from app.models.auth import User
-from app.schemas.auth import RegisterRequest, VerifyOtpRequest, ResendOtpRequest, LoginRequest
+from app.schemas.auth import (
+    RegisterRequest,
+    VerifyOtpRequest,
+    ResendOtpRequest,
+    LoginRequest,
+    ProfileUpdateRequest,
+)
 from app.db.database import get_db
 from app.utils.email_service import EmailService
 import random
@@ -39,6 +45,14 @@ def _normalize_utc_datetime(value: datetime | None) -> datetime | None:
         return value.replace(tzinfo=timezone.utc)
 
     return value.astimezone(timezone.utc)
+
+
+def _clean_optional_string(value: str | None) -> str | None:
+    if value is None:
+        return None
+
+    cleaned = value.strip()
+    return cleaned or None
 
 
 def create_access_token(data: dict) -> str:
@@ -153,6 +167,29 @@ def login_user(db: Session, payload: LoginRequest) -> dict:
     access_token = create_access_token({"sub": user.id, "email": user.email})
     refresh_token = create_refresh_token({"sub": user.id, "email": user.email})
     return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer", "user": user}
+
+
+def update_user_profile(db: Session, current_user: User, payload: ProfileUpdateRequest) -> User:
+    next_email = payload.email.strip() if payload.email is not None else current_user.email
+
+    if next_email != current_user.email:
+        existing = db.query(User).filter(User.email == next_email).first()
+        if existing and existing.id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already registered",
+            )
+        current_user.email = next_email
+
+    current_user.first_name = _clean_optional_string(payload.first_name)
+    current_user.last_name = _clean_optional_string(payload.last_name)
+    current_user.phone = _clean_optional_string(payload.phone)
+    current_user.time_zone = _clean_optional_string(payload.time_zone)
+    current_user.updated_at = datetime.now(timezone.utc)
+
+    db.commit()
+    db.refresh(current_user)
+    return current_user
 
 
 security = HTTPBearer()

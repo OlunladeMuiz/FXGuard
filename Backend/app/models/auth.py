@@ -15,3 +15,7 @@ class User(Base):
     verification_code = Column(Integer, nullable=True)
     verification_code_expires_at = Column(DateTime, nullable=True)
     company_name = Column(String)
+    first_name = Column(String, nullable=True)
+    last_name = Column(String, nullable=True)
+    phone = Column(String, nullable=True)
+    time_zone = Column(String, nullable=True)
