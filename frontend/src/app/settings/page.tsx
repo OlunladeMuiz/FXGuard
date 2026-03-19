@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import styles from './page.module.css';
-import { getUser } from '@/lib/api/auth';
+import { getUser, setUser } from '@/lib/api/auth';
 
 const icons = {
   user: (
@@ -96,12 +96,22 @@ export default function SettingsPage() {
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [timeZone, setTimeZone] = useState('UTC-5 (Eastern Time)');
 
   useEffect(() => {
     const userData = getUser();
     if (!userData?.email) return;
 
     setEmail(userData.email);
+    setFirstName(userData.first_name?.trim() ?? '');
+    setLastName(userData.last_name?.trim() ?? '');
+    setPhone(userData.phone?.trim() ?? '');
+    setTimeZone(userData.time_zone?.trim() || 'UTC-5 (Eastern Time)');
+
+    if (userData.first_name?.trim() || userData.last_name?.trim()) {
+      return;
+    }
+
     const emailPrefix = userData.email.split('@')[0] ?? '';
     const nameParts = emailPrefix.split(/[._-]/).filter(Boolean);
 
@@ -114,6 +124,20 @@ export default function SettingsPage() {
     setFirstName(titleCase(emailPrefix));
     setLastName('');
   }, []);
+
+  const handleSaveProfile = () => {
+    const currentUser = getUser();
+    if (!currentUser) return;
+
+    setUser({
+      ...currentUser,
+      email: email.trim(),
+      first_name: firstName.trim(),
+      last_name: lastName.trim(),
+      phone: phone.trim(),
+      time_zone: timeZone,
+    });
+  };
 
   const activeLabel = useMemo(
     () => menu.find((m) => m.key === active)?.label ?? 'Settings',
@@ -213,14 +237,22 @@ export default function SettingsPage() {
                     </div>
                     <div className={styles.fullWidth}>
                       <label className={styles.formLabel}>Time Zone</label>
-                      <select className={styles.formSelect}>
+                      <select
+                        className={styles.formSelect}
+                        value={timeZone}
+                        onChange={(e) => setTimeZone(e.target.value)}
+                      >
                         <option>UTC-5 (Eastern Time)</option>
                       </select>
                     </div>
                   </div>
 
                   <div className={styles.cardFooter}>
-                    <button className={styles.save} type="button">
+                    <button
+                      className={styles.save}
+                      type="button"
+                      onClick={handleSaveProfile}
+                    >
                       Save Changes
                     </button>
                   </div>

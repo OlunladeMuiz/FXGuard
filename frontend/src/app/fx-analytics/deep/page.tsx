@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import styles from './page.module.css';
-import { fetchRealFXRate } from '@/lib/api/fx';
+import { fetchRealFXRate, fetchRealFXRateOnDate } from '@/lib/api/fx';
 
 const alerts = [
   { title: 'Rate Above 0.9280', status: 'Active', tone: 'green' },
@@ -52,13 +52,9 @@ export default function FxDeepAnalysis() {
         // Calculate 24h change
         const yesterday = new Date();
         yesterday.setDate(yesterday.getDate() - 2);
-        const yesterdayStr = yesterday.toISOString().split('T')[0];
-        
-        const histResponse = await fetch(
-          `https://api.frankfurter.app/${yesterdayStr}?from=USD&to=EUR`
-        );
-        const histData = await histResponse.json();
-        const yesterdayRate = histData.rates?.EUR || rate;
+        const yesterdayStr = yesterday.toISOString().slice(0, 10);
+        const { rate: yesterdayRateValue } = await fetchRealFXRateOnDate('USD', 'EUR', yesterdayStr);
+        const yesterdayRate = yesterdayRateValue || rate;
         
         const changeValue = rate - yesterdayRate;
         const changePercent = ((rate - yesterdayRate) / yesterdayRate) * 100;

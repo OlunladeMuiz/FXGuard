@@ -260,6 +260,7 @@
 .userName {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
+  flex-wrap: wrap;
 }
 
 .userRole {
@@ -310,6 +311,16 @@
   cursor: pointer;
   transition: all 0.2s ease;
 }
+/* Hide hamburger menu on large screens */
+.hamburgerWrapper {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .hamburgerWrapper {
+    display: block;
+  }
+}
 
 .hamburgerBtn:hover {
   background: var(--color-neutral-50);
@@ -349,6 +360,14 @@
   height: 100vh;
   background: rgba(0, 0, 0, 0.2);
   z-index: 99;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.menuBackdropOpen {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .dropdownMenu {
@@ -362,7 +381,18 @@
   box-shadow: var(--shadow-lg);
   padding: var(--spacing-2);
   z-index: 100;
-  animation: menuSlideDown 0.2s ease;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-8px);
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+
+.dropdownMenuOpen {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
 }
 
 @keyframes menuSlideDown {

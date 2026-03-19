@@ -4,7 +4,7 @@ import React, { useMemo, useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import styles from './Navbar.module.css';
-import { getUser } from '@/lib/api/auth';
+import { AUTH_USER_UPDATED_EVENT, getUser, getUserDisplayName, User } from '@/lib/api/auth';
 
 const marketingLinks = [
   { href: '#features', label: 'Features' },
@@ -122,23 +122,25 @@ export const Navbar: React.FC = () => {
 
   // Close menu on route change
   useEffect(() => {
+    setMobileOpen(false);
     setMenuOpen(false);
   }, [pathname]);
 
   useEffect(() => {
-    const userData = getUser();
-    if (userData?.email) {
-      const emailPrefix = userData.email.split('@')[0] || '';
-      // Try to split by common separators like . or _ and capitalize
-      const nameParts = emailPrefix.split(/[._-]/);
-      if (nameParts.length >= 2 && nameParts[0] && nameParts[1]) {
-        const firstName = nameParts[0].charAt(0).toUpperCase() + nameParts[0].slice(1);
-        const lastName = nameParts[1].charAt(0).toUpperCase() + nameParts[1].slice(1);
-        setDisplayName(`${firstName} ${lastName}`);
-      } else if (emailPrefix) {
-        setDisplayName(emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1));
-      }
-    }
+    const syncDisplayName = (event?: Event) => {
+      const updatedUser =
+        event instanceof CustomEvent ? (event.detail as User | null | undefined) : undefined;
+      setDisplayName(getUserDisplayName(updatedUser ?? getUser()));
+    };
+
+    syncDisplayName();
+    window.addEventListener(AUTH_USER_UPDATED_EVENT, syncDisplayName);
+    window.addEventListener('storage', syncDisplayName);
+
+    return () => {
+      window.removeEventListener(AUTH_USER_UPDATED_EVENT, syncDisplayName);
+      window.removeEventListener('storage', syncDisplayName);
+    };
   }, []);
 
   const isMarketing = pathname === '/';
@@ -182,6 +184,7 @@ export const Navbar: React.FC = () => {
               <Link href="/login" className={styles.linkButton}>Log in</Link>
               <Link href="/signup" className={styles.primaryButton}>Get Started</Link>
               <button
+                type="button"
                 className={styles.mobileToggle}
                 onClick={() => setMobileOpen((prev) => !prev)}
                 aria-label="Toggle menu"
@@ -263,8 +266,9 @@ export const Navbar: React.FC = () => {
               {/* Hamburger Menu */}
               <div className={styles.hamburgerWrapper} ref={menuRef}>
                 <button
+                  type="button"
                   className={`${styles.hamburgerBtn} ${menuOpen ? styles.hamburgerBtnOpen : ''}`}
-                  onClick={() => setMenuOpen(!menuOpen)}
+                  onClick={() => setMenuOpen((prev) => !prev)}
                   aria-label={menuOpen ? 'Close menu' : 'Open menu'}
                   aria-expanded={menuOpen}
                 >
@@ -273,30 +277,33 @@ export const Navbar: React.FC = () => {
                   <span className={styles.hamburgerLine} />
                 </button>
 
-                {menuOpen && (
-                  <>
-                    <div className={styles.menuBackdrop} onClick={() => setMenuOpen(false)} />
-                    <nav className={styles.dropdownMenu}>
-                      <ul className={styles.menuList}>
-                        {navMenuItems.map((item) => {
-                          const isActive = pathname.startsWith(item.href);
-                          return (
-                            <li key={item.id} className={styles.menuItem}>
-                              <Link
-                                href={item.href}
-                                className={`${styles.menuLink} ${isActive ? styles.menuLinkActive : ''}`}
-                                onClick={() => setMenuOpen(false)}
-                              >
-                                <span className={styles.menuIcon}>{item.icon}</span>
-                                <span className={styles.menuLabel}>{item.label}</span>
-                              </Link>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    </nav>
-                  </>
-                )}
+                <div
+                  className={`${styles.menuBackdrop} ${menuOpen ? styles.menuBackdropOpen : ''}`}
+                  onClick={() => setMenuOpen(false)}
+                  aria-hidden={!menuOpen}
+                />
+                <nav
+                  className={`${styles.dropdownMenu} ${menuOpen ? styles.dropdownMenuOpen : ''}`}
+                  aria-hidden={!menuOpen}
+                >
+                  <ul className={styles.menuList}>
+                    {navMenuItems.map((item) => {
+                      const isActive = pathname.startsWith(item.href);
+                      return (
+                        <li key={item.id} className={styles.menuItem}>
+                          <Link
+                            href={item.href}
+                            className={`${styles.menuLink} ${isActive ? styles.menuLinkActive : ''}`}
+                            onClick={() => setMenuOpen(false)}
+                          >
+                            <span className={styles.menuIcon}>{item.icon}</span>
+                            <span className={styles.menuLabel}>{item.label}</span>
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </nav>
               </div>
 
               <div className={styles.user}>

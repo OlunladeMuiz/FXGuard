@@ -31,6 +31,16 @@ def generate_otp() -> int:
     return random.randint(100000, 999999)
 
 
+def _normalize_utc_datetime(value: datetime | None) -> datetime | None:
+    if value is None:
+        return None
+
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+
+    return value.astimezone(timezone.utc)
+
+
 def create_access_token(data: dict) -> str:
     to_encode = data.copy()
     to_encode["exp"] = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -85,7 +95,8 @@ def verify_otp(db: Session, payload: VerifyOtpRequest) -> User:
         )
     
     # Check if OTP has expired
-    if user.verification_code_expires_at and datetime.now(timezone.utc) > user.verification_code_expires_at:
+    expires_at = _normalize_utc_datetime(user.verification_code_expires_at)
+    if expires_at and datetime.now(timezone.utc) > expires_at:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="OTP has expired. Please request a new one.",
