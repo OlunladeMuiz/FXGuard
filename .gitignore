@@ -11,3 +11,6 @@ dist/
 .vscode/
 out/
 UNDERSTANDING.md
+Backend/env
+Backend/.venv
+
