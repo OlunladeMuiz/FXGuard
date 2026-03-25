@@ -1,8 +1,9 @@
 """
-Email service for sending transactional emails via Gmail
+Email service for sending transactional emails via SMTP
 """
 import html
 import smtplib
+import socket
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from typing import List
@@ -16,18 +17,16 @@ load_dotenv()
 # Set up logging
 logger = logging.getLogger(__name__)
 
-# Gmail SMTP Configuration
-GMAIL_ADDRESS = os.getenv("GMAIL_ADDRESS")
-GMAIL_PASSWORD = os.getenv("GMAIL_PASSWORD")
-SMTP_SERVER = "smtp.gmail.com"
-SMTP_PORT = 587
+DEFAULT_SMTP_SERVER = "smtp.gmail.com"
+DEFAULT_SMTP_PORT = 587
+DEFAULT_SMTP_TIMEOUT_SECONDS = 10.0
 
 # Template directory
 TEMPLATE_DIR = Path(__file__).parent.parent / "templates"
 
 
 class EmailService:
-    """Service for sending emails via Gmail"""
+    """Service for sending emails via SMTP"""
     
     @staticmethod
     def _escape(value) -> str:
@@ -58,6 +57,62 @@ class EmailService:
         except Exception as e:
             logger.error(f"Error loading template {template_name}: {str(e)}")
             return ""
+
+    @staticmethod
+    def _get_smtp_server() -> str:
+        configured_server = os.getenv("SMTP_SERVER", "").strip()
+        return configured_server or DEFAULT_SMTP_SERVER
+
+    @staticmethod
+    def _get_smtp_port() -> int:
+        configured_port = os.getenv("SMTP_PORT", "").strip()
+        if not configured_port:
+            return DEFAULT_SMTP_PORT
+
+        try:
+            return int(configured_port)
+        except ValueError:
+            logger.warning(
+                "Invalid SMTP_PORT '%s'. Falling back to default port %s.",
+                configured_port,
+                DEFAULT_SMTP_PORT,
+            )
+            return DEFAULT_SMTP_PORT
+
+    @staticmethod
+    def _get_smtp_timeout_seconds() -> float:
+        configured_timeout = os.getenv("SMTP_TIMEOUT_SECONDS", "").strip()
+        if not configured_timeout:
+            return DEFAULT_SMTP_TIMEOUT_SECONDS
+
+        try:
+            timeout_seconds = float(configured_timeout)
+            if timeout_seconds <= 0:
+                raise ValueError
+            return timeout_seconds
+        except ValueError:
+            logger.warning(
+                "Invalid SMTP_TIMEOUT_SECONDS '%s'. Falling back to default timeout %.1fs.",
+                configured_timeout,
+                DEFAULT_SMTP_TIMEOUT_SECONDS,
+            )
+            return DEFAULT_SMTP_TIMEOUT_SECONDS
+
+    @staticmethod
+    def _should_use_tls() -> bool:
+        return os.getenv("SMTP_USE_TLS", "true").strip().lower() not in {"0", "false", "no"}
+
+    @staticmethod
+    def _get_smtp_username() -> str | None:
+        return (os.getenv("SMTP_USERNAME") or os.getenv("GMAIL_ADDRESS") or "").strip() or None
+
+    @staticmethod
+    def _get_smtp_password() -> str | None:
+        return (os.getenv("SMTP_PASSWORD") or os.getenv("GMAIL_PASSWORD") or "").strip() or None
+
+    @staticmethod
+    def _get_from_address() -> str | None:
+        return (os.getenv("EMAIL_FROM_ADDRESS") or EmailService._get_smtp_username() or "").strip() or None
     
     @staticmethod
     def send_email(
@@ -68,7 +123,7 @@ class EmailService:
         to_emails: List[str] = None
     ) -> bool:
         """
-        Send an email via Gmail SMTP
+        Send an email via SMTP
         
         Args:
             to_email: Recipient email address (primary)
@@ -80,15 +135,25 @@ class EmailService:
         Returns:
             bool: True if email sent successfully, False otherwise
         """
-        if not GMAIL_ADDRESS or not GMAIL_PASSWORD:
-            logger.error("GMAIL_ADDRESS and GMAIL_PASSWORD environment variables not set")
+        smtp_username = EmailService._get_smtp_username()
+        smtp_password = EmailService._get_smtp_password()
+        from_address = EmailService._get_from_address()
+        smtp_server = EmailService._get_smtp_server()
+        smtp_port = EmailService._get_smtp_port()
+        smtp_timeout_seconds = EmailService._get_smtp_timeout_seconds()
+
+        if not smtp_username or not smtp_password or not from_address:
+            logger.error(
+                "SMTP credentials are not configured. Set SMTP_USERNAME/SMTP_PASSWORD "
+                "or GMAIL_ADDRESS/GMAIL_PASSWORD."
+            )
             return False
         
         try:
             # Create message
             message = MIMEMultipart("alternative")
             message["Subject"] = subject
-            message["From"] = GMAIL_ADDRESS
+            message["From"] = from_address
             message["To"] = to_email
             
             # Attach text and HTML parts
@@ -102,16 +167,51 @@ class EmailService:
                 recipients.extend(to_emails)
             
             # Send email via SMTP
-            with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
-                server.starttls()  # Secure connection
-                server.login(GMAIL_ADDRESS, GMAIL_PASSWORD)
-                server.sendmail(GMAIL_ADDRESS, recipients, message.as_string())
+            with smtplib.SMTP(
+                smtp_server,
+                smtp_port,
+                timeout=smtp_timeout_seconds,
+            ) as server:
+                server.ehlo()
+                if EmailService._should_use_tls():
+                    server.starttls()  # Secure connection
+                    server.ehlo()
+                server.login(smtp_username, smtp_password)
+                server.sendmail(from_address, recipients, message.as_string())
             
             logger.info(f"Email sent successfully to {to_email} with subject: {subject}")
             return True
         
         except smtplib.SMTPAuthenticationError:
-            logger.error("Gmail authentication failed. Check GMAIL_ADDRESS and GMAIL_PASSWORD")
+            logger.error(
+                "SMTP authentication failed for %s. Check SMTP credentials.",
+                smtp_server,
+            )
+            return False
+        except smtplib.SMTPConnectError as e:
+            logger.error(
+                "SMTP connection failed to %s:%s: %s",
+                smtp_server,
+                smtp_port,
+                str(e),
+            )
+            return False
+        except (socket.timeout, TimeoutError) as e:
+            logger.error(
+                "SMTP connection to %s:%s timed out after %.1fs: %s",
+                smtp_server,
+                smtp_port,
+                smtp_timeout_seconds,
+                str(e),
+            )
+            return False
+        except OSError as e:
+            logger.error(
+                "SMTP network error while connecting to %s:%s: %s",
+                smtp_server,
+                smtp_port,
+                str(e),
+            )
             return False
         except smtplib.SMTPException as e:
             logger.error(f"SMTP error occurred: {type(e).__name__}: {str(e)}")

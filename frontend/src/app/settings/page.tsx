@@ -1,428 +1,166 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+
 import styles from './page.module.css';
-import { getPreferredCurrency, getUser, setUser, updateProfile } from '@/lib/api/auth';
+import { BankDetailsSection } from '@/components/settings/BankDetailsSection';
+import { BusinessDetailsSection } from '@/components/settings/BusinessDetailsSection';
+import { IntegrationsSection } from '@/components/settings/IntegrationsSection';
+import { NotificationsSection } from '@/components/settings/NotificationsSection';
+import { ProfileSecuritySection } from '@/components/settings/ProfileSecuritySection';
+import { SETTINGS_NAV_ITEMS } from '@/components/settings/navigation';
+import { SettingsSidebar } from '@/components/settings/SettingsSidebar';
+import { useBankDetails } from '@/hooks/useBankDetails';
+import { useBusinessDetails } from '@/hooks/useBusinessDetails';
+import { useIntegrations } from '@/hooks/useIntegrations';
+import { useNotifications } from '@/hooks/useNotifications';
+import { useProfileSettings } from '@/hooks/useProfileSettings';
+import { SettingsSection, SettingsSectionSchema } from '@/types/settings';
 
-const icons = {
-  user: (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M19 21a7 7 0 0 0-14 0" />
-      <circle cx="12" cy="7" r="4" />
-    </svg>
-  ),
-  business: (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 21h18" />
-      <path d="M5 21V7l8-4 6 4v14" />
-      <path d="M9 9v.01" />
-      <path d="M9 12v.01" />
-      <path d="M9 15v.01" />
-      <path d="M13 9v.01" />
-      <path d="M13 12v.01" />
-      <path d="M13 15v.01" />
-    </svg>
-  ),
-  bank: (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 10h18" />
-      <path d="M5 10V7l7-4 7 4v3" />
-      <path d="M4 21h16" />
-      <path d="M7 10v11" />
-      <path d="M12 10v11" />
-      <path d="M17 10v11" />
-    </svg>
-  ),
-  bell: (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-    </svg>
-  ),
-  plug: (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 22v-5" />
-      <path d="M9 8V2" />
-      <path d="M15 8V2" />
-      <path d="M7 8h10" />
-      <path d="M7 8v4a5 5 0 0 0 10 0V8" />
-    </svg>
-  ),
-  photo: (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 15V7a2 2 0 0 0-2-2h-3l-2-2H10L8 5H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2Z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  ),
-  shield: (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" />
-      <path d="m9 12 2 2 4-4" />
-    </svg>
-  ),
-  desktop: (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="4" width="18" height="12" rx="2" />
-      <path d="M8 20h8" />
-      <path d="M12 16v4" />
-    </svg>
-  ),
-  phone: (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="7" y="2" width="10" height="20" rx="2" />
-      <path d="M12 18h.01" />
-    </svg>
-  ),
-} as const;
-
-const menu = [
-  { key: 'profile', label: 'Profile & Security', icon: icons.user },
-  { key: 'business', label: 'Business Details', icon: icons.business },
-  { key: 'bank', label: 'Bank Details', icon: icons.bank },
-  { key: 'notifications', label: 'Notifications', icon: icons.bell },
-  { key: 'integrations', label: 'Integrations', icon: icons.plug },
-] as const;
-
-const preferredCurrencyOptions = [
-  { code: 'NGN', label: 'NGN - Nigerian Naira' },
-  { code: 'USD', label: 'USD - US Dollar' },
-  { code: 'EUR', label: 'EUR - Euro' },
-  { code: 'GBP', label: 'GBP - British Pound' },
-] as const;
-
-type MenuKey = (typeof menu)[number]['key'];
-
-function titleCase(value: string) {
-  if (!value) return '';
-  return value.charAt(0).toUpperCase() + value.slice(1);
+function parseSection(value: string | null): SettingsSection {
+  const result = SettingsSectionSchema.safeParse(value);
+  return result.success ? result.data : 'profile';
 }
 
 export default function SettingsPage() {
-  const [active, setActive] = useState<MenuKey>('profile');
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [timeZone, setTimeZone] = useState('UTC-5 (Eastern Time)');
-  const [preferredCurrency, setPreferredCurrency] = useState('NGN');
-  const [saveSuccess, setSaveSuccess] = useState(false);
-  const [saveError, setSaveError] = useState('');
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const activeSection = parseSection(searchParams.get('section'));
 
-  useEffect(() => {
-    const userData = getUser();
-    if (!userData?.email) return;
+  const profile = useProfileSettings();
+  const business = useBusinessDetails();
+  const bank = useBankDetails();
+  const integrations = useIntegrations();
+  const notifications = useNotifications(profile.form.preferredCurrency);
 
-    setEmail(userData.email);
-    setFirstName(userData.first_name?.trim() ?? '');
-    setLastName(userData.last_name?.trim() ?? '');
-    setPhone(userData.phone?.trim() ?? '');
-    setTimeZone(userData.time_zone?.trim() || 'UTC-5 (Eastern Time)');
-    setPreferredCurrency(getPreferredCurrency(userData));
-
-    if (userData.first_name?.trim() || userData.last_name?.trim()) {
-      return;
-    }
-
-    const emailPrefix = userData.email.split('@')[0] ?? '';
-    const nameParts = emailPrefix.split(/[._-]/).filter(Boolean);
-
-    if (nameParts.length >= 2) {
-      setFirstName(titleCase(nameParts[0] ?? ''));
-      setLastName(titleCase(nameParts[1] ?? ''));
-      return;
-    }
-
-    setFirstName(titleCase(emailPrefix));
-    setLastName('');
-  }, []);
-
-  const handleSaveProfile = async () => {
-    const currentUser = getUser();
-    if (!currentUser) return;
-
-    setSaveSuccess(false);
-    setSaveError('');
-
-    try {
-      const updatedUser = await updateProfile({
-        email: email.trim(),
-        first_name: firstName.trim() || null,
-        last_name: lastName.trim() || null,
-        phone: phone.trim() || null,
-        time_zone: timeZone.trim() || null,
-        preferred_currency: preferredCurrency,
-      });
-      setUser({
-        ...currentUser,
-        ...updatedUser,
-      });
-      setEmail(updatedUser.email);
-      setFirstName(updatedUser.first_name?.trim() ?? '');
-      setLastName(updatedUser.last_name?.trim() ?? '');
-      setPhone(updatedUser.phone?.trim() ?? '');
-      setTimeZone(updatedUser.time_zone?.trim() || 'UTC-5 (Eastern Time)');
-      setPreferredCurrency(getPreferredCurrency(updatedUser));
-      setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3000);
-    } catch (error) {
-      console.error('Failed to save profile:', error);
-      setSaveError('Failed to save changes. Please try again.');
-      setTimeout(() => setSaveError(''), 4000);
-    }
+  const handleSectionChange = (section: SettingsSection) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('section', section);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
   const activeLabel = useMemo(
-    () => menu.find((m) => m.key === active)?.label ?? 'Settings',
-    [active]
+    () => SETTINGS_NAV_ITEMS.find((item) => item.section === activeSection)?.label ?? 'Settings',
+    [activeSection],
   );
+
+  const connectedProvidersCount = integrations.integrations.filter(
+    (integration) => integration.status === 'connected',
+  ).length;
+
+  const renderActiveSection = () => {
+    switch (activeSection) {
+      case 'business':
+        return (
+          <BusinessDetailsSection
+            businessDetails={business.businessDetails}
+            form={business.form}
+            loading={business.loading}
+            saving={business.saving}
+            error={business.error}
+            successMessage={business.successMessage}
+            setField={business.setField}
+            save={business.save}
+          />
+        );
+      case 'bank':
+        return (
+          <BankDetailsSection
+            bankDetails={bank.bankDetails}
+            lastSavedRecord={bank.lastSavedRecord}
+            loading={bank.loading}
+            saving={bank.saving}
+            error={bank.error}
+            successMessage={bank.successMessage}
+            updateField={bank.updateField}
+            save={bank.save}
+          />
+        );
+      case 'notifications':
+        return (
+          <NotificationsSection
+            notifications={notifications.notifications}
+            loading={notifications.loading}
+            error={notifications.error}
+            refresh={notifications.refresh}
+          />
+        );
+      case 'integrations':
+        return (
+          <IntegrationsSection
+            integrations={integrations.integrations}
+            loading={integrations.loading}
+            connectingProvider={integrations.connectingProvider}
+            error={integrations.error}
+            successMessage={integrations.successMessage}
+            hasConnectedProvider={integrations.hasConnectedProvider}
+            connect={integrations.connect}
+          />
+        );
+      case 'profile':
+      default:
+        return (
+          <ProfileSecuritySection
+            form={profile.form}
+            loading={profile.loading}
+            saving={profile.saving}
+            error={profile.error}
+            successMessage={profile.successMessage}
+            setField={profile.setField}
+            save={profile.save}
+          />
+        );
+    }
+  };
 
   return (
     <div className={styles.page}>
       <div className={styles.container}>
         <header className={styles.header}>
-          <h1>Settings</h1>
-          <p>
-            Manage your profile, security, business details, and platform
-            preferences
-          </p>
+          <div>
+            <span className={styles.headerEyebrow}>FXGuard Settings</span>
+            <h1>Financial control center</h1>
+            <p>
+              Manage the identity, payout rails, payment providers, and FX intelligence that
+              power cross-border execution for your business.
+            </p>
+          </div>
         </header>
 
+        <section className={styles.overviewGrid}>
+          <article className={styles.overviewCard}>
+            <span className={styles.overviewLabel}>Active Section</span>
+            <strong>{activeLabel}</strong>
+            <p>Each settings block affects how FXGuard monitors and executes settlement decisions.</p>
+          </article>
+          <article className={styles.overviewCard}>
+            <span className={styles.overviewLabel}>Default Currency</span>
+            <strong>{profile.form.preferredCurrency}</strong>
+            <p>This currency drives invoice settlement defaults and recommendation context.</p>
+          </article>
+          <article className={styles.overviewCard}>
+            <span className={styles.overviewLabel}>Connected Providers</span>
+            <strong>{connectedProvidersCount}/3</strong>
+            <p>At least one connected provider is required before payment links can be executed.</p>
+          </article>
+          <article className={styles.overviewCard}>
+            <span className={styles.overviewLabel}>Live Notifications</span>
+            <strong>{notifications.notifications.length}</strong>
+            <p>FXGuard blends live recommendation signals with system readiness alerts.</p>
+          </article>
+        </section>
+
         <div className={styles.layout}>
-          <aside className={styles.sidebar} aria-label="Settings menu">
-            {menu.map((item) => (
-              <button
-                key={item.key}
-                type="button"
-                onClick={() => setActive(item.key)}
-                className={`${styles.menuItem} ${
-                  active === item.key ? styles.active : ''
-                }`}
-                aria-current={active === item.key ? 'page' : undefined}
-              >
-                <span className={styles.menuIcon} aria-hidden>
-                  {item.icon}
-                </span>
-                <span className={styles.menuLabel}>{item.label}</span>
-              </button>
-            ))}
-          </aside>
+          <SettingsSidebar
+            activeSection={activeSection}
+            onSelect={handleSectionChange}
+          />
 
-          <div className={styles.main}>
-            {active === 'profile' ? (
-              <>
-                <section className={styles.card}>
-                  <div className={styles.cardHeader}>
-                    <h3>Profile Information</h3>
-                  </div>
-
-                  <div className={styles.photoRow}>
-                    <img
-                      src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=96&q=80"
-                      alt="Profile"
-                    />
-                    <div className={styles.photoMeta}>
-                      <button type="button" className={styles.photoButton}>
-                        {icons.photo}
-                        Change Photo
-                      </button>
-                      <p className={styles.photoHint}>JPG, PNG up to 5MB</p>
-                    </div>
-                  </div>
-
-                  <div className={styles.gridTwo}>
-                    <div>
-                      <label className={styles.formLabel}>First Name</label>
-                      <input
-                        className={styles.formInput}
-                        value={firstName}
-                        onChange={(e) => setFirstName(e.target.value)}
-                        placeholder="Enter first name"
-                      />
-                    </div>
-                    <div>
-                      <label className={styles.formLabel}>Last Name</label>
-                      <input
-                        className={styles.formInput}
-                        value={lastName}
-                        onChange={(e) => setLastName(e.target.value)}
-                        placeholder="Enter last name"
-                      />
-                    </div>
-                    <div>
-                      <label className={styles.formLabel}>Email Address</label>
-                      <input
-                        className={styles.formInput}
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        type="email"
-                        placeholder="john.smith@company.com"
-                      />
-                    </div>
-                    <div>
-                      <label className={styles.formLabel}>Phone Number</label>
-                      <input
-                        className={styles.formInput}
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        placeholder="+1 (555) 123-4567"
-                      />
-                    </div>
-                    <div className={styles.fullWidth}>
-                      <label className={styles.formLabel}>Time Zone</label>
-                      <select
-                        className={styles.formSelect}
-                        value={timeZone}
-                        onChange={(e) => setTimeZone(e.target.value)}
-                      >
-                        <option>UTC-5 (Eastern Time)</option>
-                      </select>
-                    </div>
-                    <div className={styles.fullWidth}>
-                      <label className={styles.formLabel}>Preferred Settlement Currency</label>
-                      <select
-                        className={styles.formSelect}
-                        value={preferredCurrency}
-                        onChange={(e) => setPreferredCurrency(e.target.value)}
-                      >
-                        {preferredCurrencyOptions.map((currency) => (
-                          <option key={currency.code} value={currency.code}>
-                            {currency.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  {saveSuccess && (
-                    <div style={{
-                      color: 'var(--color-success)',
-                      background: 'var(--color-success-light)',
-                      border: '1px solid var(--color-success)',
-                      borderRadius: 8,
-                      padding: '0.6rem 1rem',
-                      fontSize: 'var(--font-size-sm)',
-                      marginBottom: 'var(--spacing-3)',
-                    }}>
-                      Profile saved successfully.
-                    </div>
-                  )}
-                  {saveError && (
-                    <div style={{
-                      color: 'var(--color-error)',
-                      background: 'var(--color-error-light)',
-                      border: '1px solid var(--color-error)',
-                      borderRadius: 8,
-                      padding: '0.6rem 1rem',
-                      fontSize: 'var(--font-size-sm)',
-                      marginBottom: 'var(--spacing-3)',
-                    }}>
-                      {saveError}
-                    </div>
-                  )}
-                  <div className={styles.cardFooter}>
-                    <button
-                      className={styles.save}
-                      type="button"
-                      onClick={handleSaveProfile}
-                    >
-                      Save Changes
-                    </button>
-                  </div>
-                </section>
-
-                <section className={styles.card}>
-                  <h3>Security Settings</h3>
-
-                  <div className={styles.block}>
-                    <div className={styles.blockTitle}>Change Password</div>
-                    <div className={styles.gridTwo}>
-                      <div>
-                        <label className={styles.formLabel}>
-                          Current Password
-                        </label>
-                        <input className={styles.formInput} type="password" />
-                      </div>
-                      <div>
-                        <label className={styles.formLabel}>New Password</label>
-                        <input className={styles.formInput} type="password" />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className={styles.divider} />
-
-                  <div className={styles.block}>
-                    <div className={styles.blockTitle}>
-                      Two-Factor Authentication
-                    </div>
-                    <div className={styles.twoFaRow}>
-                      <div className={styles.twoFaLeft}>
-                        <span className={styles.twoFaIcon} aria-hidden>
-                          {icons.shield}
-                        </span>
-                        <div>
-                          <div className={styles.twoFaTitle}>2FA Enabled</div>
-                          <div className={styles.twoFaSub}>
-                            Using authenticator app
-                          </div>
-                        </div>
-                      </div>
-                      <button type="button" className={styles.manage}>
-                        Manage
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className={styles.divider} />
-
-                  <div className={styles.block}>
-                    <div className={styles.blockTitle}>Active Sessions</div>
-
-                    <div className={styles.sessionItem}>
-                      <div className={styles.sessionLeft}>
-                        <span className={styles.sessionIcon} aria-hidden>
-                          {icons.desktop}
-                        </span>
-                        <div>
-                          <div className={styles.sessionTitle}>
-                            Desktop - Chrome
-                          </div>
-                          <div className={styles.sessionMeta}>
-                            New York, NY • Current session
-                          </div>
-                        </div>
-                      </div>
-                      <span className={styles.badge}>Active</span>
-                    </div>
-
-                    <div className={styles.sessionItem}>
-                      <div className={styles.sessionLeft}>
-                        <span className={styles.sessionIcon} aria-hidden>
-                          {icons.phone}
-                        </span>
-                        <div>
-                          <div className={styles.sessionTitle}>
-                            iPhone - Safari
-                          </div>
-                          <div className={styles.sessionMeta}>
-                            New York, NY • 2 hours ago
-                          </div>
-                        </div>
-                      </div>
-                      <button type="button" className={styles.revoke}>
-                        Revoke
-                      </button>
-                    </div>
-                  </div>
-                </section>
-              </>
-            ) : (
-              <section className={styles.card}>
-                <h3>{activeLabel}</h3>
-                <p className={styles.comingSoon}>This section is coming soon.</p>
-              </section>
-            )}
-          </div>
+          <main className={styles.main}>
+            {renderActiveSection()}
+          </main>
         </div>
       </div>
     </div>

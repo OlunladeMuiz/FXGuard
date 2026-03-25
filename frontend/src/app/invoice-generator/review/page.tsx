@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import styles from './page.module.css';
 import { fetchRealFXRate, fetchRealFXRateOnDate } from '@/lib/api/fx';
@@ -8,6 +9,7 @@ import { fetchRecommendation } from '@/lib/api/recommendation';
 import { getPreferredCurrency, getUser, User } from '@/lib/api/auth';
 import client from '@/lib/api/client';
 import { formatApiError } from '@/lib/api/errors';
+import { hasConnectedIntegration } from '@/lib/api/integrations';
 import { Recommendation, getActionDisplayText } from '@/lib/types/recommendation';
 import {
   BackendInvoiceRecord,
@@ -95,6 +97,8 @@ export default function InvoiceReviewPage() {
   const [recommendationLoading, setRecommendationLoading] = useState(false);
   const [recommendationError, setRecommendationError] = useState('');
   const [submittingAction, setSubmittingAction] = useState<'draft' | 'sent' | null>(null);
+  const [hasConnectedPaymentProvider, setHasConnectedPaymentProvider] = useState(false);
+  const [providerStatusLoading, setProviderStatusLoading] = useState(true);
 
   useEffect(() => {
     let isActive = true;
@@ -140,6 +144,33 @@ export default function InvoiceReviewPage() {
       isActive = false;
     };
   }, [invoiceId]);
+
+  useEffect(() => {
+    let isActive = true;
+
+    const loadIntegrationStatus = async () => {
+      try {
+        const result = await hasConnectedIntegration();
+        if (isActive) {
+          setHasConnectedPaymentProvider(result);
+        }
+      } catch {
+        if (isActive) {
+          setHasConnectedPaymentProvider(false);
+        }
+      } finally {
+        if (isActive) {
+          setProviderStatusLoading(false);
+        }
+      }
+    };
+
+    void loadIntegrationStatus();
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!draft?.invoiceCurrency || !draft.settlementCurrency) {
@@ -319,6 +350,10 @@ export default function InvoiceReviewPage() {
 
   const handleGeneratePaymentLink = async () => {
     if (!invoice) return;
+    if (!hasConnectedPaymentProvider) {
+      setLinkError('Connect Paystack, Flutterwave, or Interswitch in Settings before generating a payment link.');
+      return;
+    }
     setGeneratingLink(true);
     setLinkError('');
     setError('');
@@ -624,14 +659,26 @@ export default function InvoiceReviewPage() {
                           {linkError}
                         </div>
                       )}
+                      {!providerStatusLoading && !hasConnectedPaymentProvider && (
+                        <div
+                          className={`${styles.message} ${styles.errorMessage}`}
+                          style={{ marginTop: 'var(--spacing-3)' }}
+                        >
+                          Connect a payment provider in <Link href="/settings?section=integrations">Settings</Link> before generating a payment link.
+                        </div>
+                      )}
                       <button
                         type="button"
                         className={styles.primary}
                         onClick={handleGeneratePaymentLink}
-                        disabled={generatingLink}
+                        disabled={generatingLink || providerStatusLoading || !hasConnectedPaymentProvider}
                         style={{ marginTop: 'var(--spacing-3)' }}
                       >
-                        {generatingLink ? 'Generating...' : 'Generate Payment Link'}
+                        {providerStatusLoading
+                          ? 'Checking Providers...'
+                          : generatingLink
+                            ? 'Generating...'
+                            : 'Generate Payment Link'}
                       </button>
                     </>
                   )}

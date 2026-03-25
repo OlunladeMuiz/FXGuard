@@ -422,6 +422,31 @@ export async function fetchInvoiceRecord(invoiceId: string): Promise<InvoiceReco
   return mapBackendInvoice(response.data);
 }
 
+export async function fetchAllInvoiceRecords(batchSize: number = 200): Promise<InvoiceRecord[]> {
+  const invoices: InvoiceRecord[] = [];
+  let skip = 0;
+
+  while (true) {
+    const response = await client.get<BackendInvoiceRecord[]>('/invoices/', {
+      params: {
+        skip,
+        limit: batchSize,
+      },
+    });
+
+    const batch = response.data.map(mapBackendInvoice);
+    invoices.push(...batch);
+
+    if (batch.length < batchSize) {
+      break;
+    }
+
+    skip += batchSize;
+  }
+
+  return invoices;
+}
+
 export function buildInvoiceEmailSubject(record: InvoiceRecord): string {
   return `Invoice ${record.invoiceNumber} from FXGuard`;
 }

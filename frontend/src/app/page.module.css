@@ -1042,7 +1042,13 @@
    Pricing Section
    =================================== */
 .pricingSection {
-  background: white;
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at top left, rgba(37, 99, 235, 0.22), transparent 28%),
+    radial-gradient(circle at bottom right, rgba(14, 165, 233, 0.18), transparent 32%),
+    linear-gradient(135deg, #0f172a 0%, #17345d 54%, #1e3a5f 100%);
+  color: white;
   padding: 5rem 1.5rem;
   text-align: center;
 }
@@ -1051,14 +1057,14 @@
   font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.1em;
-  color: #2563eb;
+  color: #7dd3fc;
   margin-bottom: 0.75rem;
 }
 
 .pricingTitle {
   font-size: 2.25rem;
   font-weight: 700;
-  color: #0f172a;
+  color: #f8fafc;
   margin-bottom: 3rem;
 }
 
@@ -1073,6 +1079,8 @@
   grid-template-columns: 1fr 1fr;
   gap: 2rem;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  position: relative;
+  z-index: 1;
 }
 
 .pricingInputs {

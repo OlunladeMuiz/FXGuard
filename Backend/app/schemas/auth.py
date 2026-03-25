@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel, EmailStr, model_validator
 
 
@@ -21,8 +23,12 @@ class User(BaseModel):
     first_name: str | None = None
     last_name: str | None = None
     phone: str | None = None
+    country: str | None = None
+    business_type: str | None = None
     time_zone: str | None = None
     preferred_currency: str | None = "NGN"
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
 
     class Config:
         from_attributes = True
@@ -55,9 +61,12 @@ class LoginResponse(BaseModel):
 
 class ProfileUpdateRequest(BaseModel):
     email: EmailStr | None = None
+    company_name: str | None = None
     first_name: str | None = None
     last_name: str | None = None
     phone: str | None = None
+    country: str | None = None
+    business_type: str | None = None
     time_zone: str | None = None
     preferred_currency: str | None = None
 

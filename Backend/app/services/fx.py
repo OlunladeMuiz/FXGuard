@@ -29,6 +29,10 @@ TWELVE_DATA_BASE_URL = os.getenv(
 DEFAULT_SYNTHETIC_SEED_DAYS = max(int(os.getenv("FX_HISTORY_SEED_DAYS", "30")), 30)
 SUPPORTED_FX_CURRENCIES = ("USD", "EUR", "GBP", "NGN", "CAD", "AUD", "JPY", "INR")
 DEFAULT_HISTORY_PERIOD = "30d"
+HISTORICAL_UNAVAILABLE_ERROR_TYPES = {
+    "plan-upgrade-required",
+    "historical-data-unavailable",
+}
 HistoryPeriod = Literal["1d", "7d", "30d", "90d", "1y"]
 CandleRange = Literal["1d", "7d", "30d", "90d", "1y"]
 CandleInterval = Literal["1min", "5min", "15min", "30min", "1h", "4h", "1day", "1week"]
@@ -460,6 +464,12 @@ def _parse_provider_date(payload: dict[str, Any], fallback: date) -> date:
     return fallback
 
 
+def _is_historical_unavailable_error(*, observed_on: date | None, error_type: str) -> bool:
+    if observed_on is None or observed_on >= _utc_today():
+        return False
+    return error_type in HISTORICAL_UNAVAILABLE_ERROR_TYPES
+
+
 def _extract_conversion_rates(payload: dict[str, Any]) -> dict[str, float]:
     conversion_rates = payload.get("conversion_rates")
     if not isinstance(conversion_rates, dict):
@@ -583,6 +593,9 @@ async def _fetch_provider_payload(
                 error_type = str(provider_error_type)
                 message = f"ExchangeRate API request failed: {provider_error_type}"
 
+        if _is_historical_unavailable_error(observed_on=observed_on, error_type=error_type):
+            raise HistoricalRatesUnavailable(error_type, f"Historical FX data is unavailable: {error_type}") from exc
+
         raise FXProviderError(error_type, message) from exc
 
     payload = response.json()
@@ -659,6 +672,8 @@ async def _fetch_pair_history_for_dates(
     if not missing_dates:
         return {}
 
+    ordered_dates = sorted(missing_dates)
+    first_date = ordered_dates[0]
     semaphore = asyncio.Semaphore(8)
 
     async def fetch_one(observed_on: date) -> tuple[date, float]:
@@ -669,7 +684,13 @@ async def _fetch_pair_history_for_dates(
                 raise FXProviderError("missing-rate", f"Provider response omitted {base}/{quote}")
             return observed_on, float(rates[quote])
 
-    results = await asyncio.gather(*[fetch_one(observed_on) for observed_on in missing_dates])
+    first_observed_on, first_rate = await fetch_one(first_date)
+    remaining_dates = [observed_on for observed_on in ordered_dates if observed_on != first_date]
+    results: list[tuple[date, float]] = [(first_observed_on, first_rate)]
+
+    if remaining_dates:
+        results.extend(await asyncio.gather(*[fetch_one(observed_on) for observed_on in remaining_dates]))
+
     return {observed_on: rate for observed_on, rate in results}
 
 

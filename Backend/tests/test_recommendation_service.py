@@ -278,6 +278,68 @@ class AIRecommendationFallbackTests(unittest.TestCase):
         self.assertIn(result["action"], {"convert_now", "wait", "hedge", "split_conversion"})
         self.assertIn("explanation", result)
 
+    def test_get_ai_recommendation_disables_retries_after_hard_400_failure(self) -> None:
+        indicators = calculate_indicators(
+            build_points([1.1 + index * 0.01 for index in range(20)]),
+            history_quality="full",
+        )
+        request = httpx.Request("POST", "https://api.anthropic.com/v1/messages")
+        response = httpx.Response(
+            400,
+            request=request,
+            json={
+                "type": "error",
+                "error": {
+                    "type": "invalid_request_error",
+                    "message": "model is not available for this workspace",
+                },
+            },
+        )
+        http_error = httpx.HTTPStatusError("Bad Request", request=request, response=response)
+
+        mock_client = AsyncMock()
+        mock_client.__aenter__.return_value = mock_client
+        mock_client.__aexit__.return_value = None
+        mock_client.post.side_effect = http_error
+
+        with patch("app.services.recommendation.ANTHROPIC_API_KEY", "test-key"), patch(
+            "app.services.recommendation._ANTHROPIC_DISABLED_REASON",
+            None,
+        ), patch(
+            "app.services.recommendation.httpx.AsyncClient",
+            return_value=mock_client,
+        ):
+            first_result = asyncio.run(
+                get_ai_recommendation(
+                    "USD",
+                    "NGN",
+                    10000,
+                    indicators,
+                    status="ready",
+                    history_quality="full",
+                    data_points=20,
+                    real_data_points=20,
+                    synthetic_data_points=0,
+                )
+            )
+            second_result = asyncio.run(
+                get_ai_recommendation(
+                    "USD",
+                    "NGN",
+                    10000,
+                    indicators,
+                    status="ready",
+                    history_quality="full",
+                    data_points=20,
+                    real_data_points=20,
+                    synthetic_data_points=0,
+                )
+            )
+
+        self.assertEqual(mock_client.post.await_count, 1)
+        self.assertIn(first_result["action"], {"convert_now", "wait", "hedge", "split_conversion"})
+        self.assertIn(second_result["action"], {"convert_now", "wait", "hedge", "split_conversion"})
+
 
 if __name__ == "__main__":
     unittest.main()

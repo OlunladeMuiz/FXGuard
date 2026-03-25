@@ -25,8 +25,10 @@ logger = logging.getLogger(__name__)
 
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-3-5-sonnet-latest")
+ANTHROPIC_HARD_FAILURE_STATUSES = {400, 401, 403, 404}
 CANDLE_FALLBACK_RANGE = "7d"
 CANDLE_FALLBACK_INTERVAL = "4h"
+_ANTHROPIC_DISABLED_REASON: str | None = None
 
 RecommendationStatus = Literal["ready", "limited_data", "insufficient_data", "provisional_data"]
 HistoryQuality = Literal["full", "mixed", "seeded", "same_currency", "candle_fallback"]
@@ -49,6 +51,32 @@ def _strip_json_wrapping(raw_content: str) -> str:
         lines = [line for line in content.splitlines() if not line.startswith("```")]
         content = "\n".join(lines).strip()
     return content
+
+
+def _extract_anthropic_error_detail(exc: httpx.HTTPError) -> str:
+    if not isinstance(exc, httpx.HTTPStatusError):
+        return str(exc)
+
+    status_code = exc.response.status_code
+
+    try:
+        payload = exc.response.json()
+    except ValueError:
+        payload = None
+
+    if isinstance(payload, dict):
+        error_payload = payload.get("error")
+        if isinstance(error_payload, dict):
+            error_type = str(error_payload.get("type") or f"http-{status_code}")
+            message = str(error_payload.get("message") or exc)
+            return f"{error_type}: {message}"
+
+        error_type = payload.get("type")
+        message = payload.get("message")
+        if error_type or message:
+            return f"{error_type or f'http-{status_code}'}: {message or exc}"
+
+    return str(exc)
 
 
 async def _load_candle_fallback_points(
@@ -354,7 +382,20 @@ async def get_ai_recommendation(
     synthetic_data_points: int,
     fallback_candle_points: int = 0,
 ) -> dict[str, Any]:
+    global _ANTHROPIC_DISABLED_REASON
+
     if not ANTHROPIC_API_KEY or history_quality == "same_currency" or status == "insufficient_data":
+        return _rule_based_recommendation(
+            indicators,
+            status=status,
+            history_quality=history_quality,
+            data_points=data_points,
+            real_data_points=real_data_points,
+            synthetic_data_points=synthetic_data_points,
+            fallback_candle_points=fallback_candle_points,
+        )
+
+    if _ANTHROPIC_DISABLED_REASON:
         return _rule_based_recommendation(
             indicators,
             status=status,
@@ -424,7 +465,18 @@ Do not include markdown or any text outside the JSON object.
             response.raise_for_status()
             payload = response.json()
     except httpx.HTTPError as exc:
-        logger.warning("Claude request failed, using fallback recommendation: %s", exc)
+        detail = _extract_anthropic_error_detail(exc)
+        status_code = exc.response.status_code if isinstance(exc, httpx.HTTPStatusError) else None
+
+        if status_code in ANTHROPIC_HARD_FAILURE_STATUSES:
+            _ANTHROPIC_DISABLED_REASON = detail
+            logger.warning(
+                "Disabling Claude recommendation requests for this process after hard failure on model %s: %s",
+                ANTHROPIC_MODEL,
+                detail,
+            )
+        else:
+            logger.warning("Claude request failed, using fallback recommendation: %s", detail)
         return _rule_based_recommendation(
             indicators,
             status=status,
