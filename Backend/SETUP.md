@@ -31,6 +31,14 @@ python3 -m venv .venv
 source .venv/bin/activate
 ```
 
+## Configure Environment Variables
+
+Generate a secure secret key before filling in the .env file:
+python -c "import secrets; print(secrets.token_hex(32))"
+Copy the output and use it as your SECRET_KEY value.
+
+DATABASE_URL=postgresql://username:password@host:5432/dbname?sslmode=require
+
 ### 3. Install Dependencies
 
 First, create a `requirements.txt` file in the project root if it doesn't exist:
@@ -55,6 +63,9 @@ pip install -r requirements.txt
 ```
 
 ### 4. Configure Environment Variables
+Generate a secure secret key before filling in the .env file:
+python -c "import secrets; print(secrets.token_hex(32))"
+Copy the output and use it as your SECRET_KEY value.
 
 Create a `.env` file in the project root with the following variables:
 

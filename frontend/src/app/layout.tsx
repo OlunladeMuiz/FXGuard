@@ -2,6 +2,7 @@
 import type { Metadata } from 'next';
 import { Plus_Jakarta_Sans } from 'next/font/google';
 import { ConditionalNavbar } from '@/components';
+import { ProtectedRouteGate } from '@/components/ProtectedRouteGate';
 
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -22,7 +23,9 @@ export default function RootLayout({ children }: RootLayoutProps) {
     <html lang="en">
       <body className={plusJakarta.className}>
         <ConditionalNavbar />
-        <main className="app-main">{children}</main>
+        <main className="app-main">
+          <ProtectedRouteGate>{children}</ProtectedRouteGate>
+        </main>
       </body>
     </html>
   );

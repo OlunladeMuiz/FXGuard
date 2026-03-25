@@ -4,8 +4,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import styles from './page.module.css';
 import { fetchRealFXRate, fetchRealFXRateOnDate } from '@/lib/api/fx';
-import { getUser, User } from '@/lib/api/auth';
+import { fetchRecommendation } from '@/lib/api/recommendation';
+import { getPreferredCurrency, getUser, User } from '@/lib/api/auth';
 import { formatApiError } from '@/lib/api/errors';
+import { Recommendation, getActionDisplayText } from '@/lib/types/recommendation';
 import {
   InvoiceEditorState,
   buildInvoicePrintHtml,
@@ -38,6 +40,45 @@ const currencies = [
 
 const paymentTerms = ['Net 7', 'Net 14', 'Net 30', 'Net 45'];
 
+function syncSettlementCurrency(
+  draft: InvoiceEditorState,
+  preferredCurrency: string,
+): InvoiceEditorState {
+  if (draft.settlementCurrency === preferredCurrency) {
+    return draft;
+  }
+
+  return {
+    ...draft,
+    settlementCurrency: preferredCurrency,
+  };
+}
+
+function getRecommendationTitle(recommendation: Recommendation): string {
+  if (recommendation.status === 'provisional_data') {
+    return `${getActionDisplayText(recommendation.action)} (Intraday Signal)`;
+  }
+  if (recommendation.status === 'insufficient_data') {
+    return 'Collecting Local History';
+  }
+  if (recommendation.status === 'limited_data') {
+    return `${getActionDisplayText(recommendation.action)} (Early Signal)`;
+  }
+  return getActionDisplayText(recommendation.action);
+}
+
+function getRecommendationSupportText(recommendation: Recommendation): string {
+  if (recommendation.historyQuality === 'full') {
+    return `${recommendation.realDataPoints} stored market closes support this view.`;
+  }
+
+  if (recommendation.historyQuality === 'candle_fallback') {
+    return `Using stored intraday candles as a provisional fallback because only ${recommendation.dataPoints} stored daily close${recommendation.dataPoints === 1 ? ' is' : 's are'} available locally.`;
+  }
+
+  return `History quality: ${recommendation.historyQuality.replace('_', ' ')} (${recommendation.realDataPoints} real, ${recommendation.syntheticDataPoints} seeded).`;
+}
+
 export default function InvoiceGeneratorPage() {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -48,12 +89,16 @@ export default function InvoiceGeneratorPage() {
   const [loadingRate, setLoadingRate] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [recommendation, setRecommendation] = useState<Recommendation | null>(null);
+  const [recommendationLoading, setRecommendationLoading] = useState(false);
+  const [recommendationError, setRecommendationError] = useState('');
   const [submittingAction, setSubmittingAction] = useState<'draft' | 'sent' | null>(null);
 
   useEffect(() => {
     const user = getUser();
+    const preferredCurrency = getPreferredCurrency(user);
     setCurrentUser(user);
-    setDraft(loadInvoiceDraft());
+    setDraft(syncSettlementCurrency(loadInvoiceDraft(), preferredCurrency));
     setDraftReady(true);
   }, []);
 
@@ -94,15 +139,17 @@ export default function InvoiceGeneratorPage() {
         const { rate } = await fetchRealFXRate(draft.invoiceCurrency, draft.settlementCurrency);
         setFxRate(rate);
 
-        const yesterday = new Date();
-        yesterday.setDate(yesterday.getDate() - 2);
-        const yesterdayStr = yesterday.toISOString().slice(0, 10);
-        const { rate: yesterdayRateValue } = await fetchRealFXRateOnDate(
+        // Compare against a stored point from two days ago so the local history
+        // still supports a stable short-term change view while it backfills.
+        const previousDay = new Date();
+        previousDay.setDate(previousDay.getDate() - 2);
+        const previousDayStr = previousDay.toISOString().slice(0, 10);
+        const { rate: previousRateValue } = await fetchRealFXRateOnDate(
           draft.invoiceCurrency,
           draft.settlementCurrency,
-          yesterdayStr,
+          previousDayStr,
         );
-        const yesterdayRate = yesterdayRateValue || rate;
+        const yesterdayRate = previousRateValue || rate;
         const change = ((rate - yesterdayRate) / yesterdayRate) * 100;
         setRateChange(Math.round(change * 100) / 100);
       } catch (loadError) {
@@ -122,6 +169,56 @@ export default function InvoiceGeneratorPage() {
     [draft],
   );
   const businessName = currentUser?.company_name?.trim() || 'Your Business Name';
+  const preferredSettlementCurrency = getPreferredCurrency(currentUser);
+  const invoiceCurrency = draft?.invoiceCurrency ?? '';
+  const settlementCurrency = draft?.settlementCurrency ?? '';
+  const invoiceTotal = totals?.total ?? 0;
+
+  useEffect(() => {
+    if (!invoiceCurrency || !settlementCurrency || invoiceTotal <= 0) {
+      setRecommendation(null);
+      setRecommendationLoading(false);
+      setRecommendationError('');
+      return;
+    }
+
+    let isActive = true;
+
+    const loadRecommendation = async () => {
+      setRecommendationLoading(true);
+      setRecommendationError('');
+
+      try {
+        const nextRecommendation = await fetchRecommendation(
+          invoiceCurrency,
+          settlementCurrency,
+          invoiceTotal,
+        );
+
+        if (isActive) {
+          setRecommendation(nextRecommendation);
+        }
+      } catch (recommendationLoadError) {
+        if (isActive) {
+          console.error('Failed to fetch invoice recommendation:', recommendationLoadError);
+          setRecommendation(null);
+          setRecommendationError(
+            formatApiError(recommendationLoadError, 'AI recommendation is unavailable right now.'),
+          );
+        }
+      } finally {
+        if (isActive) {
+          setRecommendationLoading(false);
+        }
+      }
+    };
+
+    void loadRecommendation();
+
+    return () => {
+      isActive = false;
+    };
+  }, [invoiceCurrency, invoiceTotal, settlementCurrency]);
 
   const updateDraft = <K extends keyof InvoiceEditorState>(field: K, value: InvoiceEditorState[K]) => {
     setDraft((prev) => (prev ? { ...prev, [field]: value } : prev));
@@ -403,7 +500,8 @@ export default function InvoiceGeneratorPage() {
                     <select
                       className={styles.select}
                       value={draft.settlementCurrency}
-                      onChange={(e) => updateDraft('settlementCurrency', e.target.value)}
+                      disabled
+                      aria-readonly="true"
                     >
                       {currencies.map((currency) => (
                         <option key={currency.code} value={currency.code}>
@@ -411,7 +509,42 @@ export default function InvoiceGeneratorPage() {
                         </option>
                       ))}
                     </select>
-                    <span className={styles.helper}>For FX optimization tracking</span>
+                    <span className={styles.helper}>
+                      Pulled from your profile preference ({preferredSettlementCurrency}). Update it in Settings.
+                    </span>
+                  </div>
+                </div>
+              </section>
+
+              <section className={styles.card}>
+                <h3>Payment Details</h3>
+                <div className={styles.gridTwo}>
+                  <div>
+                    <label className={styles.label}>Account Name</label>
+                    <input
+                      className={styles.input}
+                      placeholder="Account holder name"
+                      value={draft.accountName}
+                      onChange={(e) => updateDraft('accountName', e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className={styles.label}>Bank Name</label>
+                    <input
+                      className={styles.input}
+                      placeholder="Bank name"
+                      value={draft.bankName}
+                      onChange={(e) => updateDraft('bankName', e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className={styles.label}>Account Number</label>
+                    <input
+                      className={styles.input}
+                      placeholder="Account number"
+                      value={draft.accountNumber}
+                      onChange={(e) => updateDraft('accountNumber', e.target.value)}
+                    />
                   </div>
                 </div>
               </section>
@@ -663,8 +796,50 @@ export default function InvoiceGeneratorPage() {
                   </div>
                   <div>
                     <span>Optimal Window</span>
-                    <strong>Next 3-5 days</strong>
+                    <strong>{recommendation?.optimalWindow || (recommendationLoading ? 'Analysing...' : 'Unavailable')}</strong>
                   </div>
+                </div>
+                <div className={styles.recommendationBox}>
+                  {recommendationLoading ? (
+                    <p className={styles.recommendationMuted}>Analysing live market data for this invoice...</p>
+                  ) : recommendation ? (
+                    <>
+                      <div className={styles.recommendationHeader}>
+                        <div>
+                          <p className={styles.recommendationEyebrow}>AI Recommendation</p>
+                          <strong>{getRecommendationTitle(recommendation)}</strong>
+                        </div>
+                        <span className={styles.recommendationBadge}>
+                          {Math.round(recommendation.confidence * 100)}% confidence
+                        </span>
+                      </div>
+                      <p className={styles.recommendationText}>{recommendation.explanation}</p>
+                      <p className={styles.recommendationMuted}>
+                        {getRecommendationSupportText(recommendation)}
+                      </p>
+                      <div className={styles.recommendationFactors}>
+                        {recommendation.factors?.map((factor) => (
+                          <div key={factor.name} className={styles.recommendationFactor}>
+                            <span className={`${styles.recommendationDot} ${
+                              factor.impact === 'positive'
+                                ? styles.recommendationPositive
+                                : factor.impact === 'negative'
+                                  ? styles.recommendationNegative
+                                  : styles.recommendationNeutral
+                            }`}></span>
+                            <div>
+                              <strong>{factor.name}</strong>
+                              <p>{factor.description}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  ) : (
+                    <p className={styles.recommendationMuted}>
+                      {recommendationError || 'No recommendation available for this invoice yet.'}
+                    </p>
+                  )}
                 </div>
               </section>
             </aside>

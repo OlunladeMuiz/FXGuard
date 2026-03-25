@@ -22,7 +22,7 @@ class User(BaseModel):
     last_name: str | None = None
     phone: str | None = None
     time_zone: str | None = None
-    verification_code: int | None = None
+    preferred_currency: str | None = "NGN"
 
     class Config:
         from_attributes = True
@@ -59,11 +59,19 @@ class ProfileUpdateRequest(BaseModel):
     last_name: str | None = None
     phone: str | None = None
     time_zone: str | None = None
+    preferred_currency: str | None = None
 
 
 class MessageResponse(BaseModel):
     message: str
 
-class OTPResponse(BaseModel):
-    otp: int
-    message: str
+
+class BVNVerifyRequest(BaseModel):
+    bvn: str
+
+    @model_validator(mode="after")
+    def bvn_must_be_eleven_digits(self):
+        if not self.bvn.isdigit() or len(self.bvn) != 11:
+            raise ValueError("BVN must be exactly 11 digits")
+        return self
+

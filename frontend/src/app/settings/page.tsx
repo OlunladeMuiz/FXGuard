@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import styles from './page.module.css';
-import { getUser, setUser, updateProfile } from '@/lib/api/auth';
+import { getPreferredCurrency, getUser, setUser, updateProfile } from '@/lib/api/auth';
 
 const icons = {
   user: (
@@ -83,6 +83,13 @@ const menu = [
   { key: 'integrations', label: 'Integrations', icon: icons.plug },
 ] as const;
 
+const preferredCurrencyOptions = [
+  { code: 'NGN', label: 'NGN - Nigerian Naira' },
+  { code: 'USD', label: 'USD - US Dollar' },
+  { code: 'EUR', label: 'EUR - Euro' },
+  { code: 'GBP', label: 'GBP - British Pound' },
+] as const;
+
 type MenuKey = (typeof menu)[number]['key'];
 
 function titleCase(value: string) {
@@ -97,6 +104,9 @@ export default function SettingsPage() {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [timeZone, setTimeZone] = useState('UTC-5 (Eastern Time)');
+  const [preferredCurrency, setPreferredCurrency] = useState('NGN');
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveError, setSaveError] = useState('');
 
   useEffect(() => {
     const userData = getUser();
@@ -107,6 +117,7 @@ export default function SettingsPage() {
     setLastName(userData.last_name?.trim() ?? '');
     setPhone(userData.phone?.trim() ?? '');
     setTimeZone(userData.time_zone?.trim() || 'UTC-5 (Eastern Time)');
+    setPreferredCurrency(getPreferredCurrency(userData));
 
     if (userData.first_name?.trim() || userData.last_name?.trim()) {
       return;
@@ -129,6 +140,9 @@ export default function SettingsPage() {
     const currentUser = getUser();
     if (!currentUser) return;
 
+    setSaveSuccess(false);
+    setSaveError('');
+
     try {
       const updatedUser = await updateProfile({
         email: email.trim(),
@@ -136,8 +150,8 @@ export default function SettingsPage() {
         last_name: lastName.trim() || null,
         phone: phone.trim() || null,
         time_zone: timeZone.trim() || null,
+        preferred_currency: preferredCurrency,
       });
-
       setUser({
         ...currentUser,
         ...updatedUser,
@@ -147,8 +161,13 @@ export default function SettingsPage() {
       setLastName(updatedUser.last_name?.trim() ?? '');
       setPhone(updatedUser.phone?.trim() ?? '');
       setTimeZone(updatedUser.time_zone?.trim() || 'UTC-5 (Eastern Time)');
+      setPreferredCurrency(getPreferredCurrency(updatedUser));
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
     } catch (error) {
       console.error('Failed to save profile:', error);
+      setSaveError('Failed to save changes. Please try again.');
+      setTimeout(() => setSaveError(''), 4000);
     }
   };
 
@@ -258,8 +277,48 @@ export default function SettingsPage() {
                         <option>UTC-5 (Eastern Time)</option>
                       </select>
                     </div>
+                    <div className={styles.fullWidth}>
+                      <label className={styles.formLabel}>Preferred Settlement Currency</label>
+                      <select
+                        className={styles.formSelect}
+                        value={preferredCurrency}
+                        onChange={(e) => setPreferredCurrency(e.target.value)}
+                      >
+                        {preferredCurrencyOptions.map((currency) => (
+                          <option key={currency.code} value={currency.code}>
+                            {currency.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
 
+                  {saveSuccess && (
+                    <div style={{
+                      color: 'var(--color-success)',
+                      background: 'var(--color-success-light)',
+                      border: '1px solid var(--color-success)',
+                      borderRadius: 8,
+                      padding: '0.6rem 1rem',
+                      fontSize: 'var(--font-size-sm)',
+                      marginBottom: 'var(--spacing-3)',
+                    }}>
+                      Profile saved successfully.
+                    </div>
+                  )}
+                  {saveError && (
+                    <div style={{
+                      color: 'var(--color-error)',
+                      background: 'var(--color-error-light)',
+                      border: '1px solid var(--color-error)',
+                      borderRadius: 8,
+                      padding: '0.6rem 1rem',
+                      fontSize: 'var(--font-size-sm)',
+                      marginBottom: 'var(--spacing-3)',
+                    }}>
+                      {saveError}
+                    </div>
+                  )}
                   <div className={styles.cardFooter}>
                     <button
                       className={styles.save}

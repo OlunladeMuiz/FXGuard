@@ -1,157 +1,126 @@
+import { z } from 'zod';
+
 import client from './client';
 import {
   Recommendation,
-  RecommendationResponseSchema,
-  RecommendationAction,
+  RecommendationActionSchema,
 } from '@/types/recommendation';
 
-// Mock data flag
-const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === 'true' || true;
+const RawRecommendationSchema = z.object({
+  base: z.string().length(3),
+  quote: z.string().length(3),
+  amount: z.number().positive(),
+  status: z.enum(['ready', 'limited_data', 'insufficient_data', 'provisional_data']),
+  history_quality: z.enum(['full', 'mixed', 'seeded', 'same_currency', 'candle_fallback']),
+  action: RecommendationActionSchema,
+  confidence: z.number().min(0).max(1),
+  explanation: z.string(),
+  risk_score: z.number().min(0).max(1),
+  factors: z.array(z.object({
+    name: z.string(),
+    impact: z.enum(['positive', 'negative', 'neutral']),
+    description: z.string(),
+  })),
+  optimal_window: z.string(),
+  indicators: z.object({
+    current_rate: z.number().positive(),
+    avg_30_day: z.number().positive(),
+    sma_7: z.number().positive(),
+    sma_20: z.number().positive(),
+    volatility_percent: z.number().nonnegative(),
+    change_7d_percent: z.number(),
+    change_30d_percent: z.number(),
+    rsi_14: z.number().min(0).max(100),
+    range_position_percent: z.number().min(0).max(100),
+    trend: z.enum(['upward', 'downward', 'sideways']),
+    period_min: z.number().positive(),
+    period_max: z.number().positive(),
+    is_near_high: z.boolean(),
+    is_near_low: z.boolean(),
+    is_overbought: z.boolean(),
+    is_oversold: z.boolean(),
+    data_source: z.enum(['stored_history', 'same_currency', 'candle_history']),
+    analytics_mode: z.enum(['insufficient', 'limited', 'full', 'provisional']),
+  }),
+  data_points: z.number().int().positive(),
+  real_data_points: z.number().int().nonnegative(),
+  synthetic_data_points: z.number().int().nonnegative(),
+  contains_synthetic: z.boolean(),
+  generated_at: z.string().datetime(),
+});
 
-/**
- * Generate mock recommendation based on invoice ID
- */
-const generateMockRecommendation = (invoiceId: string): Recommendation => {
-  // Use invoice ID to generate deterministic but varied recommendations
-  const hash = invoiceId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  const actionIndex = hash % 4;
-  const actions: RecommendationAction[] = ['convert_now', 'wait', 'hedge', 'split_conversion'];
-  const selectedAction = actions[actionIndex] ?? 'convert_now';
-  
-  const confidence = 0.6 + (hash % 40) / 100; // 0.6-0.99
-  const riskScore = (hash % 100) / 100; // 0-0.99
-  const volatility = 0.2 + (hash % 60) / 100; // 0.2-0.79
-
-  const explanations: Record<RecommendationAction, string> = {
-    convert_now: 'Current market conditions are favorable with USD/NGN rates near monthly highs. Converting now locks in advantageous rates before potential market shifts.',
-    wait: 'Historical patterns suggest rates may improve within the next 5-7 days. Current volatility is low, making it safe to wait for better conditions.',
-    hedge: 'Market volatility is elevated. Consider hedging 50% of the amount now and the remainder over the next two weeks to mitigate risk.',
-    split_conversion: 'Optimal strategy is to convert in tranches. Convert 40% immediately at current favorable rates and schedule the remainder over 2 weeks.',
-  };
-
-  const trends: Array<'up' | 'down' | 'stable'> = ['up', 'down', 'stable'];
-  const selectedTrend = trends[hash % 3] ?? 'stable';
-  const alternativeAction = actions[(actionIndex + 1) % 4] ?? 'wait';
+const mapRecommendationResponse = (
+  raw: z.infer<typeof RawRecommendationSchema>,
+): Recommendation => {
+  const normalizedVolatility = Math.min(raw.indicators.volatility_percent / 5, 1);
+  const marketTrend =
+    raw.indicators.trend === 'upward'
+      ? 'up'
+      : raw.indicators.trend === 'downward'
+        ? 'down'
+        : 'stable';
 
   return {
-    invoiceId,
-    action: selectedAction,
-    confidence: Math.min(confidence, 0.95),
-    explanation: explanations[selectedAction],
-    riskScore,
-    factors: [
-      {
-        name: 'Market Volatility',
-        impact: volatility > 0.5 ? 'negative' : 'positive',
-        description: `Current volatility index is ${(volatility * 100).toFixed(1)}%`,
-      },
-      {
-        name: 'Rate Trend',
-        impact: selectedAction === 'convert_now' ? 'positive' : 'neutral',
-        description: 'USD/NGN showing upward momentum over 7 days',
-      },
-      {
-        name: 'Economic Indicators',
-        impact: 'neutral',
-        description: 'Central bank policy remains stable',
-      },
-    ],
-    alternativeActions: [
-      {
-        action: alternativeAction,
-        confidence: confidence - 0.15,
-        reason: 'Alternative approach based on conservative risk tolerance',
-      },
-    ],
-    marketConditions: {
-      volatility,
-      trend: selectedTrend,
-      momentum: (hash % 200 - 100) / 100, // -1 to 1
+    base: raw.base,
+    quote: raw.quote,
+    amount: raw.amount,
+    status: raw.status,
+    historyQuality: raw.history_quality,
+    action: raw.action,
+    confidence: raw.confidence,
+    explanation: raw.explanation,
+    riskScore: raw.risk_score,
+    factors: raw.factors,
+    optimalWindow: raw.optimal_window,
+    indicators: {
+      currentRate: raw.indicators.current_rate,
+      avg30Day: raw.indicators.avg_30_day,
+      sma7: raw.indicators.sma_7,
+      sma20: raw.indicators.sma_20,
+      volatilityPercent: raw.indicators.volatility_percent,
+      change7dPercent: raw.indicators.change_7d_percent,
+      change30dPercent: raw.indicators.change_30d_percent,
+      rsi14: raw.indicators.rsi_14,
+      rangePositionPercent: raw.indicators.range_position_percent,
+      trend: raw.indicators.trend,
+      periodMin: raw.indicators.period_min,
+      periodMax: raw.indicators.period_max,
+      isNearHigh: raw.indicators.is_near_high,
+      isNearLow: raw.indicators.is_near_low,
+      isOverbought: raw.indicators.is_overbought,
+      isOversold: raw.indicators.is_oversold,
+      dataSource: raw.indicators.data_source,
+      analyticsMode: raw.indicators.analytics_mode,
     },
-    createdAt: new Date().toISOString(),
+    dataPoints: raw.data_points,
+    realDataPoints: raw.real_data_points,
+    syntheticDataPoints: raw.synthetic_data_points,
+    containsSynthetic: raw.contains_synthetic,
+    generatedAt: raw.generated_at,
+    createdAt: raw.generated_at,
+    marketConditions: {
+      volatility: normalizedVolatility,
+      trend: marketTrend,
+      momentum: raw.indicators.change_7d_percent / 100,
+    },
   };
 };
 
-/**
- * Fetch recommendation for an invoice
- * @param invoiceId - Invoice ID to get recommendation for
- * @returns Recommendation data
- */
-export const fetchRecommendation = async (invoiceId: string): Promise<Recommendation> => {
-  if (USE_MOCK) {
-    console.log('[DEV] Using mock recommendation');
-    // Simulate network delay
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    return generateMockRecommendation(invoiceId);
-  }
-
-  try {
-    const response = await client.get(`/recommendation/${invoiceId}`);
-    const validated = RecommendationResponseSchema.parse(response.data);
-    return validated.data;
-  } catch (error) {
-    console.warn('[API] Recommendation fetch failed, using mock data');
-    return generateMockRecommendation(invoiceId);
-  }
+export const fetchRecommendation = async (
+  base: string,
+  quote: string,
+  amount: number = 10000,
+): Promise<Recommendation> => {
+  const response = await client.get(`/recommendation/${base}/${quote}`, {
+    params: { amount },
+  });
+  return mapRecommendationResponse(RawRecommendationSchema.parse(response.data));
 };
 
-/**
- * Fetch batch recommendations for multiple invoices
- * @param invoiceIds - Array of invoice IDs
- * @returns Map of invoice ID to recommendation
- */
-export const fetchBatchRecommendations = async (
-  invoiceIds: string[]
-): Promise<Map<string, Recommendation>> => {
-  if (USE_MOCK) {
-    console.log('[DEV] Using mock batch recommendations');
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    
-    const recommendationsMap = new Map<string, Recommendation>();
-    invoiceIds.forEach((id) => {
-      recommendationsMap.set(id, generateMockRecommendation(id));
-    });
-    return recommendationsMap;
-  }
-
-  try {
-    const response = await client.post('/recommendations/batch', { invoiceIds });
-    const recommendations = response.data.data as Recommendation[];
-    
-    const recommendationsMap = new Map<string, Recommendation>();
-    recommendations.forEach((rec) => {
-      recommendationsMap.set(rec.invoiceId, rec);
-    });
-    return recommendationsMap;
-  } catch (error) {
-    console.warn('[API] Batch recommendations fetch failed, using mock data');
-    const recommendationsMap = new Map<string, Recommendation>();
-    invoiceIds.forEach((id) => {
-      recommendationsMap.set(id, generateMockRecommendation(id));
-    });
-    return recommendationsMap;
-  }
-};
-
-/**
- * Refresh recommendation for an invoice
- * Forces a new calculation based on latest market data
- * @param invoiceId - Invoice ID
- * @returns Fresh recommendation
- */
-export const refreshRecommendation = async (invoiceId: string): Promise<Recommendation> => {
-  if (USE_MOCK) {
-    console.log('[DEV] Refreshing mock recommendation');
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    return generateMockRecommendation(invoiceId);
-  }
-
-  try {
-    const response = await client.post(`/recommendation/${invoiceId}/refresh`);
-    const validated = RecommendationResponseSchema.parse(response.data);
-    return validated.data;
-  } catch (error) {
-    console.warn('[API] Recommendation refresh failed, using mock data');
-    return generateMockRecommendation(invoiceId);
-  }
+export const refreshRecommendation = async (
+  base: string,
+  quote: string,
+  amount: number = 10000,
+): Promise<Recommendation> => {
+  return fetchRecommendation(base, quote, amount);
 };

@@ -225,6 +225,17 @@
   color: var(--text-secondary);
 }
 
+.chartXAxisSingle {
+  justify-content: center;
+}
+
+.chartHint {
+  margin-top: var(--spacing-2);
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  text-align: center;
+}
+
 /* Volatility Analysis */
 .volatilityLayout {
   display: grid;
@@ -962,6 +973,26 @@
 .badgeRed {
   background: #fee2e2;
   color: #dc2626;
+}
+
+.badgeAmber {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.chartTrendSummary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-2);
+  align-items: center;
+  margin-bottom: var(--spacing-3);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.chartTrendSummary strong {
+  color: var(--text-primary);
+  font-weight: var(--font-weight-semibold);
 }
 
 /* Loading State */

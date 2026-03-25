@@ -37,6 +37,9 @@ class InvoiceCreate(BaseModel):
     description: Optional[str] = None
     payment_method: Optional[str] = None
     payment_details: Optional[str] = None
+    account_name: Optional[str] = None
+    bank_name: Optional[str] = None
+    account_number: Optional[str] = None
     status: str = "draft"
     items: List[InvoiceItemCreate]
 
@@ -57,6 +60,9 @@ class InvoiceUpdate(BaseModel):
     description: Optional[str] = None
     payment_method: Optional[str] = None
     payment_details: Optional[str] = None
+    account_name: Optional[str] = None
+    bank_name: Optional[str] = None
+    account_number: Optional[str] = None
     status: Optional[str] = None
     items: Optional[List[InvoiceItemCreate]] = None
 
@@ -79,10 +85,24 @@ class InvoiceResponse(BaseModel):
     description: Optional[str]
     payment_method: Optional[str]
     payment_details: Optional[str]
+    account_name: Optional[str]
+    bank_name: Optional[str]
+    account_number: Optional[str]
     status: str
+    payment_link: Optional[str]
+    payment_reference: Optional[str]
+    payment_completed_at: Optional[datetime]
     created_at: datetime
     updated_at: datetime
     items: List[InvoiceItemResponse]
+
+    class Config:
+        from_attributes = True
+
+
+class PaymentLinkResponse(BaseModel):
+    payment_link: str
+    payment_reference: str
 
     class Config:
         from_attributes = True

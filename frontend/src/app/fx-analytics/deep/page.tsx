@@ -49,12 +49,13 @@ export default function FxDeepAnalysis() {
         const { rate } = await fetchRealFXRate('USD', 'EUR');
         setFxRate(rate);
 
-        // Calculate 24h change
-        const yesterday = new Date();
-        yesterday.setDate(yesterday.getDate() - 2);
-        const yesterdayStr = yesterday.toISOString().slice(0, 10);
-        const { rate: yesterdayRateValue } = await fetchRealFXRateOnDate('USD', 'EUR', yesterdayStr);
-        const yesterdayRate = yesterdayRateValue || rate;
+        // Compare against a stored point from two days ago so the local history
+        // still supports a stable short-term change view while it backfills.
+        const previousDay = new Date();
+        previousDay.setDate(previousDay.getDate() - 2);
+        const previousDayStr = previousDay.toISOString().slice(0, 10);
+        const { rate: previousRateValue } = await fetchRealFXRateOnDate('USD', 'EUR', previousDayStr);
+        const yesterdayRate = previousRateValue || rate;
         
         const changeValue = rate - yesterdayRate;
         const changePercent = ((rate - yesterdayRate) / yesterdayRate) * 100;

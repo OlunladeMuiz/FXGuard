@@ -5,7 +5,7 @@ import { CurrencyCodeSchema } from './currency';
  * Historical FX rate data point
  */
 export const FXHistoryPointSchema = z.object({
-  date: z.string().datetime(),
+  date: z.string(),
   rate: z.number().positive(),
   high: z.number().positive().optional(),
   low: z.number().positive().optional(),
@@ -19,9 +19,10 @@ export type FXHistoryPoint = z.infer<typeof FXHistoryPointSchema>;
  * FX History response schema
  */
 export const FXHistoryResponseSchema = z.object({
+  pair: z.string(),
   base: CurrencyCodeSchema,
   quote: CurrencyCodeSchema,
-  period: z.enum(['7d', '30d', '90d', '1y']),
+  period: z.enum(['1d', '7d', '30d', '90d', '1y']),
   data: z.array(FXHistoryPointSchema),
   statistics: z.object({
     min: z.number().positive(),
@@ -30,6 +31,11 @@ export const FXHistoryResponseSchema = z.object({
     volatility: z.number().min(0).max(1),
     standardDeviation: z.number().nonnegative(),
   }),
+  dataPoints: z.number().int().positive(),
+  realDataPoints: z.number().int().nonnegative(),
+  syntheticDataPoints: z.number().int().nonnegative(),
+  containsSynthetic: z.boolean(),
+  source: z.string(),
 });
 
 export type FXHistoryResponse = z.infer<typeof FXHistoryResponseSchema>;

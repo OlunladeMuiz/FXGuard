@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+
 import { Recommendation } from '@/types/recommendation';
 import { fetchRecommendation, refreshRecommendation } from '@/api/recommendation';
 
@@ -17,13 +18,13 @@ interface UseRecommendationReturn extends UseRecommendationState {
 }
 
 /**
- * Custom hook for managing invoice recommendations
- * Handles fetching and refreshing AI-powered recommendations
- *
- * @param invoiceId - Invoice ID to get recommendation for
- * @returns Recommendation data and utilities
+ * Custom hook for managing pair-based FX recommendations.
  */
-export const useRecommendation = (invoiceId: string | null): UseRecommendationReturn => {
+export const useRecommendation = (
+  base: string | null,
+  quote: string | null,
+  amount: number | null,
+): UseRecommendationReturn => {
   const [state, setState] = useState<UseRecommendationState>({
     recommendation: null,
     loading: false,
@@ -32,7 +33,7 @@ export const useRecommendation = (invoiceId: string | null): UseRecommendationRe
   });
 
   const fetchData = useCallback(async () => {
-    if (!invoiceId) {
+    if (!base || !quote || amount === null || amount <= 0) {
       setState({
         recommendation: null,
         loading: false,
@@ -44,7 +45,7 @@ export const useRecommendation = (invoiceId: string | null): UseRecommendationRe
 
     try {
       setState((prev) => ({ ...prev, loading: true, error: null }));
-      const data = await fetchRecommendation(invoiceId);
+      const data = await fetchRecommendation(base, quote, amount);
       setState({
         recommendation: data,
         loading: false,
@@ -59,18 +60,18 @@ export const useRecommendation = (invoiceId: string | null): UseRecommendationRe
         error: err,
       }));
     }
-  }, [invoiceId]);
+  }, [amount, base, quote]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
   const refresh = useCallback(async () => {
-    if (!invoiceId) return;
+    if (!base || !quote || amount === null || amount <= 0) return;
 
     try {
       setState((prev) => ({ ...prev, loading: true, error: null }));
-      const data = await refreshRecommendation(invoiceId);
+      const data = await refreshRecommendation(base, quote, amount);
       setState({
         recommendation: data,
         loading: false,
@@ -85,7 +86,7 @@ export const useRecommendation = (invoiceId: string | null): UseRecommendationRe
         error: err,
       }));
     }
-  }, [invoiceId]);
+  }, [amount, base, quote]);
 
   return {
     ...state,

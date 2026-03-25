@@ -10,7 +10,7 @@ import { mockWallet } from './mockData';
  */
 
 // Flag to enable mock mode (set to true for development without backend)
-const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === 'true' || true;
+const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === 'true';
 
 interface FetchWalletParams {
   walletId: string;

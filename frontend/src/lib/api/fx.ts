@@ -1,114 +1,88 @@
+import { z } from 'zod';
+
 import client from './client';
-import { FXRateResponseSchema } from '@/types/currency';
-import { CurrencyCode } from '@/types/currency';
 import { getMockFXRates } from './mockData';
+import { CurrencyCode, FXRateResponseSchema } from '@/types/currency';
 import {
+  FXHistoryPoint,
   FXHistoryResponse,
   FXHistoryResponseSchema,
-  FXHistoryPoint,
   FXStatistics,
 } from '@/types/fx';
 import { calculateVolatility } from '@/utils/calculations';
 
-/**
- * Foreign Exchange (FX) Rates API Service
- * Handles all FX rate fetching and conversion
- * Uses Frankfurter API for real market data
- */
-
-// Flag to enable mock mode (set to true for development without backend)
 const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === 'true' || false;
 
-// Frankfurter API base URL (free, no API key needed)
-const FRANKFURTER_API = 'https://api.frankfurter.dev/v1';
+type HistoryPeriod = '1d' | '7d' | '30d' | '90d' | '1y';
+type CandleInterval = '1min' | '5min' | '15min' | '30min' | '1h' | '4h' | '1day' | '1week';
 
-const FRANKFURTER_SUPPORTED_CURRENCIES = new Set([
-  'AUD', 'BRL', 'CAD', 'CHF', 'CNY', 'CZK', 'DKK', 'EUR', 'GBP', 'HKD',
-  'HUF', 'IDR', 'ILS', 'INR', 'ISK', 'JPY', 'KRW', 'MXN', 'MYR', 'NOK',
-  'NZD', 'PHP', 'PLN', 'RON', 'SEK', 'SGD', 'THB', 'TRY', 'USD', 'ZAR',
-]);
+const RawFXRateItemSchema = z.object({
+  base: z.string().length(3),
+  quote: z.string().length(3),
+  rate: z.number().positive(),
+  timestamp: z.string().datetime(),
+  observed_on: z.string(),
+  source: z.string(),
+  is_synthetic: z.boolean(),
+});
 
-const FALLBACK_USD_REFERENCE_RATES: Record<string, number> = {
-  USD: 1,
-  EUR: 0.91,
-  GBP: 0.79,
-  NGN: 1550,
-  CAD: 1.35,
-  AUD: 1.52,
-};
+const RawFXRatesResponseSchema = z.object({
+  data: z.array(RawFXRateItemSchema),
+  timestamp: z.string().datetime(),
+});
 
-interface FrankfurterSnapshot {
+const RawFXHistoryResponseSchema = z.object({
+  pair: z.string(),
+  base: z.string().length(3),
+  quote: z.string().length(3),
+  period: z.enum(['1d', '7d', '30d', '90d', '1y']),
+  data: z.array(z.object({
+    date: z.string(),
+    rate: z.number().positive(),
+  })),
+  stats: z.object({
+    min: z.number().positive(),
+    max: z.number().positive(),
+    avg: z.number().positive(),
+    volatility: z.number().min(0).max(1),
+    standard_deviation: z.number().nonnegative(),
+  }),
+  data_points: z.number().int().positive(),
+  real_data_points: z.number().int().nonnegative(),
+  synthetic_data_points: z.number().int().nonnegative(),
+  contains_synthetic: z.boolean(),
+  source: z.string(),
+});
+
+const RawFXCandlesResponseSchema = z.object({
+  pair: z.string(),
+  base: z.string().length(3),
+  quote: z.string().length(3),
+  range: z.enum(['1d', '7d', '30d', '90d', '1y']),
+  interval: z.enum(['1min', '5min', '15min', '30min', '1h', '4h', '1day', '1week']),
+  data: z.array(z.object({
+    timestamp: z.string().datetime(),
+    open: z.number().positive(),
+    high: z.number().positive(),
+    low: z.number().positive(),
+    close: z.number().positive(),
+    source: z.string(),
+  })),
+  stats: z.object({
+    min: z.number().positive(),
+    max: z.number().positive(),
+    avg: z.number().positive(),
+    volatility: z.number().min(0).max(1),
+    standard_deviation: z.number().nonnegative(),
+    change_percent: z.number(),
+  }),
+  data_points: z.number().int().positive(),
+  source: z.string(),
+});
+
+interface BackendRateSnapshot {
   date: string;
   rates: Record<string, number>;
-}
-
-function buildFrankfurterUrl(path: string, base: string, symbols: string[]): string {
-  const url = new URL(`${FRANKFURTER_API}/${path}`);
-  url.searchParams.set('base', base);
-  if (symbols.length > 0) {
-    url.searchParams.set('symbols', symbols.join(','));
-  }
-  return url.toString();
-}
-
-function getFallbackSnapshot(base: string, quotes: string[]): FrankfurterSnapshot | null {
-  const baseReferenceRate = FALLBACK_USD_REFERENCE_RATES[base];
-  if (!baseReferenceRate) {
-    return null;
-  }
-
-  const rates = quotes.reduce<Record<string, number>>((acc, quote) => {
-    const quoteReferenceRate = FALLBACK_USD_REFERENCE_RATES[quote];
-    if (!quoteReferenceRate) {
-      return acc;
-    }
-
-    acc[quote] = quoteReferenceRate / baseReferenceRate;
-    return acc;
-  }, {});
-
-  if (Object.keys(rates).length !== quotes.length) {
-    return null;
-  }
-
-  return {
-    date: new Date().toISOString().slice(0, 10),
-    rates,
-  };
-}
-
-async function fetchFrankfurterSnapshot(
-  base: string,
-  quotes: string[],
-  path = 'latest',
-): Promise<FrankfurterSnapshot> {
-  const normalizedBase = base.toUpperCase();
-  const normalizedQuotes = quotes.map((quote) => quote.toUpperCase());
-  const hasUnsupportedCurrency = [normalizedBase, ...normalizedQuotes].some(
-    (currency) => !FRANKFURTER_SUPPORTED_CURRENCIES.has(currency),
-  );
-
-  if (hasUnsupportedCurrency) {
-    const fallback = getFallbackSnapshot(normalizedBase, normalizedQuotes);
-    if (fallback) {
-      return fallback;
-    }
-
-    throw new Error(`Unsupported Frankfurter currency pair: ${normalizedBase}/${normalizedQuotes.join(',')}`);
-  }
-
-  const response = await fetch(buildFrankfurterUrl(path, normalizedBase, normalizedQuotes));
-
-  if (!response.ok) {
-    throw new Error(`Frankfurter API error: ${response.status}`);
-  }
-
-  const data = await response.json();
-
-  return {
-    date: data.date ?? new Date().toISOString().slice(0, 10),
-    rates: data.rates ?? {},
-  };
 }
 
 interface FetchRatesParams {
@@ -116,131 +90,96 @@ interface FetchRatesParams {
   quotes?: CurrencyCode[] | undefined;
 }
 
-/**
- * Fetch current FX rates
- * @param params - Base currency and optional quote currencies
- * @returns Array of FX rates
- * @throws Error if request fails
- */
-export const fetchFXRates = async (params: FetchRatesParams) => {
-  // Use mock data if enabled or backend unavailable
-  if (USE_MOCK) {
-    console.log('[DEV] Using mock FX rates');
-    return getMockFXRates(params.base, params.quotes);
-  }
+const normalizeHistoryPoint = (point: z.infer<typeof RawFXHistoryResponseSchema>['data'][number]): FXHistoryPoint => ({
+  date: new Date(`${point.date}T00:00:00.000Z`).toISOString(),
+  rate: point.rate,
+  open: point.rate,
+  high: point.rate,
+  low: point.rate,
+  close: point.rate,
+});
 
-  try {
-    const response = await client.get('/fx/rates', {
-      params: {
-        base: params.base,
-        quotes: params.quotes?.join(','),
-      },
-    });
-    const validated = FXRateResponseSchema.parse(response.data);
-    return validated.data;
-  } catch (error) {
-    console.warn('[API] FX rates fetch failed, using mock data');
-    return getMockFXRates(params.base, params.quotes);
-  }
+const mapHistoryResponse = (
+  raw: z.infer<typeof RawFXHistoryResponseSchema>,
+): FXHistoryResponse => {
+  const normalized = {
+    pair: raw.pair,
+    base: raw.base,
+    quote: raw.quote,
+    period: raw.period,
+    data: raw.data.map(normalizeHistoryPoint),
+    statistics: {
+      min: raw.stats.min,
+      max: raw.stats.max,
+      average: raw.stats.avg,
+      volatility: raw.stats.volatility,
+      standardDeviation: raw.stats.standard_deviation,
+    },
+    dataPoints: raw.data_points,
+    realDataPoints: raw.real_data_points,
+    syntheticDataPoints: raw.synthetic_data_points,
+    containsSynthetic: raw.contains_synthetic,
+    source: raw.source,
+  };
+
+  return FXHistoryResponseSchema.parse(normalized);
 };
 
-/**
- * Get conversion rate between two currencies
- * @param base - Base currency
- * @param quote - Quote currency
- * @returns Exchange rate
- * @throws Error if request fails or conversion not supported
- */
-export const getConversionRate = async (
-  base: CurrencyCode,
-  quote: CurrencyCode
-): Promise<number> => {
-  try {
-    const rates = await fetchFXRates({
-      base,
-      quotes: [quote],
-    });
+const mapCandleResponse = (
+  raw: z.infer<typeof RawFXCandlesResponseSchema>,
+): FXHistoryResponse => {
+  const normalized = {
+    pair: raw.pair,
+    base: raw.base,
+    quote: raw.quote,
+    period: raw.range,
+    data: raw.data.map((item) => ({
+      date: item.timestamp,
+      rate: item.close,
+      open: item.open,
+      high: item.high,
+      low: item.low,
+      close: item.close,
+    })),
+    statistics: {
+      min: raw.stats.min,
+      max: raw.stats.max,
+      average: raw.stats.avg,
+      volatility: raw.stats.volatility,
+      standardDeviation: raw.stats.standard_deviation,
+    },
+    dataPoints: raw.data_points,
+    realDataPoints: raw.data_points,
+    syntheticDataPoints: 0,
+    containsSynthetic: false,
+    source: raw.source,
+  };
 
-    const rate = rates.find((r: { base: CurrencyCode; quote: CurrencyCode; rate: number }) => r.base === base && r.quote === quote);
-    if (!rate) {
-      throw new Error(
-        `Conversion rate not found for ${base}/${quote}`
-      );
-    }
-
-    return rate.rate;
-  } catch (error) {
-    if (error instanceof Error) {
-      throw error;
-    }
-    throw new Error('Failed to get conversion rate');
-  }
+  return FXHistoryResponseSchema.parse(normalized);
 };
 
-/**
- * Convert amount from one currency to another
- * @param amount - Amount to convert
- * @param from - Source currency
- * @param to - Target currency
- * @returns Converted amount
- * @throws Error if conversion fails
- */
-export const convertAmount = async (
-  amount: number,
-  from: CurrencyCode,
-  to: CurrencyCode
-): Promise<number> => {
-  try {
-    const rate = await getConversionRate(from, to);
-    return Math.round(amount * rate * 100) / 100; // Round to 2 decimals
-  } catch (error) {
-    if (error instanceof Error) {
-      throw error;
-    }
-    throw new Error('Failed to convert amount');
+function getCandleIntervalForRange(range: HistoryPeriod): CandleInterval {
+  switch (range) {
+    case '1d':
+      return '1h';
+    case '7d':
+      return '4h';
+    case '30d':
+    case '90d':
+    case '1y':
+      return '1day';
+    default:
+      return '1day';
   }
-};
+}
 
-/**
- * Fetch historical FX rates (for future analytics)
- * @param base - Base currency
- * @param startDate - Start date (ISO 8601)
- * @param endDate - End date (ISO 8601)
- * @returns Historical rates
- * @throws Error if request fails
- */
-export const fetchHistoricalRates = async (
-  base: CurrencyCode,
-  startDate: string,
-  endDate: string
-) => {
-  try {
-    const response = await client.get('/fx/historical', {
-      params: {
-        base,
-        startDate,
-        endDate,
-      },
-    });
-    const validated = FXRateResponseSchema.parse(response.data);
-    return validated.data;
-  } catch (error) {
-    if (error instanceof Error) {
-      throw error;
-    }
-    throw new Error('Failed to fetch historical rates');
-  }
-};
-
-/**
- * Generate mock FX history data
- */
 const generateMockFXHistory = (
   base: CurrencyCode,
   quote: CurrencyCode,
-  period: '7d' | '30d' | '90d' | '1y'
+  period: Exclude<HistoryPeriod, '1d'> | '1d',
 ): FXHistoryResponse => {
-  const periodDays: Record<'7d' | '30d' | '90d' | '1y', number> = {
+  const periodDays: Record<HistoryPeriod, number> = {
+    '1d': 1,
     '7d': 7,
     '30d': 30,
     '90d': 90,
@@ -251,81 +190,137 @@ const generateMockFXHistory = (
     'USD-NGN': 1550,
     'USD-EUR': 0.91,
     'USD-GBP': 0.79,
-    'EUR-USD': 1.10,
+    'EUR-USD': 1.1,
     'GBP-USD': 1.27,
   };
 
   const pairKey = `${base}-${quote}`;
   const baseRate = baseRates[pairKey] || 1;
-  const days: number = periodDays[period];
-  const volatilityFactor = quote === 'NGN' ? 0.05 : 0.02; // NGN more volatile
+  const days = periodDays[period];
+  const volatilityFactor = quote === 'NGN' ? 0.05 : 0.02;
 
   const data: FXHistoryPoint[] = [];
   const rates: number[] = [];
   const now = new Date();
 
-  for (let i = days; i >= 0; i--) {
+  for (let index = days - 1; index >= 0; index -= 1) {
     const date = new Date(now);
-    date.setDate(date.getDate() - i);
-    
-    // Generate rate with some randomness and trend
-    const trendFactor = 1 + ((days - i) / days) * 0.02; // slight upward trend
+    date.setDate(date.getDate() - index);
+
+    const trendFactor = 1 + ((days - index) / Math.max(days, 1)) * 0.02;
     const randomFactor = 1 + (Math.random() - 0.5) * volatilityFactor * 2;
     const rate = baseRate * trendFactor * randomFactor;
-    
-    const high = rate * (1 + Math.random() * 0.01);
-    const low = rate * (1 - Math.random() * 0.01);
-    
+
     rates.push(rate);
     data.push({
       date: date.toISOString(),
       rate: Math.round(rate * 10000) / 10000,
-      high: Math.round(high * 10000) / 10000,
-      low: Math.round(low * 10000) / 10000,
-      open: Math.round((rate * 0.999) * 10000) / 10000,
-      close: Math.round((rate * 1.001) * 10000) / 10000,
+      open: Math.round(rate * 10000) / 10000,
+      high: Math.round(rate * 10000) / 10000,
+      low: Math.round(rate * 10000) / 10000,
+      close: Math.round(rate * 10000) / 10000,
     });
   }
 
-  const min = Math.min(...rates);
-  const max = Math.max(...rates);
-  const average = rates.reduce((a, b) => a + b, 0) / rates.length;
-  const volatility = calculateVolatility(rates);
-
-  // Calculate standard deviation
-  const squaredDiffs = rates.map(r => Math.pow(r - average, 2));
-  const avgSquaredDiff = squaredDiffs.reduce((a, b) => a + b, 0) / rates.length;
+  const average = rates.reduce((sum, rate) => sum + rate, 0) / rates.length;
+  const squaredDiffs = rates.map((rate) => Math.pow(rate - average, 2));
+  const avgSquaredDiff = squaredDiffs.reduce((sum, diff) => sum + diff, 0) / rates.length;
   const standardDeviation = Math.sqrt(avgSquaredDiff);
 
-  return {
+  return FXHistoryResponseSchema.parse({
+    pair: `${base}/${quote}`,
     base,
     quote,
     period,
     data,
     statistics: {
-      min: Math.round(min * 10000) / 10000,
-      max: Math.round(max * 10000) / 10000,
-      average: Math.round(average * 10000) / 10000,
-      volatility: Math.round(volatility * 1000) / 1000,
-      standardDeviation: Math.round(standardDeviation * 10000) / 10000,
+      min: Math.min(...rates),
+      max: Math.max(...rates),
+      average,
+      volatility: calculateVolatility(rates),
+      standardDeviation,
     },
-  };
+    dataPoints: data.length,
+    realDataPoints: 0,
+    syntheticDataPoints: data.length,
+    containsSynthetic: true,
+    source: 'mock',
+  });
 };
 
-/**
- * Fetch FX history with statistics
- * @param base - Base currency
- * @param quote - Quote currency
- * @param period - Time period for history
- * @returns FX history with statistics including volatility
- */
+export const fetchFXRates = async (params: FetchRatesParams) => {
+  if (USE_MOCK) {
+    return getMockFXRates(params.base, params.quotes);
+  }
+
+  try {
+    const response = await client.get('/fx/rates', {
+      params: {
+        base: params.base,
+        quotes: params.quotes?.join(','),
+      },
+    });
+
+    const raw = RawFXRatesResponseSchema.parse(response.data);
+    const normalized = {
+      data: raw.data.map((item) => ({
+        base: item.base as CurrencyCode,
+        quote: item.quote as CurrencyCode,
+        rate: item.rate,
+        timestamp: item.timestamp,
+      })),
+      timestamp: raw.timestamp,
+    };
+
+    return FXRateResponseSchema.parse(normalized).data;
+  } catch (error) {
+    console.warn('[API] FX rates fetch failed, using mock data', error);
+    return getMockFXRates(params.base, params.quotes);
+  }
+};
+
+export const getConversionRate = async (
+  base: CurrencyCode,
+  quote: CurrencyCode,
+): Promise<number> => {
+  const rates = await fetchFXRates({
+    base,
+    quotes: [quote],
+  });
+
+  const rate = rates.find((item) => item.base === base && item.quote === quote);
+  if (!rate) {
+    throw new Error(`Conversion rate not found for ${base}/${quote}`);
+  }
+
+  return rate.rate;
+};
+
+export const convertAmount = async (
+  amount: number,
+  from: CurrencyCode,
+  to: CurrencyCode,
+): Promise<number> => {
+  const rate = await getConversionRate(from, to);
+  return Math.round(amount * rate * 100) / 100;
+};
+
+export const fetchHistoricalRates = async (
+  base: CurrencyCode,
+  startDate: string,
+  endDate: string,
+) => {
+  void startDate;
+  void endDate;
+  return fetchFXRates({ base });
+};
+
 export const fetchFXHistory = async (
   base: CurrencyCode,
   quote: CurrencyCode,
-  period: '7d' | '30d' | '90d' | '1y' = '30d'
+  period: HistoryPeriod = '30d',
 ): Promise<FXHistoryResponse> => {
   if (USE_MOCK) {
-    console.log('[DEV] Using mock FX history');
     await new Promise((resolve) => setTimeout(resolve, 200));
     return generateMockFXHistory(base, quote, period);
   }
@@ -334,29 +329,23 @@ export const fetchFXHistory = async (
     const response = await client.get('/fx/history', {
       params: { base, quote, period },
     });
-    return FXHistoryResponseSchema.parse(response.data);
+    const raw = RawFXHistoryResponseSchema.parse(response.data);
+    return mapHistoryResponse(raw);
   } catch (error) {
-    console.warn('[API] FX history fetch failed, using mock data');
+    console.warn('[API] FX history fetch failed, using mock data', error);
     return generateMockFXHistory(base, quote, period);
   }
 };
 
-/**
- * Get FX statistics for a currency pair
- * @param base - Base currency
- * @param quote - Quote currency
- * @returns FX statistics
- */
 export const getFXStatistics = async (
   base: CurrencyCode,
-  quote: CurrencyCode
+  quote: CurrencyCode,
 ): Promise<FXStatistics> => {
   const history = await fetchFXHistory(base, quote, '30d');
   const currentRate = history.data[history.data.length - 1]?.rate || history.statistics.average;
   const previousRate = history.data[0]?.rate || currentRate;
-  
-  const changePercent = previousRate > 0 
-    ? ((currentRate - previousRate) / previousRate) * 100 
+  const changePercent = previousRate > 0
+    ? ((currentRate - previousRate) / previousRate) * 100
     : 0;
 
   let trend: 'up' | 'down' | 'stable' = 'stable';
@@ -376,126 +365,104 @@ export const getFXStatistics = async (
   };
 };
 
-/**
- * Fetch REAL FX history from Frankfurter API
- * @param base - Base currency (e.g., 'USD')
- * @param quote - Quote currency (e.g., 'EUR')
- * @param period - Time period: '1d' | '7d' | '30d' | '90d' | '1y'
- * @returns Real FX history data with statistics
- */
 export const fetchRealFXHistory = async (
   base: string,
   quote: string,
-  period: '1d' | '7d' | '30d' | '90d' | '1y' = '7d'
+  period: HistoryPeriod = '7d',
 ): Promise<FXHistoryResponse> => {
-  const normalizedBase = base.toUpperCase();
-  const normalizedQuote = quote.toUpperCase();
-  const periodDays: Record<string, number> = {
-    '1d': 1,
-    '7d': 7,
-    '30d': 30,
-    '90d': 90,
-    '1y': 365,
-  };
-
-  const days = periodDays[period] || 7;
-  const endDate = new Date();
-  const startDate = new Date();
-  startDate.setDate(endDate.getDate() - days);
-
-  const formatDate = (d: Date) => d.toISOString().slice(0, 10);
-
-  try {
-    // Fetch historical rates from Frankfurter API
-    const url = buildFrankfurterUrl(
-      `${formatDate(startDate)}..${formatDate(endDate)}`,
-      normalizedBase,
-      [normalizedQuote],
-    );
-    const response = await fetch(url);
-    
-    if (!response.ok) {
-      throw new Error(`Frankfurter API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    const rates: FXHistoryPoint[] = [];
-    const rateValues: number[] = [];
-
-    // Parse the response - Frankfurter returns { rates: { "2024-01-01": { EUR: 0.91 }, ... } }
-    if (data.rates) {
-      const sortedDates = Object.keys(data.rates).sort();
-      
-      for (const dateStr of sortedDates) {
-        const rate = data.rates[dateStr][normalizedQuote];
-        if (rate !== undefined) {
-          rateValues.push(rate);
-          
-          // Generate realistic OHLC from the close rate
-          const variance = rate * 0.002; // 0.2% variance for high/low
-          rates.push({
-            date: new Date(dateStr).toISOString(),
-            rate: Math.round(rate * 100000) / 100000,
-            open: Math.round((rate - variance * 0.5) * 100000) / 100000,
-            high: Math.round((rate + variance) * 100000) / 100000,
-            low: Math.round((rate - variance) * 100000) / 100000,
-            close: Math.round(rate * 100000) / 100000,
-          });
-        }
-      }
-    }
-
-    // Calculate statistics
-    const min = Math.min(...rateValues);
-    const max = Math.max(...rateValues);
-    const average = rateValues.reduce((a, b) => a + b, 0) / rateValues.length;
-    const volatility = calculateVolatility(rateValues);
-    
-    const squaredDiffs = rateValues.map(r => Math.pow(r - average, 2));
-    const avgSquaredDiff = squaredDiffs.reduce((a, b) => a + b, 0) / rateValues.length;
-    const standardDeviation = Math.sqrt(avgSquaredDiff);
-
-    return {
-      base: normalizedBase as CurrencyCode,
-      quote: normalizedQuote as CurrencyCode,
-      period: period as '7d' | '30d' | '90d' | '1y',
-      data: rates,
-      statistics: {
-        min: Math.round(min * 100000) / 100000,
-        max: Math.round(max * 100000) / 100000,
-        average: Math.round(average * 100000) / 100000,
-        volatility: Math.round(volatility * 1000) / 1000,
-        standardDeviation: Math.round(standardDeviation * 100000) / 100000,
-      },
-    };
-  } catch (error) {
-    console.error('[Frankfurter API] Error fetching FX history:', error);
-    // Fallback to mock data if API fails
-    return generateMockFXHistory(normalizedBase as CurrencyCode, normalizedQuote as CurrencyCode, period === '1d' ? '7d' : period as '7d' | '30d' | '90d' | '1y');
-  }
+  const normalizedBase = base.toUpperCase() as CurrencyCode;
+  const normalizedQuote = quote.toUpperCase() as CurrencyCode;
+  return fetchFXHistory(normalizedBase, normalizedQuote, period);
 };
 
-/**
- * Fetch current REAL FX rate from Frankfurter API
- * @param base - Base currency
- * @param quote - Quote currency
- * @returns Current exchange rate
- */
+export const fetchRealFXCandles = async (
+  base: string,
+  quote: string,
+  range: HistoryPeriod = '7d',
+): Promise<FXHistoryResponse> => {
+  const normalizedBase = base.toUpperCase() as CurrencyCode;
+  const normalizedQuote = quote.toUpperCase() as CurrencyCode;
+
+  if (USE_MOCK) {
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    return generateMockFXHistory(normalizedBase, normalizedQuote, range);
+  }
+
+  const response = await client.get('/fx/candles', {
+    params: {
+      base: normalizedBase,
+      quote: normalizedQuote,
+      range,
+      interval: getCandleIntervalForRange(range),
+    },
+  });
+  const raw = RawFXCandlesResponseSchema.parse(response.data);
+  return mapCandleResponse(raw);
+};
+
+const fetchSnapshotRates = async (
+  base: string,
+  quotes: string[],
+  date?: string,
+): Promise<z.infer<typeof RawFXRatesResponseSchema>> => {
+  if (USE_MOCK) {
+    const mockRates = getMockFXRates(
+      base.toUpperCase() as CurrencyCode,
+      quotes.map((quote) => quote.toUpperCase() as CurrencyCode),
+    );
+    const observedOn = date ?? new Date().toISOString().slice(0, 10);
+    return RawFXRatesResponseSchema.parse({
+      data: [
+        {
+          base: base.toUpperCase(),
+          quote: base.toUpperCase(),
+          rate: 1,
+          timestamp: new Date(`${observedOn}T00:00:00.000Z`).toISOString(),
+          observed_on: observedOn,
+          source: 'mock',
+          is_synthetic: false,
+        },
+        ...mockRates.map((rate) => ({
+          base: rate.base,
+          quote: rate.quote,
+          rate: rate.rate,
+          timestamp: rate.timestamp,
+          observed_on: observedOn,
+          source: 'mock',
+          is_synthetic: false,
+        })),
+      ],
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  const response = await client.get('/fx/rates', {
+    params: {
+      base: base.toUpperCase(),
+      quotes: quotes.map((quote) => quote.toUpperCase()).join(','),
+      ...(date ? { date } : {}),
+    },
+  });
+  return RawFXRatesResponseSchema.parse(response.data);
+};
+
 export const fetchRealFXRate = async (
   base: string,
-  quote: string
+  quote: string,
 ): Promise<{ rate: number; date: string }> => {
   const normalizedQuote = quote.toUpperCase();
-  try {
-    const data = await fetchFrankfurterSnapshot(base, [quote]);
-    return {
-      rate: data.rates[normalizedQuote],
-      date: data.date,
-    };
-  } catch (error) {
-    console.error('[Frankfurter API] Error fetching current rate:', error);
-    throw error;
+  const snapshot = await fetchSnapshotRates(base, [normalizedQuote]);
+  const rate = snapshot.data.find((item) => item.quote === normalizedQuote)?.rate;
+  const observedOn = snapshot.data.find((item) => item.quote === normalizedQuote)?.observed_on;
+
+  if (rate === undefined || !observedOn) {
+    throw new Error(`Conversion rate not found for ${base}/${quote}`);
   }
+
+  return {
+    rate,
+    date: observedOn,
+  };
 };
 
 export const fetchRealFXRateOnDate = async (
@@ -504,27 +471,38 @@ export const fetchRealFXRateOnDate = async (
   date: string,
 ): Promise<{ rate: number; date: string }> => {
   const normalizedQuote = quote.toUpperCase();
-  try {
-    const data = await fetchFrankfurterSnapshot(base, [quote], date);
-    return {
-      rate: data.rates[normalizedQuote],
-      date: data.date,
-    };
-  } catch (error) {
-    console.error('[Frankfurter API] Error fetching dated rate:', error);
-    throw error;
+  const snapshot = await fetchSnapshotRates(base, [normalizedQuote], date);
+  const rate = snapshot.data.find((item) => item.quote === normalizedQuote)?.rate;
+  const observedOn = snapshot.data.find((item) => item.quote === normalizedQuote)?.observed_on;
+
+  if (rate === undefined || !observedOn) {
+    throw new Error(`Conversion rate not found for ${base}/${quote} on ${date}`);
   }
+
+  return {
+    rate,
+    date: observedOn,
+  };
 };
 
 export const fetchRealFXSnapshot = async (
   base: string,
   quotes: string[],
   date = 'latest',
-): Promise<FrankfurterSnapshot> => {
-  try {
-    return await fetchFrankfurterSnapshot(base, quotes, date);
-  } catch (error) {
-    console.error('[Frankfurter API] Error fetching snapshot:', error);
-    throw error;
-  }
+): Promise<BackendRateSnapshot> => {
+  const snapshot = await fetchSnapshotRates(base, quotes, date === 'latest' ? undefined : date);
+  const rateMap = snapshot.data.reduce<Record<string, number>>((acc, item) => {
+    if (item.quote !== item.base) {
+      acc[item.quote] = item.rate;
+    }
+    return acc;
+  }, {});
+
+  const firstObservedOn = snapshot.data.find((item) => item.quote !== item.base)?.observed_on
+    ?? new Date().toISOString().slice(0, 10);
+
+  return {
+    date: firstObservedOn,
+    rates: rateMap,
+  };
 };

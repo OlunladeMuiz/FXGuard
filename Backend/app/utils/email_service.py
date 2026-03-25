@@ -1,6 +1,7 @@
 """
 Email service for sending transactional emails via Gmail
 """
+import html
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -28,6 +29,12 @@ TEMPLATE_DIR = Path(__file__).parent.parent / "templates"
 class EmailService:
     """Service for sending emails via Gmail"""
     
+    @staticmethod
+    def _escape(value) -> str:
+        if value is None:
+            return ""
+        return html.escape(str(value))
+
     @staticmethod
     def load_template(template_name: str, **kwargs) -> str:
         """
@@ -128,7 +135,7 @@ class EmailService:
         """
         subject = "Verify Your Email - FXGuard"
         
-        company_greeting = f"at {company_name}" if company_name else ""
+        company_greeting = EmailService._escape(f"at {company_name}" if company_name else "")
         
         html_body = EmailService.load_template("otp_email", company_greeting=company_greeting, otp=otp)
         
@@ -201,15 +208,13 @@ class EmailService:
             line_items_html += '<th style="padding: 10px; text-align: right; font-weight: 600; color: #1e40af;">Unit Price</th>'
             line_items_html += '<th style="padding: 10px; text-align: right; font-weight: 600; color: #1e40af;">Total</th>'
             line_items_html += '</tr>'
-            
             for item in line_items:
                 line_items_html += '<tr style="border-bottom: 1px solid #e5e7eb;">'
-                line_items_html += f'<td style="padding: 10px; color: #4b5563;">{item["description"]}</td>'
-                line_items_html += f'<td style="padding: 10px; text-align: center; color: #4b5563;">{item["quantity"]}</td>'
-                line_items_html += f'<td style="padding: 10px; text-align: right; color: #4b5563;">{item["unit_price"]}</td>'
-                line_items_html += f'<td style="padding: 10px; text-align: right; color: #4b5563; font-weight: 600;">{item["total"]}</td>'
+                line_items_html += f'<td style="padding: 10px; color: #4b5563;">{EmailService._escape(item["description"])}</td>'
+                line_items_html += f'<td style="padding: 10px; text-align: center; color: #4b5563;">{EmailService._escape(str(item["quantity"]))}</td>'
+                line_items_html += f'<td style="padding: 10px; text-align: right; color: #4b5563;">{EmailService._escape(str(item["unit_price"]))}</td>'
+                line_items_html += f'<td style="padding: 10px; text-align: right; color: #4b5563; font-weight: 600;">{EmailService._escape(str(item["total"]))}</td>'
                 line_items_html += '</tr>'
-            
             line_items_html += '</table></div>'
         
         # Format summary HTML
@@ -234,16 +239,16 @@ class EmailService:
         
         html_body = EmailService.load_template(
             "invoice_notification_email",
-            client_name=client_name,
-            invoice_number=invoice_number,
-            currency=currency,
-            due_date=due_date,
-            description=description or "Invoice",
-            payment_method=payment_method or "To be determined",
-            account_name=account_name or "Not provided",
-            bank=bank or "Not provided",
-            account_number=account_number or "Not provided",
-            tax_rate=f"{tax_rate:.2f}" if tax_rate else "0",
+            client_name=EmailService._escape(client_name),
+            invoice_number=EmailService._escape(invoice_number),
+            currency=EmailService._escape(currency),
+            due_date=EmailService._escape(due_date),
+            description=EmailService._escape(description or "Invoice"),
+            payment_method=EmailService._escape(payment_method or "To be determined"),
+            account_name=EmailService._escape(account_name or "Not provided"),
+            bank=EmailService._escape(bank or "Not provided"),
+            account_number=EmailService._escape(account_number or "Not provided"),
+            tax_rate=EmailService._escape(f"{tax_rate:.2f}" if tax_rate else "0"),
             line_items_html=line_items_html,
             summary_html=summary_html
         )
@@ -322,15 +327,13 @@ class EmailService:
             line_items_html += '<th style="padding: 10px; text-align: right; font-weight: 600; color: #1e40af;">Unit Price</th>'
             line_items_html += '<th style="padding: 10px; text-align: right; font-weight: 600; color: #1e40af;">Total</th>'
             line_items_html += '</tr>'
-            
             for item in line_items:
                 line_items_html += '<tr style="border-bottom: 1px solid #e5e7eb;">'
-                line_items_html += f'<td style="padding: 10px; color: #4b5563;">{item["description"]}</td>'
-                line_items_html += f'<td style="padding: 10px; text-align: center; color: #4b5563;">{item["quantity"]}</td>'
-                line_items_html += f'<td style="padding: 10px; text-align: right; color: #4b5563;">{item["unit_price"]}</td>'
-                line_items_html += f'<td style="padding: 10px; text-align: right; color: #4b5563; font-weight: 600;">{item["total"]}</td>'
+                line_items_html += f'<td style="padding: 10px; color: #4b5563;">{EmailService._escape(item["description"])}</td>'
+                line_items_html += f'<td style="padding: 10px; text-align: center; color: #4b5563;">{EmailService._escape(str(item["quantity"]))}</td>'
+                line_items_html += f'<td style="padding: 10px; text-align: right; color: #4b5563;">{EmailService._escape(str(item["unit_price"]))}</td>'
+                line_items_html += f'<td style="padding: 10px; text-align: right; color: #4b5563; font-weight: 600;">{EmailService._escape(str(item["total"]))}</td>'
                 line_items_html += '</tr>'
-            
             line_items_html += '</table></div>'
         
         # Format summary HTML
@@ -355,11 +358,11 @@ class EmailService:
         
         html_body = EmailService.load_template(
             "invoice_created_email",
-            user_name=user_name,
-            invoice_number=invoice_number,
-            client_name=client_name,
-            currency=currency,
-            due_date=due_date,
+            user_name=EmailService._escape(user_name),
+            invoice_number=EmailService._escape(invoice_number),
+            client_name=EmailService._escape(client_name),
+            currency=EmailService._escape(currency),
+            due_date=EmailService._escape(due_date),
             items_count=items_count,
             line_items_html=line_items_html,
             summary_html=summary_html
@@ -403,10 +406,8 @@ class EmailService:
             bool: True if email sent successfully, False otherwise
         """
         subject = "Reset Your Password - FXGuard"
-        
-        company_greeting = f"at {company_name}" if company_name else ""
-        reset_link = f"https://fxguard.app/reset-password?token={reset_token}"
-        
+        company_greeting = EmailService._escape(f"at {company_name}" if company_name else "")
+        reset_link = EmailService._escape(f"https://fxguard.app/reset-password?token={reset_token}")
         html_body = EmailService.load_template(
             "password_reset_email",
             company_greeting=company_greeting,

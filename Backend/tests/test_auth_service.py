@@ -31,7 +31,7 @@ class VerifyOtpTests(unittest.TestCase):
         user.verification_code_expires_at = self._naive_utc_now() + timedelta(minutes=5)
 
         db = self._build_db(user)
-        payload = VerifyOtpRequest(email="mariamolunlade2015@gmail.com", otp=123456)
+        payload = VerifyOtpRequest(email="test@example.com", otp=123456)
 
         result = verify_otp(db=db, payload=payload)
 
@@ -49,7 +49,7 @@ class VerifyOtpTests(unittest.TestCase):
         user.verification_code_expires_at = self._naive_utc_now() - timedelta(minutes=1)
 
         db = self._build_db(user)
-        payload = VerifyOtpRequest(email="mariamolunlade2015@gmail.com", otp=123456)
+        payload = VerifyOtpRequest(email="test@example.com", otp=123456)
 
         with self.assertRaises(HTTPException) as context:
             verify_otp(db=db, payload=payload)
@@ -67,6 +67,7 @@ class UpdateUserProfileTests(unittest.TestCase):
         current_user.last_name = None
         current_user.phone = None
         current_user.time_zone = None
+        current_user.preferred_currency = None
 
         db = Mock()
         db.query.return_value.filter.return_value.first.return_value = None
@@ -80,6 +81,7 @@ class UpdateUserProfileTests(unittest.TestCase):
                 last_name=" Olunlade  ",
                 phone="  +234 800 000 0000 ",
                 time_zone=" Africa/Lagos ",
+                preferred_currency=" ngn ",
             ),
         )
 
@@ -89,6 +91,7 @@ class UpdateUserProfileTests(unittest.TestCase):
         self.assertEqual(current_user.last_name, "Olunlade")
         self.assertEqual(current_user.phone, "+234 800 000 0000")
         self.assertEqual(current_user.time_zone, "Africa/Lagos")
+        self.assertEqual(current_user.preferred_currency, "NGN")
         db.commit.assert_called_once()
         db.refresh.assert_called_once_with(current_user)
 
