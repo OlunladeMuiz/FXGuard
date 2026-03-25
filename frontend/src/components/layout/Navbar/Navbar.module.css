@@ -15,7 +15,9 @@
   height: 72px;
   display: flex;
   align-items: center;
-  gap: 8rem;
+  justify-content: space-between;
+  gap: var(--spacing-6);
+  min-width: 0;
 }
 
 .brand {
@@ -69,6 +71,8 @@
   display: flex;
   align-items: center;
   gap: var(--spacing-3);
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .linkButton {
@@ -125,7 +129,7 @@
 }
 
 .tabs {
-  flex: 1 0 auto;
+  flex: 1 1 auto;
   gap: var(--spacing-2);
 }
 
@@ -167,8 +171,11 @@
 .appActions {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: var(--spacing-3);
+  margin-left: auto;
   min-width: 0;
+  flex-shrink: 0;
 }
 
 .search {
@@ -276,6 +283,10 @@
     display: none;
   }
 
+  .container {
+    gap: var(--spacing-4);
+  }
+
   .mobileToggle {
     display: inline-flex;
     flex-direction: column;
@@ -285,9 +296,25 @@
 @media (max-width: 768px) {
   .container {
     padding: 0 var(--spacing-4);
+    gap: var(--spacing-3);
   }
-  .navbar{
-    justify-content: space-between;
+
+  .appActions {
+    gap: var(--spacing-2);
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    padding: 0 var(--spacing-3);
+  }
+
+  .brandText {
+    font-size: var(--font-size-base);
+  }
+
+  .appActions {
+    gap: 0.625rem;
   }
 }
 

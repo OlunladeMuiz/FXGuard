@@ -196,6 +196,7 @@ def login_user(db: Session, payload: LoginRequest) -> dict:
 
 
 def update_user_profile(db: Session, current_user: User, payload: ProfileUpdateRequest) -> User:
+    fields_set = payload.model_fields_set
     next_email = payload.email.strip() if payload.email is not None else current_user.email
 
     if next_email != current_user.email:
@@ -207,11 +208,21 @@ def update_user_profile(db: Session, current_user: User, payload: ProfileUpdateR
             )
         current_user.email = next_email
 
-    current_user.first_name = _clean_optional_string(payload.first_name)
-    current_user.last_name = _clean_optional_string(payload.last_name)
-    current_user.phone = _clean_optional_string(payload.phone)
-    current_user.time_zone = _clean_optional_string(payload.time_zone)
-    if payload.preferred_currency is not None:
+    if "company_name" in fields_set:
+        current_user.company_name = _clean_optional_string(payload.company_name)
+    if "first_name" in fields_set:
+        current_user.first_name = _clean_optional_string(payload.first_name)
+    if "last_name" in fields_set:
+        current_user.last_name = _clean_optional_string(payload.last_name)
+    if "phone" in fields_set:
+        current_user.phone = _clean_optional_string(payload.phone)
+    if "country" in fields_set:
+        current_user.country = _clean_optional_string(payload.country)
+    if "business_type" in fields_set:
+        current_user.business_type = _clean_optional_string(payload.business_type)
+    if "time_zone" in fields_set:
+        current_user.time_zone = _clean_optional_string(payload.time_zone)
+    if "preferred_currency" in fields_set:
         current_user.preferred_currency = _normalize_currency_code(payload.preferred_currency)
     elif not current_user.preferred_currency:
         current_user.preferred_currency = "NGN"

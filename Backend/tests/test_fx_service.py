@@ -10,7 +10,12 @@ BACKEND_DIR = Path(__file__).resolve().parents[1]
 if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
-from app.services.fx import get_fx_history_response, get_fx_rates
+from app.services.fx import (
+    HistoricalRatesUnavailable,
+    _fetch_pair_history_for_dates,
+    get_fx_history_response,
+    get_fx_rates,
+)
 
 
 class FXServiceTests(unittest.TestCase):
@@ -49,6 +54,27 @@ class FXServiceTests(unittest.TestCase):
         self.assertEqual(payload["data"][0]["base"], "USD")
         self.assertEqual(payload["data"][0]["quote"], "USD")
         self.assertEqual(payload["data"][0]["rate"], 1.0)
+
+    def test_fetch_pair_history_stops_after_first_historical_plan_limit(self) -> None:
+        payload_mock = AsyncMock(
+            side_effect=HistoricalRatesUnavailable(
+                "plan-upgrade-required",
+                "Historical FX data is unavailable: plan-upgrade-required",
+            )
+        )
+
+        with patch("app.services.fx._fetch_provider_payload", new=payload_mock):
+            with self.assertRaises(HistoricalRatesUnavailable):
+                asyncio.run(
+                    _fetch_pair_history_for_dates(
+                        AsyncMock(),
+                        base="USD",
+                        quote="NGN",
+                        missing_dates=[date(2026, 3, 5), date(2026, 3, 4), date(2026, 3, 6)],
+                    )
+                )
+
+        self.assertEqual(payload_mock.await_count, 1)
 
 
 if __name__ == "__main__":

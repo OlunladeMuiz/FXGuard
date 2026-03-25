@@ -75,6 +75,8 @@ class InitializeDatabaseTests(unittest.TestCase):
         self.assertIn("first_name", columns)
         self.assertIn("last_name", columns)
         self.assertIn("phone", columns)
+        self.assertIn("country", columns)
+        self.assertIn("business_type", columns)
         self.assertIn("time_zone", columns)
         self.assertIn("preferred_currency", columns)
 

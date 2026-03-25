@@ -26,9 +26,12 @@ export interface ResendOtpPayload {
 
 export interface UpdateProfilePayload {
   email?: string;
+  company_name?: string | null;
   first_name?: string | null;
   last_name?: string | null;
   phone?: string | null;
+  country?: string | null;
+  business_type?: string | null;
   time_zone?: string | null;
   preferred_currency?: string | null;
 }
@@ -40,8 +43,12 @@ export interface User {
   first_name?: string | null;
   last_name?: string | null;
   phone?: string | null;
+  country?: string | null;
+  business_type?: string | null;
   time_zone?: string | null;
   preferred_currency?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
 }
 
 function titleCase(value: string): string {
@@ -101,6 +108,14 @@ export interface MessageResponse {
   user?: User;
 }
 
+
+/**
+ * Fetch current user profile
+ */
+export async function fetchProfile(): Promise<User> {
+  const response = await client.get<User>('/auth/profile');
+  return response.data;
+}
 
 /**
  * Register a new user

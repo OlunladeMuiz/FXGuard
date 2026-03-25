@@ -46,6 +46,11 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
     return login_user(db=db, payload=payload)
 
 
+@router.get("/profile", response_model=User)
+def read_profile(current_user: UserModel = Depends(get_current_user)):
+    return current_user
+
+
 @router.put("/profile", response_model=User)
 def update_profile(
     payload: ProfileUpdateRequest,

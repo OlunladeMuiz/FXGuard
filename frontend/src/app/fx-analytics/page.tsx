@@ -2,21 +2,18 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import styles from './page.module.css';
-import { fetchRealFXCandles } from '@/lib/api/fx';
+import { AUTH_USER_UPDATED_EVENT, getPreferredCurrency, getUser } from '@/lib/api/auth';
+import { fetchRealFXCandles, fetchRealFXSnapshot } from '@/lib/api/fx';
 import { fetchRecommendation } from '@/lib/api/recommendation';
 import { formatApiError } from '@/lib/api/errors';
+import { fetchAllInvoiceRecords } from '@/lib/invoices/editor';
+import { CurrencyCode, CurrencyCodeSchema } from '@/types/currency';
 import { FXHistoryPoint } from '@/lib/types/fx';
 import { Recommendation, getActionDisplayText } from '@/lib/types/recommendation';
 
 const alerts = [
   { title: 'USD/EUR Rate', subtitle: 'Target: 0.9180', color: 'yellow' },
   { title: 'Volatility Spike', subtitle: 'Threshold: >2%', color: 'blue' },
-];
-
-const currencyDistribution = [
-  { currency: 'USD', percent: 65.2, amount: '$45,230', color: '#3b82f6' },
-  { currency: 'EUR', percent: 28.7, amount: '€18,450', color: '#22c55e' },
-  { currency: 'GBP', percent: 6.1, amount: '£3,200', color: '#a855f7' },
 ];
 
 const CURRENCY_PAIRS = [
@@ -33,6 +30,172 @@ type CurrencyPair = { label: string; base: string; quote: string };
 
 const DEFAULT_PAIR: CurrencyPair = { label: 'USD/EUR', base: 'USD', quote: 'EUR' };
 const ANALYTICS_RECOMMENDATION_AMOUNT = 10000;
+const OPEN_EXPOSURE_STATUSES = new Set(['draft', 'sent', 'overdue']);
+const DONUT_RADIUS = 40;
+const DONUT_CIRCUMFERENCE = 2 * Math.PI * DONUT_RADIUS;
+const CURRENCY_DISTRIBUTION_COLORS: Record<CurrencyCode, string> = {
+  USD: '#3b82f6',
+  EUR: '#22c55e',
+  GBP: '#a855f7',
+  NGN: '#f59e0b',
+  CAD: '#ef4444',
+  AUD: '#14b8a6',
+  JPY: '#8b5cf6',
+  INR: '#ec4899',
+};
+
+interface CurrencyDistributionItem {
+  currency: CurrencyCode;
+  share: number;
+  percent: number;
+  amount: string;
+  rawAmount: number;
+  normalizedAmount: number;
+  color: string;
+}
+
+interface CurrencyDistributionSummary {
+  items: CurrencyDistributionItem[];
+  reportingCurrency: CurrencyCode;
+  totalNormalizedAmount: number;
+  activeInvoiceCount: number;
+  valuationDate: string | null;
+}
+
+const EMPTY_CURRENCY_DISTRIBUTION_SUMMARY: CurrencyDistributionSummary = {
+  items: [],
+  reportingCurrency: 'NGN',
+  totalNormalizedAmount: 0,
+  activeInvoiceCount: 0,
+  valuationDate: null,
+};
+
+function parseCurrencyCode(value: string | null | undefined): CurrencyCode | null {
+  const normalized = value?.trim().toUpperCase();
+  if (!normalized) {
+    return null;
+  }
+
+  const parsed = CurrencyCodeSchema.safeParse(normalized);
+  return parsed.success ? parsed.data : null;
+}
+
+function formatCurrencyAmount(amount: number, currency: string): string {
+  try {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency,
+    }).format(amount);
+  } catch {
+    return `${currency} ${amount.toFixed(2)}`;
+  }
+}
+
+function formatObservedDate(value: string | null): string | null {
+  if (!value) {
+    return null;
+  }
+
+  const date = new Date(`${value}T00:00:00.000Z`);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
+async function buildCurrencyDistribution(
+  reportingCurrency: CurrencyCode,
+): Promise<CurrencyDistributionSummary> {
+  const invoices = await fetchAllInvoiceRecords();
+  const activeInvoices = invoices.filter((invoice) =>
+    OPEN_EXPOSURE_STATUSES.has(invoice.status.toLowerCase()),
+  );
+  const totalsByCurrency = new Map<CurrencyCode, number>();
+  const unsupportedCurrencies = new Set<string>();
+
+  for (const invoice of activeInvoices) {
+    if (!Number.isFinite(invoice.amount) || invoice.amount <= 0) {
+      continue;
+    }
+
+    const currency = parseCurrencyCode(invoice.currency);
+    if (!currency) {
+      unsupportedCurrencies.add(invoice.currency.trim().toUpperCase() || invoice.currency);
+      continue;
+    }
+
+    totalsByCurrency.set(currency, (totalsByCurrency.get(currency) ?? 0) + invoice.amount);
+  }
+
+  if (unsupportedCurrencies.size > 0) {
+    throw new Error(
+      `Currency distribution cannot be calculated for unsupported invoice currencies: ${Array.from(unsupportedCurrencies).sort().join(', ')}.`,
+    );
+  }
+
+  if (totalsByCurrency.size === 0) {
+    return {
+      ...EMPTY_CURRENCY_DISTRIBUTION_SUMMARY,
+      reportingCurrency,
+      activeInvoiceCount: activeInvoices.length,
+    };
+  }
+
+  const quoteCurrencies = Array.from(totalsByCurrency.keys()).filter(
+    (currency) => currency !== reportingCurrency,
+  );
+  const snapshot = quoteCurrencies.length > 0
+    ? await fetchRealFXSnapshot(reportingCurrency, quoteCurrencies)
+    : { date: new Date().toISOString().slice(0, 10), rates: {} as Record<string, number> };
+
+  const preliminaryItems = Array.from(totalsByCurrency.entries())
+    .map(([currency, rawAmount]) => {
+      const rate = currency === reportingCurrency ? 1 : snapshot.rates[currency];
+      if (!rate || rate <= 0) {
+        throw new Error(`Missing FX rate required to value ${currency} exposure in ${reportingCurrency}.`);
+      }
+
+      const normalizedAmount = currency === reportingCurrency ? rawAmount : rawAmount / rate;
+
+      return {
+        currency,
+        rawAmount,
+        normalizedAmount,
+        color: CURRENCY_DISTRIBUTION_COLORS[currency],
+      };
+    })
+    .sort((left, right) => right.normalizedAmount - left.normalizedAmount);
+
+  const totalNormalizedAmount = preliminaryItems.reduce(
+    (sum, item) => sum + item.normalizedAmount,
+    0,
+  );
+
+  const items: CurrencyDistributionItem[] = preliminaryItems.map((item) => {
+    const share = totalNormalizedAmount > 0 ? item.normalizedAmount / totalNormalizedAmount : 0;
+    return {
+      currency: item.currency,
+      share,
+      percent: Number((share * 100).toFixed(1)),
+      amount: formatCurrencyAmount(item.rawAmount, item.currency),
+      rawAmount: Number(item.rawAmount.toFixed(2)),
+      normalizedAmount: Number(item.normalizedAmount.toFixed(2)),
+      color: item.color,
+    };
+  });
+
+  return {
+    items,
+    reportingCurrency,
+    totalNormalizedAmount: Number(totalNormalizedAmount.toFixed(2)),
+    activeInvoiceCount: activeInvoices.length,
+    valuationDate: snapshot.date ?? null,
+  };
+}
 
 function getRecommendationStateLabel(recommendation: Recommendation): string {
   if (recommendation.status === 'provisional_data') {
@@ -178,6 +341,44 @@ export default function FxAnalyticsHub() {
     min: number;
     level: 'Low' | 'Medium' | 'High';
   }>({ average: 0, max: 0, min: 0, level: 'Low' });
+  const [reportingCurrency, setReportingCurrency] = useState<CurrencyCode>('NGN');
+  const [distributionSummary, setDistributionSummary] = useState<CurrencyDistributionSummary>(
+    EMPTY_CURRENCY_DISTRIBUTION_SUMMARY,
+  );
+  const [distributionLoading, setDistributionLoading] = useState(true);
+  const [distributionError, setDistributionError] = useState<string | null>(null);
+  const [viewportWidth, setViewportWidth] = useState<number | null>(null);
+
+  useEffect(() => {
+    const syncViewportWidth = () => {
+      setViewportWidth(window.innerWidth);
+    };
+
+    syncViewportWidth();
+    window.addEventListener('resize', syncViewportWidth);
+
+    return () => {
+      window.removeEventListener('resize', syncViewportWidth);
+    };
+  }, []);
+
+  useEffect(() => {
+    const syncReportingCurrency = () => {
+      const nextCurrency = parseCurrencyCode(getPreferredCurrency(getUser())) ?? 'NGN';
+      setReportingCurrency((currentCurrency) => (
+        currentCurrency === nextCurrency ? currentCurrency : nextCurrency
+      ));
+    };
+
+    syncReportingCurrency();
+    window.addEventListener(AUTH_USER_UPDATED_EVENT, syncReportingCurrency);
+    window.addEventListener('storage', syncReportingCurrency);
+
+    return () => {
+      window.removeEventListener(AUTH_USER_UPDATED_EVENT, syncReportingCurrency);
+      window.removeEventListener('storage', syncReportingCurrency);
+    };
+  }, []);
 
   const fetchData = useCallback(async () => {
     if (!selectedPair) return;
@@ -290,6 +491,43 @@ export default function FxAnalyticsHub() {
     fetchData();
   }, [fetchData]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadCurrencyDistribution = async () => {
+      setDistributionLoading(true);
+      setDistributionError(null);
+
+      try {
+        const nextSummary = await buildCurrencyDistribution(reportingCurrency);
+        if (!cancelled) {
+          setDistributionSummary(nextSummary);
+        }
+      } catch (err) {
+        console.error('Error fetching currency distribution:', err);
+        if (!cancelled) {
+          setDistributionSummary({
+            ...EMPTY_CURRENCY_DISTRIBUTION_SUMMARY,
+            reportingCurrency,
+          });
+          setDistributionError(
+            formatApiError(err, 'Failed to load currency distribution.'),
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setDistributionLoading(false);
+        }
+      }
+    };
+
+    void loadCurrencyDistribution();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [reportingCurrency]);
+
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -300,6 +538,8 @@ export default function FxAnalyticsHub() {
 
     const { points, min, max } = chartData;
     const isSinglePoint = points.length === 1;
+    const isPhoneViewport = viewportWidth !== null && viewportWidth < 640;
+    const isTabletViewport = viewportWidth !== null && viewportWidth < 900;
     
     // Add padding to the range for better visualization
     const range = max - min;
@@ -340,14 +580,14 @@ export default function FxAnalyticsHub() {
 
     // Generate Y-axis labels (5 labels for cleaner display)
     const yLabels: string[] = [];
-    const labelCount = 5;
+    const labelCount = isPhoneViewport ? 4 : 5;
     for (let i = 0; i <= labelCount; i++) {
       const value = yMax - (i / labelCount) * yRange;
       yLabels.push(value.toFixed(4));
     }
 
     // Generate X-axis labels (max 7 labels)
-    const maxLabels = 7;
+    const maxLabels = isPhoneViewport ? 4 : isTabletViewport ? 5 : 7;
     const xLabelInterval = Math.max(1, Math.ceil(points.length / maxLabels));
     const xLabels = points.filter((_, i) => i % xLabelInterval === 0 || i === points.length - 1);
 
@@ -419,6 +659,29 @@ export default function FxAnalyticsHub() {
       </div>
     );
   };
+
+  let currencyArcOffset = 0;
+  const currencyDistributionArcs = distributionSummary.items.map((item) => {
+    const dashLength = item.share * DONUT_CIRCUMFERENCE;
+    const circle = (
+      <circle
+        key={item.currency}
+        cx="50"
+        cy="50"
+        r={DONUT_RADIUS}
+        fill="none"
+        stroke={item.color}
+        strokeWidth="20"
+        strokeDasharray={`${dashLength} ${Math.max(DONUT_CIRCUMFERENCE - dashLength, 0)}`}
+        strokeDashoffset={-currencyArcOffset}
+        transform="rotate(-90 50 50)"
+      />
+    );
+    currencyArcOffset += dashLength;
+    return circle;
+  });
+  const distributionAsOfLabel = formatObservedDate(distributionSummary.valuationDate);
+
   return (
     <div className={styles.page}>
       <div className={styles.container}>
@@ -618,21 +881,39 @@ export default function FxAnalyticsHub() {
             {/* Currency Distribution */}
             <section className={styles.card}>
               <h3>Currency Distribution</h3>
-              <div className={styles.currencyLayout}>
-                <div className={styles.donutContainer}>
-                  <svg className={styles.donutSvg} viewBox="0 0 100 100">
-                    <circle cx="50" cy="50" r="40" fill="none" stroke="#a855f7" strokeWidth="20" strokeDasharray="15.08 236.18" strokeDashoffset="0" transform="rotate(-90 50 50)" />
-                    <circle cx="50" cy="50" r="40" fill="none" stroke="#22c55e" strokeWidth="20" strokeDasharray="72.07 179.19" strokeDashoffset="-15.08" transform="rotate(-90 50 50)" />
-                    <circle cx="50" cy="50" r="40" fill="none" stroke="#3b82f6" strokeWidth="20" strokeDasharray="163.79 87.47" strokeDashoffset="-87.15" transform="rotate(-90 50 50)" />
-                    <circle cx="50" cy="50" r="25" fill="white" />
-                  </svg>
-                  <div className={styles.donutLabels}>
-                    <div className={styles.eurLabel}>EUR<br/>28.7%</div>
-                    <div className={styles.gbpLabel}>GBP<br/>6.1%</div>
-                    <div className={styles.usdLabel}>USD<br/>65.2%</div>
+              {distributionError ? (
+                <div className={styles.distributionMessage}>{distributionError}</div>
+              ) : distributionLoading ? (
+                <div className={styles.distributionMessage}>Loading invoice exposure...</div>
+              ) : distributionSummary.items.length === 0 ? (
+                <div className={styles.distributionMessage}>
+                  No open invoice exposure yet. Draft, sent, and overdue invoices will appear here once they use a supported currency.
+                </div>
+              ) : (
+                <div className={styles.currencyLayout}>
+                  <div className={styles.donutContainer}>
+                    <svg className={styles.donutSvg} viewBox="0 0 100 100">
+                      <circle cx="50" cy="50" r={DONUT_RADIUS} fill="none" stroke="#e5e7eb" strokeWidth="20" />
+                      {currencyDistributionArcs}
+                      <circle cx="50" cy="50" r="25" fill="white" />
+                    </svg>
+                    <div className={styles.donutCenter}>
+                      <span className={styles.donutCenterLabel}>{distributionSummary.reportingCurrency} Exposure</span>
+                      <strong className={styles.donutCenterValue}>
+                        {formatCurrencyAmount(
+                          distributionSummary.totalNormalizedAmount,
+                          distributionSummary.reportingCurrency,
+                        )}
+                      </strong>
+                      <span className={styles.donutCenterMeta}>
+                        {distributionSummary.activeInvoiceCount} open invoice
+                        {distributionSummary.activeInvoiceCount === 1 ? '' : 's'}
+                        {distributionAsOfLabel ? ` · As of ${distributionAsOfLabel}` : ''}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </section>
 
             {/* P&L and Hedging Impact */}
@@ -674,12 +955,30 @@ export default function FxAnalyticsHub() {
           {/* Middle Column - Currency Amounts & Scenarios */}
           <div className={styles.middleColumn}>
             <div className={styles.currencyAmounts}>
-              {currencyDistribution.map((item) => (
-                <div key={item.currency} className={styles.currencyAmountCard}>
-                  <span className={styles.amountValue}>{item.amount}</span>
-                  <span className={styles.amountPercent}>{item.percent}%</span>
+              {distributionLoading ? (
+                <div className={styles.currencyAmountCard}>
+                  <span className={styles.amountValue}>Loading...</span>
+                  <span className={styles.amountPercent}>Fetching invoice exposure</span>
                 </div>
-              ))}
+              ) : distributionError ? (
+                <div className={styles.currencyAmountCard}>
+                  <span className={styles.amountValue}>Unavailable</span>
+                  <span className={styles.amountPercent}>Currency distribution could not be valued accurately.</span>
+                </div>
+              ) : distributionSummary.items.length === 0 ? (
+                <div className={styles.currencyAmountCard}>
+                  <span className={styles.amountValue}>No exposure</span>
+                  <span className={styles.amountPercent}>Open invoices will populate this panel automatically.</span>
+                </div>
+              ) : (
+                distributionSummary.items.map((item) => (
+                  <div key={item.currency} className={styles.currencyAmountCard}>
+                    <span className={styles.amountCode} style={{ color: item.color }}>{item.currency}</span>
+                    <span className={styles.amountValue}>{item.amount}</span>
+                    <span className={styles.amountPercent}>{item.percent.toFixed(1)}% of open exposure</span>
+                  </div>
+                ))
+              )}
             </div>
             <div className={styles.scenarioButtons}>
               <button className={styles.scenarioBtn}>

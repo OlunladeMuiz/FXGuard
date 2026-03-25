@@ -18,5 +18,7 @@ class User(Base):
     first_name = Column(String, nullable=True)
     last_name = Column(String, nullable=True)
     phone = Column(String, nullable=True)
+    country = Column(String, nullable=True)
+    business_type = Column(String, nullable=True)
     time_zone = Column(String, nullable=True)
     preferred_currency = Column(String, nullable=True, default="NGN")
