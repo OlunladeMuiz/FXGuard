@@ -12,47 +12,11 @@ from app.schemas.invoice import (
     InvoiceCreate,
     InvoiceUpdate,
 )
+from app.services.interswitch import InterswitchService
 from app.utils.email_service import EmailService
 
 # Set up logging
 logger = logging.getLogger(__name__)
-
-
-def parse_payment_details(payment_details: str) -> dict:
-    """
-    Parse payment details string into components
-    Format: "Account Name: XXX, Bank: XXX, Account Number: XXX"
-    
-    Args:
-        payment_details: Raw payment details string
-        
-    Returns:
-        Dict with keys: account_name, bank, account_number
-    """
-    result = {
-        'account_name': '',
-        'bank': '',
-        'account_number': ''
-    }
-    
-    if not payment_details:
-        return result
-    
-    try:
-        # Split by comma
-        parts = [part.strip() for part in payment_details.split(',')]
-        
-        for part in parts:
-            if 'Account Name:' in part:
-                result['account_name'] = part.split(':', 1)[1].strip()
-            elif 'Bank:' in part:
-                result['bank'] = part.split(':', 1)[1].strip()
-            elif 'Account Number:' in part:
-                result['account_number'] = part.split(':', 1)[1].strip()
-    except Exception as e:
-        logger.warning(f"Error parsing payment details: {str(e)}")
-    
-    return result
 
 
 class InvoiceService:
@@ -98,8 +62,6 @@ class InvoiceService:
         else:
             logger.warning(f"Failed to send invoice creation email to user {user.email}")
 
-        payment_details_parsed = parse_payment_details(invoice.payment_details)
-
         client_email_sent = EmailService.send_invoice_email(
             to_email=invoice.client_email,
             client_name=invoice.client_name,
@@ -109,9 +71,9 @@ class InvoiceService:
             amount=invoice.amount,
             description=invoice.description,
             payment_method=invoice.payment_method,
-            account_name=payment_details_parsed['account_name'],
-            bank=payment_details_parsed['bank'],
-            account_number=payment_details_parsed['account_number'],
+            account_name=invoice.account_name or "",
+            bank=invoice.bank_name or "",
+            account_number=invoice.account_number or "",
             tax_rate=invoice.tax_rate,
             line_items=line_items,
             subtotal=f"{subtotal:.2f}",
@@ -146,13 +108,14 @@ class InvoiceService:
         """
         # Check if invoice number already exists
         existing_invoice = db.query(Invoice).filter(
-            Invoice.invoice_number == invoice_data.invoice_number
+            Invoice.invoice_number == invoice_data.invoice_number,
+            Invoice.user_id == user.id
         ).first()
-        
+
         if existing_invoice:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invoice number already exists"
+                detail="You already have an invoice with this number"
             )
         
         # Create invoice
@@ -174,6 +137,9 @@ class InvoiceService:
             description=invoice_data.description,
             payment_method=invoice_data.payment_method,
             payment_details=invoice_data.payment_details,
+            account_name=invoice_data.account_name,
+            bank_name=invoice_data.bank_name,
+            account_number=invoice_data.account_number,
             status=invoice_data.status,
             created_at=datetime.now(timezone.utc),
             updated_at=datetime.now(timezone.utc),
@@ -366,3 +332,147 @@ class InvoiceService:
         
         db.delete(invoice)
         db.commit()
+
+    @staticmethod
+    def generate_payment_link(
+        db: Session,
+        invoice_id: str,
+        user: User,
+    ) -> Invoice:
+        """
+        Generate an Interswitch payment link for an invoice and persist the
+        link and reference back to the invoice record.
+
+        If the invoice already has a payment_link the existing record is
+        returned immediately without calling Interswitch again.
+
+        Args:
+            db: Database session.
+            invoice_id: ID of the invoice to generate a payment link for.
+            user: The authenticated user making the request.
+
+        Returns:
+            The updated Invoice object containing the payment_link and
+            payment_reference fields.
+
+        Raises:
+            HTTPException 404: If the invoice does not belong to the user.
+            HTTPException 400: If the invoice is already paid or cancelled.
+            HTTPException 502: If the Interswitch API call fails.
+        """
+        invoice = db.query(Invoice).filter(
+            Invoice.id == invoice_id,
+            Invoice.user_id == user.id,
+        ).first()
+
+        if not invoice:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Invoice not found",
+            )
+
+        if invoice.status in ("paid", "cancelled"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Cannot generate a payment link for an invoice with status '{invoice.status}'",
+            )
+
+        if invoice.payment_link:
+            return invoice
+
+        try:
+            result = InterswitchService.generate_payment_link(
+                invoice_id=invoice.id,
+                amount=invoice.amount,
+                currency=invoice.currency,
+                description=f"Payment for Invoice {invoice.invoice_number}",
+                customer_email=invoice.client_email,
+            )
+        except RuntimeError as exc:
+            logger.error(
+                "Interswitch payment link generation is not configured correctly: %s",
+                str(exc),
+            )
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=str(exc),
+            ) from exc
+        except Exception as exc:
+            logger.error(
+                "Interswitch payment link generation failed for invoice %s: %s",
+                invoice_id,
+                str(exc),
+                exc_info=True,
+            )
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="Failed to generate payment link. Please try again later.",
+            ) from exc
+
+        invoice.payment_link = (
+            result.get("paymentUrl")
+            or result.get("checkoutUrl")
+            or result.get("url")
+        )
+        invoice.payment_reference = result.get("transactionReference") or invoice.id
+        invoice.updated_at = datetime.now(timezone.utc)
+
+        db.commit()
+        db.refresh(invoice)
+        return invoice
+
+    @staticmethod
+    def handle_payment_webhook(db: Session, payload: dict) -> dict:
+        """
+        Process an incoming Interswitch payment webhook notification.
+
+        Looks up the invoice by payment_reference. If the Interswitch
+        responseCode is '00' (success) the invoice status is updated to
+        'paid' and the payment_completed_at timestamp is recorded.
+
+        Args:
+            db: Database session.
+            payload: Raw webhook payload dict from Interswitch.
+
+        Returns:
+            dict with a 'status' key of either 'processed' or 'ignored'.
+        """
+        reference = (
+            payload.get("transactionReference")
+            or payload.get("merchantReference")
+        )
+
+        if not reference:
+            logger.warning("Interswitch webhook received with no transaction reference.")
+            return {"status": "ignored", "reason": "no_reference"}
+
+        invoice = db.query(Invoice).filter(
+            Invoice.payment_reference == reference
+        ).first()
+
+        if not invoice:
+            logger.warning(
+                "Interswitch webhook: no invoice found for reference %s.", reference
+            )
+            return {"status": "ignored", "reason": "invoice_not_found"}
+
+        response_code = payload.get("responseCode") or payload.get("ResponseCode")
+
+        if response_code == "00":
+            invoice.status = "paid"
+            invoice.payment_completed_at = datetime.now(timezone.utc)
+            invoice.updated_at = datetime.now(timezone.utc)
+            db.commit()
+            logger.info(
+                "Invoice %s marked as paid via Interswitch webhook (ref: %s).",
+                invoice.id,
+                reference,
+            )
+            return {"status": "processed"}
+
+        logger.info(
+            "Interswitch webhook for invoice %s had non-success responseCode: %s.",
+            invoice.id,
+            response_code,
+        )
+        return {"status": "ignored", "reason": f"response_code_{response_code}"}

@@ -62,6 +62,14 @@ SessionLocal = sessionmaker(
 Base = declarative_base()
 
 
+def _load_models() -> None:
+    # Import ORM modules here so Base.metadata is complete before create_all runs.
+    from app.models import auth as _auth  # noqa: F401
+    from app.models import fx_candle as _fx_candle  # noqa: F401
+    from app.models import fx_rate as _fx_rate  # noqa: F401
+    from app.models import invoice as _invoice  # noqa: F401
+
+
 def _ensure_database_connection() -> None:
     if not DATABASE_URL.startswith("postgresql"):
         return
@@ -96,6 +104,12 @@ def _sync_user_columns() -> None:
             if column.name in existing_columns or column.primary_key:
                 continue
             if not column.nullable:
+                logger.warning(
+                    "Column '%s' is missing from the 'users' table but is defined as "
+                    "non-nullable in the ORM model. This will cause query failures. "
+                    "Create and run an Alembic migration to add this column manually.",
+                    column.name,
+                )
                 continue
             missing_columns.append(column)
 
@@ -108,6 +122,7 @@ def _sync_user_columns() -> None:
 
 def initialize_database() -> None:
     _ensure_database_connection()
+    _load_models()
     Base.metadata.create_all(bind=engine)
     _sync_user_columns()
 

@@ -49,8 +49,8 @@ export default function VerifyOtpPage() {
     setResending(true);
 
     try {
-      const response = await resendOtp({ email });
-      setSuccess(`OTP resent successfully! Your new code is: ${response.otp}`);
+      await resendOtp({ email });
+      setSuccess('A new verification code has been sent to your email.');
     } catch (err: unknown) {
       setError(formatApiError(err, 'Failed to resend OTP. Please try again.'));
     } finally {

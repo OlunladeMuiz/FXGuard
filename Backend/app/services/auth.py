@@ -2,7 +2,7 @@ from fastapi import HTTPException, status, Depends
 from fastapi.security import HTTPBearer
 from sqlalchemy.orm import Session
 import bcrypt
-import hashlib
+import uuid
 import jwt
 import os
 from datetime import datetime, timedelta, timezone
@@ -18,7 +18,12 @@ from app.db.database import get_db
 from app.utils.email_service import EmailService
 import random
 
-SECRET_KEY = os.getenv("SECRET_KEY", "change-me-in-production")
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    raise RuntimeError(
+        "SECRET_KEY environment variable is not set. "
+        "Generate one with: python -c \"import secrets; print(secrets.token_hex(32))\""
+    )
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 REFRESH_TOKEN_EXPIRE_DAYS = 7
@@ -55,6 +60,13 @@ def _clean_optional_string(value: str | None) -> str | None:
     return cleaned or None
 
 
+def _normalize_currency_code(value: str | None, default: str = "NGN") -> str:
+    cleaned = _clean_optional_string(value)
+    if not cleaned:
+        return default
+    return cleaned.upper()
+
+
 def create_access_token(data: dict) -> str:
     to_encode = data.copy()
     to_encode["exp"] = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -78,12 +90,13 @@ def register_user(db: Session, payload: RegisterRequest) -> User:
     otp = generate_otp()
     otp_expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
     user = User(
-        id=hashlib.sha256(payload.email.encode()).hexdigest()[:16],
+        id=str(uuid.uuid4()),
         email=payload.email,
         password=hash_password(payload.password),
         verification_code=otp,
         verification_code_expires_at=otp_expires_at,
-        company_name=payload.company_name
+        company_name=payload.company_name,
+        preferred_currency="NGN",
     )
     db.add(user) 
     db.commit()
@@ -130,7 +143,7 @@ def verify_otp(db: Session, payload: VerifyOtpRequest) -> User:
     return user
 
 
-def resend_otp(db: Session, payload: ResendOtpRequest) -> int:
+def resend_otp(db: Session, payload: ResendOtpRequest) -> None:
     user = db.query(User).filter(User.email == payload.email).first()
     if not user:
         raise HTTPException(
@@ -138,17 +151,25 @@ def resend_otp(db: Session, payload: ResendOtpRequest) -> int:
             detail="User not found",
         )
 
+    if user.verification_code_expires_at:
+        expires_at = _normalize_utc_datetime(user.verification_code_expires_at)
+        if expires_at:
+            cooldown_until = expires_at - timedelta(minutes=9)
+            if datetime.now(timezone.utc) < cooldown_until:
+                raise HTTPException(
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                    detail="Please wait at least 1 minute before requesting a new verification code.",
+                )
+
     otp = generate_otp()
     otp_expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
     user.verification_code = otp
     user.verification_code_expires_at = otp_expires_at
     db.commit()
     db.refresh(user)
-    
     # Send OTP email
     EmailService.send_otp_email(payload.email, otp, user.company_name)
-    
-    return otp
+    # No return
 
 
 def login_user(db: Session, payload: LoginRequest) -> dict:
@@ -163,6 +184,11 @@ def login_user(db: Session, payload: LoginRequest) -> dict:
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Email not verified. Please verify your email first.",
         )
+
+    if not user.preferred_currency:
+        user.preferred_currency = "NGN"
+        db.commit()
+        db.refresh(user)
 
     access_token = create_access_token({"sub": user.id, "email": user.email})
     refresh_token = create_refresh_token({"sub": user.id, "email": user.email})
@@ -185,6 +211,10 @@ def update_user_profile(db: Session, current_user: User, payload: ProfileUpdateR
     current_user.last_name = _clean_optional_string(payload.last_name)
     current_user.phone = _clean_optional_string(payload.phone)
     current_user.time_zone = _clean_optional_string(payload.time_zone)
+    if payload.preferred_currency is not None:
+        current_user.preferred_currency = _normalize_currency_code(payload.preferred_currency)
+    elif not current_user.preferred_currency:
+        current_user.preferred_currency = "NGN"
     current_user.updated_at = datetime.now(timezone.utc)
 
     db.commit()

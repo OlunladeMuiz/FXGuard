@@ -9,7 +9,7 @@ import {
 } from '@/types/invoice';
 
 // Mock data flag
-const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === 'true' || true;
+const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === 'true';
 
 /**
  * Mock invoices for development

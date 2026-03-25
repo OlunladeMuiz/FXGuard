@@ -21,6 +21,6 @@ export function ConditionalNavbar() {
   if (pathname === '/') {
     return null;
   }
-  
+
   return <Navbar />;
 }

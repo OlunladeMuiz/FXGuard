@@ -19,3 +19,4 @@ class User(Base):
     last_name = Column(String, nullable=True)
     phone = Column(String, nullable=True)
     time_zone = Column(String, nullable=True)
+    preferred_currency = Column(String, nullable=True, default="NGN")

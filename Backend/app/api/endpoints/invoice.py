@@ -1,14 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 from app.db.database import get_db
 from app.models.auth import User
+from app.schemas.auth import BVNVerifyRequest
 from app.schemas.invoice import (
     InvoiceCreate,
-    InvoiceUpdate,
     InvoiceResponse,
+    InvoiceUpdate,
+    PaymentLinkResponse,
 )
 from app.services.auth import get_current_user
 from app.services.invoice import InvoiceService
+from app.services.interswitch import InterswitchService
 
 router = APIRouter(prefix="/invoices", tags=["invoices"])
 
@@ -93,3 +96,41 @@ async def delete_invoice(
     """
     InvoiceService.delete_invoice(db, invoice_id, current_user)
     return None
+
+
+@router.post("/{invoice_id}/payment-link", response_model=InvoiceResponse)
+async def generate_payment_link(
+    invoice_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Generate an Interswitch payment link for an existing invoice.
+    If the invoice already has a payment link it is returned immediately
+    without creating a new one.
+    """
+    return InvoiceService.generate_payment_link(db, invoice_id, current_user)
+
+
+@router.post("/webhooks/payment", include_in_schema=False)
+async def payment_webhook(request: Request, db: Session = Depends(get_db)):
+    """
+    Interswitch payment webhook receiver.
+    Called by Interswitch when a payment is completed.
+    This endpoint is intentionally excluded from the public API schema.
+    """
+    payload = await request.json()
+    result = InvoiceService.handle_payment_webhook(db, payload)
+    return result
+
+
+@router.post("/verify-bvn")
+async def verify_bvn(
+    payload: BVNVerifyRequest,
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Verify a Nigerian Bank Verification Number via Interswitch Identity API.
+    Requires an authenticated user.
+    """
+    return InterswitchService.verify_bvn(payload.bvn)

@@ -1,5 +1,4 @@
 import client from '@/lib/api/client';
-import { getUser, User } from '@/lib/api/auth';
 
 const INVOICE_DRAFT_STORAGE_KEY = 'fxguard:invoice-draft';
 
@@ -21,6 +20,9 @@ export interface InvoiceEditorState {
   issueDate: string;
   dueDate: string;
   paymentTerms: string;
+  accountName: string;
+  bankName: string;
+  accountNumber: string;
   invoiceCurrency: string;
   settlementCurrency: string;
   lineItems: InvoiceEditorLineItem[];
@@ -39,7 +41,7 @@ interface BackendInvoiceItem {
   created_at: string;
 }
 
-interface BackendInvoiceRecord {
+export interface BackendInvoiceRecord {
   id: string;
   user_id: string;
   invoice_number: string;
@@ -57,7 +59,13 @@ interface BackendInvoiceRecord {
   description: string | null;
   payment_method: string | null;
   payment_details: string | null;
+  account_name: string | null;
+  bank_name: string | null;
+  account_number: string | null;
   status: string;
+  payment_link: string | null;
+  payment_reference: string | null;
+  payment_completed_at: string | null;
   created_at: string;
   updated_at: string;
   items: BackendInvoiceItem[];
@@ -90,7 +98,13 @@ export interface InvoiceRecord {
   description: string;
   paymentMethod: string;
   paymentDetails: string;
+  accountName: string;
+  bankName: string;
+  accountNumber: string;
   status: string;
+  paymentLink: string;
+  paymentReference: string;
+  paymentCompletedAt: string;
   createdAt: string;
   updatedAt: string;
   items: InvoiceRecordItem[];
@@ -145,7 +159,7 @@ export function createInvoiceLineItem(partial?: Partial<InvoiceEditorLineItem>):
   };
 }
 
-export function createEmptyInvoiceDraft(user?: User | null): InvoiceEditorState {
+export function createEmptyInvoiceDraft(): InvoiceEditorState {
   return {
     persistedInvoiceId: null,
     invoiceNumber: createInvoiceNumber(),
@@ -157,8 +171,11 @@ export function createEmptyInvoiceDraft(user?: User | null): InvoiceEditorState 
     issueDate: todayIsoDate(),
     dueDate: datePlusDays(30),
     paymentTerms: 'Net 30',
+    accountName: '',
+    bankName: '',
+    accountNumber: '',
     invoiceCurrency: 'USD',
-    settlementCurrency: 'EUR',
+    settlementCurrency: 'NGN',
     lineItems: [createInvoiceLineItem()],
     discount: '0',
     discountType: 'percent',
@@ -168,8 +185,7 @@ export function createEmptyInvoiceDraft(user?: User | null): InvoiceEditorState 
 }
 
 function normalizeDraft(value: Partial<InvoiceEditorState> | null | undefined): InvoiceEditorState {
-  const currentUser = getUser();
-  const fallback = createEmptyInvoiceDraft(currentUser);
+  const fallback = createEmptyInvoiceDraft();
   if (!value) {
     return fallback;
   }
@@ -192,13 +208,13 @@ export function loadInvoiceDraft(): InvoiceEditorState {
 
   const raw = window.sessionStorage.getItem(INVOICE_DRAFT_STORAGE_KEY);
   if (!raw) {
-    return createEmptyInvoiceDraft(getUser());
+    return createEmptyInvoiceDraft();
   }
 
   try {
     return normalizeDraft(JSON.parse(raw) as Partial<InvoiceEditorState>);
   } catch {
-    return createEmptyInvoiceDraft(getUser());
+    return createEmptyInvoiceDraft();
   }
 }
 
@@ -275,7 +291,7 @@ export function formatDisplayDate(value: string): string {
   });
 }
 
-function mapBackendInvoice(record: BackendInvoiceRecord): InvoiceRecord {
+export function mapBackendInvoice(record: BackendInvoiceRecord): InvoiceRecord {
   return {
     id: record.id,
     userId: record.user_id,
@@ -294,7 +310,13 @@ function mapBackendInvoice(record: BackendInvoiceRecord): InvoiceRecord {
     description: record.description ?? '',
     paymentMethod: record.payment_method ?? '',
     paymentDetails: record.payment_details ?? '',
+    accountName: record.account_name ?? '',
+    bankName: record.bank_name ?? '',
+    accountNumber: record.account_number ?? '',
     status: record.status,
+    paymentLink: record.payment_link ?? '',
+    paymentReference: record.payment_reference ?? '',
+    paymentCompletedAt: record.payment_completed_at ?? '',
     createdAt: record.created_at,
     updatedAt: record.updated_at,
     items: record.items.map((item) => ({
@@ -332,6 +354,9 @@ function buildInvoicePayload(draft: InvoiceEditorState, status: string) {
     description: trimmedNotes || null,
     payment_method: draft.paymentTerms.trim() || null,
     payment_details: trimmedNotes || null,
+    account_name: draft.accountName.trim() || null,
+    bank_name: draft.bankName.trim() || null,
+    account_number: draft.accountNumber.trim() || null,
     status,
     items: draft.lineItems
       .filter((item) => item.description.trim() || parseNumeric(item.unitPrice) > 0)
@@ -355,8 +380,11 @@ export function mapInvoiceRecordToDraft(record: InvoiceRecord): InvoiceEditorSta
     issueDate: record.issueDate.slice(0, 10) || todayIsoDate(),
     dueDate: record.dueDate.slice(0, 10) || datePlusDays(30),
     paymentTerms: record.paymentMethod || 'Net 30',
+    accountName: record.accountName || '',
+    bankName: record.bankName || '',
+    accountNumber: record.accountNumber || '',
     invoiceCurrency: record.currency,
-    settlementCurrency: 'EUR',
+    settlementCurrency: 'NGN',
     lineItems:
       record.items.length > 0
         ? record.items.map((item) => createInvoiceLineItem({
@@ -411,11 +439,11 @@ export function buildInvoiceEmailMessage(record: InvoiceRecord): string {
 
 function escapeHtml(value: string): string {
   return value
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 export function buildInvoicePrintHtml(

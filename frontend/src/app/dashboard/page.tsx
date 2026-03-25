@@ -70,22 +70,34 @@ export default function DashboardPage() {
   useEffect(() => {
     const fetchRealFXRates = async () => {
       try {
+        const getRequiredRate = (
+          snapshot: { rates: Record<string, number> },
+          currency: string,
+        ) => {
+          const rate = snapshot.rates[currency];
+          if (rate === undefined) {
+            throw new Error(`Missing ${currency} FX rate`);
+          }
+          return rate;
+        };
+
         // Fetch current rates
         const data = await fetchRealFXSnapshot('USD', ['EUR', 'GBP', 'CAD', 'AUD']);
         
-        // Fetch yesterday's rates for change calculation
-        const yesterday = new Date();
-        yesterday.setDate(yesterday.getDate() - 2);
-        const yesterdayStr = yesterday.toISOString().slice(0, 10);
-        
-        const histData = await fetchRealFXSnapshot('USD', ['EUR', 'GBP', 'CAD', 'AUD'], yesterdayStr);
+        // Compare against a stored point from two days ago so the local history
+        // still supports a stable short-term change view while it backfills.
+        const previousDay = new Date();
+        previousDay.setDate(previousDay.getDate() - 2);
+        const previousDayStr = previousDay.toISOString().slice(0, 10);
+
+        const histData = await fetchRealFXSnapshot('USD', ['EUR', 'GBP', 'CAD', 'AUD'], previousDayStr);
         
         // Calculate rates and changes for each pair
         const ratesArray: FXRateData[] = [];
         
         // EUR/USD (inverted since we want EUR as base)
-        const eurRate = 1 / data.rates.EUR;
-        const eurYesterday = 1 / histData.rates.EUR;
+        const eurRate = 1 / getRequiredRate(data, 'EUR');
+        const eurYesterday = 1 / getRequiredRate(histData, 'EUR');
         const eurChange = ((eurRate - eurYesterday) / eurYesterday) * 100;
         ratesArray.push({
           pair: 'EUR/USD',
@@ -97,8 +109,8 @@ export default function DashboardPage() {
         });
         
         // GBP/USD
-        const gbpRate = 1 / data.rates.GBP;
-        const gbpYesterday = 1 / histData.rates.GBP;
+        const gbpRate = 1 / getRequiredRate(data, 'GBP');
+        const gbpYesterday = 1 / getRequiredRate(histData, 'GBP');
         const gbpChange = ((gbpRate - gbpYesterday) / gbpYesterday) * 100;
         ratesArray.push({
           pair: 'GBP/USD',
@@ -110,8 +122,8 @@ export default function DashboardPage() {
         });
         
         // CAD/USD
-        const cadRate = 1 / data.rates.CAD;
-        const cadYesterday = 1 / histData.rates.CAD;
+        const cadRate = 1 / getRequiredRate(data, 'CAD');
+        const cadYesterday = 1 / getRequiredRate(histData, 'CAD');
         const cadChange = ((cadRate - cadYesterday) / cadYesterday) * 100;
         ratesArray.push({
           pair: 'CAD/USD',
@@ -123,8 +135,8 @@ export default function DashboardPage() {
         });
         
         // AUD/USD
-        const audRate = 1 / data.rates.AUD;
-        const audYesterday = 1 / histData.rates.AUD;
+        const audRate = 1 / getRequiredRate(data, 'AUD');
+        const audYesterday = 1 / getRequiredRate(histData, 'AUD');
         const audChange = ((audRate - audYesterday) / audYesterday) * 100;
         ratesArray.push({
           pair: 'AUD/USD',
@@ -178,43 +190,55 @@ export default function DashboardPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className={styles.statsGrid}>
-        {statsData.map((stat) => (
-          <div key={stat.label} className={styles.statCard}>
-            <div className={styles.statHeader}>
-              <div className={`${styles.statIcon} ${styles[stat.icon]}`}>
-                {stat.icon === 'exposure' && (
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
-                    <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
-                  </svg>
-                )}
-                {stat.icon === 'rate' && (
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M23 6l-9.5 9.5-5-5L1 18"/>
-                    <path d="M17 6h6v6"/>
-                  </svg>
-                )}
-                {stat.icon === 'savings' && (
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-                  </svg>
-                )}
-                {stat.icon === 'invoices' && (
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <circle cx="12" cy="12" r="10"/>
-                    <polyline points="12 6 12 12 16 14"/>
-                  </svg>
-                )}
+      {loading ? (
+        <div className={styles.statsGrid}>
+          {[1, 2, 3, 4].map((i) => (
+            <div
+              key={i}
+              className={styles.statCard}
+              style={{ opacity: 0.4, minHeight: 120, background: 'var(--color-neutral-100)' }}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className={styles.statsGrid}>
+          {statsData.map((stat) => (
+            <div key={stat.label} className={styles.statCard}>
+              <div className={styles.statHeader}>
+                <div className={`${styles.statIcon} ${styles[stat.icon]}`}>
+                  {stat.icon === 'exposure' && (
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
+                      <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+                    </svg>
+                  )}
+                  {stat.icon === 'rate' && (
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M23 6l-9.5 9.5-5-5L1 18"/>
+                      <path d="M17 6h6v6"/>
+                    </svg>
+                  )}
+                  {stat.icon === 'savings' && (
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                    </svg>
+                  )}
+                  {stat.icon === 'invoices' && (
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="12" cy="12" r="10"/>
+                      <polyline points="12 6 12 12 16 14"/>
+                    </svg>
+                  )}
+                </div>
+                <span className={`${styles.statChange} ${styles[stat.changeType]}`}>{stat.change}</span>
               </div>
-              <span className={`${styles.statChange} ${styles[stat.changeType]}`}>{stat.change}</span>
+              <div className={styles.statLabel}>{stat.label}</div>
+              <div className={styles.statValue}>{stat.value}</div>
+              <div className={styles.statSubtitle}>{stat.subtitle}</div>
             </div>
-            <div className={styles.statLabel}>{stat.label}</div>
-            <div className={styles.statValue}>{stat.value}</div>
-            <div className={styles.statSubtitle}>{stat.subtitle}</div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* Three Column Section */}
       <div className={styles.threeColGrid}>

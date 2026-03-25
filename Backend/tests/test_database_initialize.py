@@ -13,6 +13,8 @@ if str(BACKEND_DIR) not in sys.path:
 
 from app.db import database
 from app.models.auth import User
+from app.models.fx_candle import FXCandle
+from app.models.fx_rate import FXRate
 
 
 class InitializeDatabaseTests(unittest.TestCase):
@@ -74,6 +76,59 @@ class InitializeDatabaseTests(unittest.TestCase):
         self.assertIn("last_name", columns)
         self.assertIn("phone", columns)
         self.assertIn("time_zone", columns)
+        self.assertIn("preferred_currency", columns)
+
+    def test_initialize_database_creates_fx_rates_table(self) -> None:
+        db_path = Path(__file__).resolve().parent / f"fx_{next(tempfile._get_candidate_names())}.db"
+        self.addCleanup(lambda: db_path.exists() and db_path.unlink())
+        temp_url = f"sqlite:///{db_path}"
+
+        database.DATABASE_URL = temp_url
+        database.engine = database._create_engine(temp_url)
+        database.SessionLocal.configure(bind=database.engine)
+
+        self.assertEqual(FXRate.__tablename__, "fx_rates")
+
+        database.initialize_database()
+
+        connection = sqlite3.connect(str(db_path))
+        try:
+            tables = {
+                row[0]
+                for row in connection.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table'"
+                ).fetchall()
+            }
+        finally:
+            connection.close()
+
+        self.assertIn("fx_rates", tables)
+
+    def test_initialize_database_creates_fx_candles_table(self) -> None:
+        db_path = Path(__file__).resolve().parent / f"fx_candles_{next(tempfile._get_candidate_names())}.db"
+        self.addCleanup(lambda: db_path.exists() and db_path.unlink())
+        temp_url = f"sqlite:///{db_path}"
+
+        database.DATABASE_URL = temp_url
+        database.engine = database._create_engine(temp_url)
+        database.SessionLocal.configure(bind=database.engine)
+
+        self.assertEqual(FXCandle.__tablename__, "fx_candles")
+
+        database.initialize_database()
+
+        connection = sqlite3.connect(str(db_path))
+        try:
+            tables = {
+                row[0]
+                for row in connection.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table'"
+                ).fetchall()
+            }
+        finally:
+            connection.close()
+
+        self.assertIn("fx_candles", tables)
 
     def test_resolve_database_url_prefers_psycopg_for_postgres_urls(self) -> None:
         raw_url = "postgres://user:password@localhost:5432/fxguard"

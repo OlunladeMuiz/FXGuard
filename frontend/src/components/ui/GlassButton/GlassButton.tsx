@@ -6,7 +6,7 @@ import styles from './GlassButton.module.css';
 type ButtonSize = 'sm' | 'default' | 'lg' | 'icon';
 type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost';
 
-interface GlassButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+export interface GlassButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   size?: ButtonSize;
   variant?: ButtonVariant; // Accepted for compatibility, glass style applied regardless
   isLoading?: boolean;

@@ -2,32 +2,11 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import styles from './page.module.css';
-import { fetchRealFXHistory, fetchRealFXRate } from '@/lib/api/fx';
+import { fetchRealFXCandles } from '@/lib/api/fx';
+import { fetchRecommendation } from '@/lib/api/recommendation';
+import { formatApiError } from '@/lib/api/errors';
 import { FXHistoryPoint } from '@/lib/types/fx';
-
-const insights = [
-  {
-    title: 'Optimal Conversion Window',
-    percent: 95,
-    text: 'Next 3-5 days show favorable USD strength patterns based on economic indicators.',
-    link: 'Why this recommendation?',
-    color: 'blue',
-  },
-  {
-    title: 'Hedging Recommendation',
-    percent: 78,
-    text: 'Consider hedging 40% of USD exposure given current volatility levels.',
-    link: 'Hedging strategy details',
-    color: 'orange',
-  },
-  {
-    title: 'Rate Alert Setup',
-    percent: 88,
-    text: 'Set alert for USD/EUR at 0.9180 for optimal conversion opportunity.',
-    hasButton: true,
-    color: 'green',
-  },
-];
+import { Recommendation, getActionDisplayText } from '@/lib/types/recommendation';
 
 const alerts = [
   { title: 'USD/EUR Rate', subtitle: 'Target: 0.9180', color: 'yellow' },
@@ -41,6 +20,8 @@ const currencyDistribution = [
 ];
 
 const CURRENCY_PAIRS = [
+  { label: 'USD/NGN', base: 'USD', quote: 'NGN' },
+  { label: 'EUR/NGN', base: 'EUR', quote: 'NGN' },
   { label: 'USD/EUR', base: 'USD', quote: 'EUR' },
   { label: 'USD/GBP', base: 'USD', quote: 'GBP' },
   { label: 'EUR/GBP', base: 'EUR', quote: 'GBP' },
@@ -51,6 +32,45 @@ const CURRENCY_PAIRS = [
 type CurrencyPair = { label: string; base: string; quote: string };
 
 const DEFAULT_PAIR: CurrencyPair = { label: 'USD/EUR', base: 'USD', quote: 'EUR' };
+const ANALYTICS_RECOMMENDATION_AMOUNT = 10000;
+
+function getRecommendationStateLabel(recommendation: Recommendation): string {
+  if (recommendation.status === 'provisional_data') {
+    return `${getActionDisplayText(recommendation.action)} (Intraday Signal)`;
+  }
+  if (recommendation.status === 'insufficient_data') {
+    return 'Collecting Local History';
+  }
+  if (recommendation.status === 'limited_data') {
+    return `${getActionDisplayText(recommendation.action)} (Early Signal)`;
+  }
+  return getActionDisplayText(recommendation.action);
+}
+
+function getHistoryQualityLabel(recommendation: Recommendation): string {
+  switch (recommendation.historyQuality) {
+    case 'full':
+      return 'Full stored history';
+    case 'mixed':
+      return 'Mixed real and seeded history';
+    case 'seeded':
+      return 'Seeded history';
+    case 'same_currency':
+      return 'No conversion required';
+    case 'candle_fallback':
+      return 'Intraday candle fallback';
+    default:
+      return 'Stored history';
+  }
+}
+
+function getHistorySupportText(recommendation: Recommendation): string {
+  if (recommendation.historyQuality === 'candle_fallback') {
+    return `Using stored intraday candles as a provisional fallback because only ${recommendation.dataPoints} stored daily close${recommendation.dataPoints === 1 ? ' is' : 's are'} available locally.`;
+  }
+
+  return `${getHistoryQualityLabel(recommendation)} · ${recommendation.realDataPoints} real points${recommendation.containsSynthetic ? ` · ${recommendation.syntheticDataPoints} seeded points` : ''}`;
+}
 
 const TIME_PERIODS = [
   { label: '1D', value: '1d' as const },
@@ -66,6 +86,80 @@ interface ChartData {
   changePercent: number;
   min: number;
   max: number;
+  trend: {
+    label: string;
+    description: string;
+    tone: 'positive' | 'negative' | 'neutral';
+    stroke: string;
+    fillStart: string;
+    fillMid: string;
+    fillEnd: string;
+  };
+  periodLabel: string;
+}
+
+function deriveTrend(points: FXHistoryPoint[]): ChartData['trend'] {
+  if (points.length < 2) {
+    return {
+      label: 'Single Close',
+      description: 'Only one stored close is available for this time window.',
+      tone: 'neutral',
+      stroke: '#2563eb',
+      fillStart: 'rgba(37, 99, 235, 0.24)',
+      fillMid: 'rgba(37, 99, 235, 0.10)',
+      fillEnd: 'rgba(37, 99, 235, 0.02)',
+    };
+  }
+
+  const firstRate = points[0]?.rate ?? 0;
+  const lastRate = points[points.length - 1]?.rate ?? firstRate;
+  const changePercent = firstRate > 0 ? ((lastRate - firstRate) / firstRate) * 100 : 0;
+  const dailyMoves = points
+    .slice(1)
+    .map((point, index) => {
+      const previous = points[index]?.rate ?? point.rate;
+      if (previous === 0) {
+        return 0;
+      }
+      return Math.abs((point.rate - previous) / previous) * 100;
+    });
+  const averageDailyMove = dailyMoves.length > 0
+    ? dailyMoves.reduce((sum, move) => sum + move, 0) / dailyMoves.length
+    : 0;
+
+  if (Math.abs(changePercent) < 0.25 && averageDailyMove < 0.2) {
+    return {
+      label: 'Consolidation',
+      description: 'The pair is moving sideways inside a tight recent range.',
+      tone: 'neutral',
+      stroke: '#d97706',
+      fillStart: 'rgba(217, 119, 6, 0.24)',
+      fillMid: 'rgba(245, 158, 11, 0.10)',
+      fillEnd: 'rgba(245, 158, 11, 0.02)',
+    };
+  }
+
+  if (changePercent > 0) {
+    return {
+      label: 'Uptrend',
+      description: 'Successive closes are moving higher across the selected window.',
+      tone: 'positive',
+      stroke: '#16a34a',
+      fillStart: 'rgba(34, 197, 94, 0.24)',
+      fillMid: 'rgba(74, 222, 128, 0.10)',
+      fillEnd: 'rgba(134, 239, 172, 0.02)',
+    };
+  }
+
+  return {
+    label: 'Downtrend',
+    description: 'Successive closes are moving lower across the selected window.',
+    tone: 'negative',
+    stroke: '#dc2626',
+    fillStart: 'rgba(239, 68, 68, 0.24)',
+    fillMid: 'rgba(248, 113, 113, 0.10)',
+    fillEnd: 'rgba(254, 202, 202, 0.02)',
+  };
 }
 
 export default function FxAnalyticsHub() {
@@ -74,6 +168,9 @@ export default function FxAnalyticsHub() {
   const [chartData, setChartData] = useState<ChartData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [recommendation, setRecommendation] = useState<Recommendation | null>(null);
+  const [recommendationLoading, setRecommendationLoading] = useState(false);
+  const [recommendationError, setRecommendationError] = useState<string | null>(null);
   const [volatilityData, setVolatilityData] = useState<{ day: string; value: number }[]>([]);
   const [volatilityStats, setVolatilityStats] = useState<{
     average: number;
@@ -87,17 +184,28 @@ export default function FxAnalyticsHub() {
     
     setLoading(true);
     setError(null);
+    setRecommendationLoading(true);
+    setRecommendationError(null);
+    setRecommendation(null);
     
     try {
-      const [historyData, currentRateData] = await Promise.all([
-        fetchRealFXHistory(selectedPair.base, selectedPair.quote, selectedPeriod),
-        fetchRealFXRate(selectedPair.base, selectedPair.quote),
-      ]);
+      const historyData = await fetchRealFXCandles(
+        selectedPair.base,
+        selectedPair.quote,
+        selectedPeriod,
+      );
 
       const points = historyData.data;
       const firstRate = points[0]?.rate || 0;
-      const lastRate = currentRateData.rate;
+      const lastRate = points[points.length - 1]?.close ?? points[points.length - 1]?.rate ?? firstRate;
       const changePercent = firstRate > 0 ? ((lastRate - firstRate) / firstRate) * 100 : 0;
+      const trend = deriveTrend(points);
+      const minRate = points.length > 0
+        ? Math.min(...points.map((point) => point.low ?? point.rate))
+        : historyData.statistics.min;
+      const maxRate = points.length > 0
+        ? Math.max(...points.map((point) => point.high ?? point.rate))
+        : historyData.statistics.max;
 
       // Calculate real volatility for last 7 days from actual price movements
       const last7Days = points.slice(-7);
@@ -148,14 +256,33 @@ export default function FxAnalyticsHub() {
         points,
         currentRate: lastRate,
         changePercent: Math.round(changePercent * 100) / 100,
-        min: historyData.statistics.min,
-        max: historyData.statistics.max,
+        min: minRate,
+        max: maxRate,
+        trend,
+        periodLabel: selectedPeriod.toUpperCase(),
       });
+
+      try {
+        const nextRecommendation = await fetchRecommendation(
+          selectedPair.base,
+          selectedPair.quote,
+          ANALYTICS_RECOMMENDATION_AMOUNT,
+        );
+        setRecommendation(nextRecommendation);
+      } catch (recommendationFetchError) {
+        console.error('Recommendation fetch failed:', recommendationFetchError);
+        setRecommendation(null);
+        setRecommendationError(
+          formatApiError(recommendationFetchError, 'Live recommendation is unavailable right now.'),
+        );
+      }
     } catch (err) {
       console.error('Error fetching FX data:', err);
-      setError('Failed to fetch market data. Please try again.');
+      setError(formatApiError(err, 'Failed to fetch market data. Please try again.'));
+      setRecommendation(null);
     } finally {
       setLoading(false);
+      setRecommendationLoading(false);
     }
   }, [selectedPair, selectedPeriod]);
 
@@ -172,6 +299,7 @@ export default function FxAnalyticsHub() {
     if (!chartData || chartData.points.length === 0) return null;
 
     const { points, min, max } = chartData;
+    const isSinglePoint = points.length === 1;
     
     // Add padding to the range for better visualization
     const range = max - min;
@@ -194,16 +322,20 @@ export default function FxAnalyticsHub() {
     const firstPoint = points[0];
     if (!firstPoint) return null;
     
+    const singlePointY = getY(firstPoint.rate);
+
     // Build the line path
-    let pathD = `M 0 ${getY(firstPoint.rate)}`;
-    points.forEach((point, index) => {
-      if (index > 0) {
-        pathD += ` L ${getX(index)} ${getY(point.rate)}`;
-      }
-    });
+    const pathD = isSinglePoint
+      ? `M 0 ${singlePointY} L ${width} ${singlePointY}`
+      : points.reduce((path, point, index) => {
+          if (index === 0) {
+            return `M 0 ${getY(point.rate)}`;
+          }
+          return `${path} L ${getX(index)} ${getY(point.rate)}`;
+        }, '');
 
     // Build the area path (close to bottom of chart)
-    const lastX = getX(points.length - 1);
+    const lastX = isSinglePoint ? width : getX(points.length - 1);
     const areaPath = pathD + ` L ${lastX} ${height} L 0 ${height} Z`;
 
     // Generate Y-axis labels (5 labels for cleaner display)
@@ -234,9 +366,9 @@ export default function FxAnalyticsHub() {
           >
             <defs>
               <linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor="rgba(59, 130, 246, 0.4)" />
-                <stop offset="50%" stopColor="rgba(59, 130, 246, 0.15)" />
-                <stop offset="100%" stopColor="rgba(59, 130, 246, 0.02)" />
+                <stop offset="0%" stopColor={chartData.trend.fillStart} />
+                <stop offset="50%" stopColor={chartData.trend.fillMid} />
+                <stop offset="100%" stopColor={chartData.trend.fillEnd} />
               </linearGradient>
             </defs>
             {/* Grid lines */}
@@ -257,8 +389,8 @@ export default function FxAnalyticsHub() {
             <path 
               d={pathD} 
               fill="none" 
-              stroke="#3b82f6" 
-              strokeWidth="0.8"
+              stroke={chartData.trend.stroke}
+              strokeWidth={isSinglePoint ? '1.2' : '0.8'}
               strokeLinecap="round"
               strokeLinejoin="round"
             />
@@ -266,18 +398,23 @@ export default function FxAnalyticsHub() {
             {points.length <= 30 && points.map((point, index) => (
               <circle
                 key={index}
-                cx={getX(index)}
+                cx={isSinglePoint ? width / 2 : getX(index)}
                 cy={getY(point.rate)}
-                r="0.8"
-                fill="#3b82f6"
+                r={isSinglePoint ? '1.3' : '0.8'}
+                fill={chartData.trend.stroke}
               />
             ))}
           </svg>
-          <div className={styles.chartXAxis}>
+          <div className={`${styles.chartXAxis} ${isSinglePoint ? styles.chartXAxisSingle : ''}`}>
             {xLabels.map((point, i) => (
               <span key={i}>{formatDate(point.date)}</span>
             ))}
           </div>
+          {isSinglePoint && (
+            <p className={styles.chartHint}>
+              1D currently shows the latest stored daily close. Switch to 7D or longer to see a trend line.
+            </p>
+          )}
         </div>
       </div>
     );
@@ -337,6 +474,17 @@ export default function FxAnalyticsHub() {
                         <span className={`${styles.badge} ${chartData.changePercent >= 0 ? styles.badgeGreen : styles.badgeRed}`}>
                           {chartData.changePercent >= 0 ? '+' : ''}{chartData.changePercent.toFixed(2)}%
                         </span>
+                        <span
+                          className={`${styles.badge} ${
+                            chartData.trend.tone === 'positive'
+                              ? styles.badgeGreen
+                              : chartData.trend.tone === 'negative'
+                                ? styles.badgeRed
+                                : styles.badgeAmber
+                          }`}
+                        >
+                          {chartData.trend.label}
+                        </span>
                       </>
                     ) : null}
                   </div>
@@ -358,6 +506,13 @@ export default function FxAnalyticsHub() {
                     </button>
                   </div>
                 </div>
+                {!loading && chartData && (
+                  <div className={styles.chartTrendSummary}>
+                    <strong>{chartData.trend.label}</strong>
+                    <span>{chartData.trend.description}</span>
+                    <span>Based on {chartData.points.length} real stored close{chartData.points.length === 1 ? '' : 's'} in the {chartData.periodLabel} window.</span>
+                  </div>
+                )}
                 {error ? (
                   <div className={styles.errorMessage}>{error}</div>
                 ) : loading ? (
@@ -567,43 +722,59 @@ export default function FxAnalyticsHub() {
                 </div>
                 <h3>AI Insights</h3>
               </div>
-              <div className={styles.insightList}>
-                {insights.map((item) => (
-                  <div
-                    key={item.title}
-                    className={`${styles.insight} ${
-                      item.color === 'blue'
-                        ? styles.insightBlue
-                        : item.color === 'orange'
-                        ? styles.insightOrange
-                        : styles.insightGreen
-                    }`}
-                  >
+              {recommendationLoading ? (
+                <div style={{ padding: 'var(--spacing-4)', color: 'var(--text-secondary)' }}>
+                  Analysing live market data...
+                </div>
+              ) : recommendation ? (
+                <div className={styles.insightList}>
+                  <div className={`${styles.insight} ${styles.insightBlue}`}>
                     <div className={styles.insightHeader}>
-                      <span className={styles.insightTitle}>{item.title}</span>
+                      <span className={styles.insightTitle}>
+                        {getRecommendationStateLabel(recommendation)}
+                      </span>
                       <div className={styles.percentBadge}>
-                        <span>{item.percent}%</span>
+                        <span>{Math.round(recommendation.confidence * 100)}%</span>
                         <div className={styles.progressSmall}>
-                          <div style={{ width: `${item.percent}%` }}></div>
+                          <div style={{ width: `${recommendation.confidence * 100}%` }}></div>
                         </div>
                       </div>
                     </div>
-                    <p className={styles.insightText}>{item.text}</p>
-                    {item.link && (
-                      <a href="#" className={`${styles.insightLink} ${item.color === 'orange' ? styles.insightLinkOrange : ''}`}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                          <circle cx="12" cy="12" r="10"/>
-                          <path d="M12 16v-4M12 8h.01" stroke="white" strokeWidth="2" strokeLinecap="round"/>
-                        </svg>
-                        {item.link}
-                      </a>
-                    )}
-                    {item.hasButton && (
-                      <button className={styles.setAlertBtn}>Set Alert</button>
-                    )}
+                    <p className={styles.insightText}>{recommendation.explanation}</p>
+                    <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-secondary)' }}>
+                      Optimal window: {recommendation.optimalWindow}
+                    </p>
+                    <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-secondary)' }}>
+                      {getHistorySupportText(recommendation)}
+                    </p>
+                    <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-secondary)' }}>
+                      Based on a {recommendation.base} {ANALYTICS_RECOMMENDATION_AMOUNT.toLocaleString('en-US')} invoice.
+                    </p>
                   </div>
-                ))}
-              </div>
+
+                  {recommendation.factors?.map((factor) => (
+                    <div
+                      key={factor.name}
+                      className={`${styles.insight} ${
+                        factor.impact === 'positive'
+                          ? styles.insightGreen
+                          : factor.impact === 'negative'
+                            ? styles.insightOrange
+                            : styles.insightBlue
+                      }`}
+                    >
+                      <div className={styles.insightHeader}>
+                        <span className={styles.insightTitle}>{factor.name}</span>
+                      </div>
+                      <p className={styles.insightText}>{factor.description}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ padding: 'var(--spacing-4)', color: 'var(--text-secondary)' }}>
+                  {recommendationError ?? 'No recommendation available.'}
+                </div>
+              )}
             </div>
 
             {/* Active Alerts */}

@@ -40,16 +40,12 @@ export default function SignupPage() {
 
     setLoading(true);
     try {
-      const response = await register({
+      await register({
         company_name: normalizedCompanyName,
         email: email.trim(),
         password,
         password_confirmation: passwordConfirmation,
-      });
-      // Store OTP temporarily for development (in production, this would be sent via email)
-      if (response.user.verification_code) {
-        alert(`Your verification code is: ${response.user.verification_code}\n(In production, this would be sent to your email)`);
-      }
+      }); 
       // Redirect to OTP verification page
       router.push(`/verify-otp?email=${encodeURIComponent(email)}`);
     } catch (err: unknown) {

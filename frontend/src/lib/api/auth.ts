@@ -30,6 +30,7 @@ export interface UpdateProfilePayload {
   last_name?: string | null;
   phone?: string | null;
   time_zone?: string | null;
+  preferred_currency?: string | null;
 }
 
 export interface User {
@@ -40,7 +41,7 @@ export interface User {
   last_name?: string | null;
   phone?: string | null;
   time_zone?: string | null;
-  verification_code?: number | null;
+  preferred_currency?: string | null;
 }
 
 function titleCase(value: string): string {
@@ -78,6 +79,11 @@ export function getUserDisplayName(user: User | null): string {
   return 'User';
 }
 
+export function getPreferredCurrency(user: User | null | undefined): string {
+  const preferredCurrency = user?.preferred_currency?.trim().toUpperCase();
+  return preferredCurrency || 'NGN';
+}
+
 export interface RegisterResponse {
   message: string;
   user: User;
@@ -95,10 +101,6 @@ export interface MessageResponse {
   user?: User;
 }
 
-export interface OTPResponse {
-  otp: number;
-  message: string;
-}
 
 /**
  * Register a new user
@@ -127,8 +129,8 @@ export async function verifyOtp(payload: VerifyOtpPayload): Promise<MessageRespo
 /**
  * Resend OTP code
  */
-export async function resendOtp(payload: ResendOtpPayload): Promise<OTPResponse> {
-  const response = await client.post<OTPResponse>('/auth/resend-otp', payload);
+export async function resendOtp(payload: ResendOtpPayload): Promise<MessageResponse> {
+  const response = await client.post<MessageResponse>('/auth/resend-otp', payload);
   return response.data;
 }
 
@@ -168,6 +170,7 @@ export function clearAuthTokens(): void {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
     localStorage.removeItem(USER_STORAGE_KEY);
+    window.dispatchEvent(new CustomEvent(AUTH_USER_UPDATED_EVENT, { detail: null }));
   }
 }
 

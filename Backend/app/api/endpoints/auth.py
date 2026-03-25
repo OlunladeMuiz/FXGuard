@@ -5,7 +5,7 @@ from app.db.database import get_db
 from app.schemas.auth import (
     RegisterRequest, RegisterResponse,
     VerifyOtpRequest, ResendOtpRequest,
-    LoginRequest, LoginResponse, MessageResponse, OTPResponse, User, ProfileUpdateRequest
+    LoginRequest, LoginResponse, MessageResponse, User, ProfileUpdateRequest
 )
 from app.services.auth import (
     register_user as create_user,
@@ -35,10 +35,10 @@ def verify_otp(payload: VerifyOtpRequest, db: Session = Depends(get_db)):
     return MessageResponse(message="Email verified successfully")
 
 
-@router.post("/resend-otp", response_model=OTPResponse)
+@router.post("/resend-otp", response_model=MessageResponse)
 def resend_otp(payload: ResendOtpRequest, db: Session = Depends(get_db)):
-    otp = resend_user_otp(db=db, payload=payload)
-    return OTPResponse(otp=otp, message="OTP resent successfully")
+    resend_user_otp(db=db, payload=payload)
+    return MessageResponse(message="A new verification code has been sent to your email")
 
 
 @router.post("/login", response_model=LoginResponse)
