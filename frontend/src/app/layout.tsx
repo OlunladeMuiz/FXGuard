@@ -1,7 +1,7 @@
 ﻿import '@/styles/globals.css';
 import type { Metadata } from 'next';
 import { Plus_Jakarta_Sans } from 'next/font/google';
-import { ConditionalNavbar, ErrorBoundary, Sidebar } from '@/components';
+import { ConditionalNavbar, ErrorBoundary } from '@/components';
 import { ProtectedRouteGate } from '@/components/ProtectedRouteGate';
 
 const plusJakarta = Plus_Jakarta_Sans({
@@ -24,7 +24,6 @@ export default function RootLayout({ children }: RootLayoutProps) {
       <body className={plusJakarta.className}>
         <ErrorBoundary>
           <ConditionalNavbar />
-          <Sidebar />
           <main className="app-main">
             <ProtectedRouteGate>{children}</ProtectedRouteGate>
           </main>
