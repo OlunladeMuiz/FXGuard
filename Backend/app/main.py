@@ -18,6 +18,10 @@ logger = logging.getLogger(__name__)
 request_logger = logging.getLogger("app.request")
 
 
+class RequestBodyTooLargeError(Exception):
+    """Raised when a request body exceeds the configured size limit."""
+
+
 def configure_logging() -> None:
     log_level_name = os.getenv("LOG_LEVEL", "INFO").upper()
     log_level = getattr(logging, log_level_name, logging.INFO)
@@ -80,22 +84,40 @@ app.add_middleware(
 
 @app.middleware("http")
 async def enforce_request_body_limit(request: Request, call_next):
-    if request.method in {"POST", "PUT", "PATCH"}:
-        content_length = request.headers.get("content-length")
-        if content_length and int(content_length) > MAX_REQUEST_BODY_SIZE:
-            return JSONResponse(
-                status_code=413,
-                content={"detail": "Request body exceeds the 1MB limit."},
-            )
+    if request.method not in {"POST", "PUT", "PATCH"}:
+        return await call_next(request)
 
-        body = await request.body()
-        if len(body) > MAX_REQUEST_BODY_SIZE:
-            return JSONResponse(
-                status_code=413,
-                content={"detail": "Request body exceeds the 1MB limit."},
-            )
+    content_length = request.headers.get("content-length")
+    if content_length and int(content_length) > MAX_REQUEST_BODY_SIZE:
+        return JSONResponse(
+            status_code=413,
+            content={"detail": "Request body exceeds the 1MB limit."},
+        )
 
-    return await call_next(request)
+    received_bytes = 0
+    original_receive = request._receive
+
+    async def limited_receive():
+        nonlocal received_bytes
+        message = await original_receive()
+
+        if message["type"] == "http.request":
+            body = message.get("body", b"")
+            received_bytes += len(body)
+            if received_bytes > MAX_REQUEST_BODY_SIZE:
+                raise RequestBodyTooLargeError
+
+        return message
+
+    request._receive = limited_receive
+
+    try:
+        return await call_next(request)
+    except RequestBodyTooLargeError:
+        return JSONResponse(
+            status_code=413,
+            content={"detail": "Request body exceeds the 1MB limit."},
+        )
 
 
 @app.middleware("http")
