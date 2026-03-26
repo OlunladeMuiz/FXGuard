@@ -11,8 +11,8 @@ BACKEND_DIR = Path(__file__).resolve().parents[1]
 if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
-from app.schemas.auth import ProfileUpdateRequest, RegisterRequest, VerifyOtpRequest
-from app.services.auth import register_user, update_user_profile, verify_otp
+from app.schemas.auth import LoginRequest, ProfileUpdateRequest, RegisterRequest, VerifyOtpRequest
+from app.services.auth import hash_password, login_user, register_user, update_user_profile, verify_otp
 
 
 class VerifyOtpTests(unittest.TestCase):
@@ -80,6 +80,33 @@ class RegisterUserTests(unittest.TestCase):
         db.commit.assert_called_once()
         db.refresh.assert_called_once_with(created)
         send_otp_mock.assert_called_once()
+
+
+class LoginUserTests(unittest.TestCase):
+    def test_login_user_auto_verifies_existing_unverified_account(self) -> None:
+        user = Mock()
+        user.id = "user-123"
+        user.email = "owner@example.com"
+        user.password = hash_password("Test1234!")
+        user.is_verified = False
+        user.verification_code = 123456
+        user.verification_code_expires_at = datetime.now(timezone.utc) + timedelta(minutes=5)
+        user.preferred_currency = "USD"
+
+        db = Mock()
+        db.query.return_value.filter.return_value.first.return_value = user
+
+        result = login_user(
+            db=db,
+            payload=LoginRequest(email="owner@example.com", password="Test1234!"),
+        )
+
+        self.assertTrue(user.is_verified)
+        self.assertIsNone(user.verification_code)
+        self.assertIsNone(user.verification_code_expires_at)
+        self.assertEqual(result["token_type"], "bearer")
+        db.commit.assert_called_once()
+        db.refresh.assert_called_once_with(user)
 
 
 class UpdateUserProfileTests(unittest.TestCase):

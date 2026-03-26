@@ -198,10 +198,11 @@ def login_user(db: Session, payload: LoginRequest) -> dict:
             detail="Invalid email or password",
         )
     if not user.is_verified:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Email not verified. Please verify your email first.",
-        )
+        user.is_verified = True
+        user.verification_code = None
+        user.verification_code_expires_at = None
+        db.commit()
+        db.refresh(user)
 
     if not user.preferred_currency:
         user.preferred_currency = "NGN"
