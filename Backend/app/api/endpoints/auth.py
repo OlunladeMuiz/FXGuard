@@ -19,7 +19,7 @@ from app.services.auth import (
 from app.models.auth import User as UserModel
 
 router = APIRouter()
-
+                                                                                                                                 
 
 @router.post("/register", response_model=RegisterResponse, status_code=201)
 @limiter.limit("5/minute")
