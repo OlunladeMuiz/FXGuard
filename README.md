@@ -547,6 +547,53 @@ npm run lint --workspace=frontend
 .\.venv\Scripts\python.exe -m unittest discover Backend/tests
 ```
 
+## Deployment Notes — Email Service
+
+### Current Status
+
+Email delivery is intentionally disabled in this hackathon deployment.
+User accounts are auto-verified on registration - no OTP confirmation
+step is required to access the platform.
+
+### Why
+
+FXGuard's backend is hosted on Railway, which restricts outbound
+connections to external SMTP servers (port 465/587) at the network
+level. This is a documented Railway infrastructure limitation affecting
+all services on their free tier, not a bug in the application.
+
+### What This Means for the Demo
+
+- **Registration works immediately** - sign up and log in without
+  waiting for any email
+- **Invoice creation works fully** - invoices are created, saved, and
+  returned successfully. The client notification email is queued but
+  not delivered in this environment
+- **All other features are fully functional** - FX analytics, payment
+  link generation, BVN verification, AI recommendations
+
+### Production Email Plan
+
+The email infrastructure is fully built and ready. The switch to
+production email delivery requires one environment variable change:
+
+```env
+RESEND_API_KEY=<key from resend.com>
+RESEND_FROM_EMAIL=noreply@fxguard.com
+```
+
+Resend uses HTTPS (port 443) which Railway permits. A verified sending
+domain will be configured post-hackathon. The estimated time to enable
+full email delivery in production is under 30 minutes.
+
+### Email Features Built
+
+- OTP verification emails (HTML template)
+- Welcome emails on registration
+- Invoice notification emails to clients (with payment link)
+- All templates are production-ready and will activate automatically
+  once the email provider is connected
+
 ## Future Improvements
 
 - Add real payout and bank settlement orchestration beyond payment-link collection

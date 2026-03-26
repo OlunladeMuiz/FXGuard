@@ -1,11 +1,14 @@
+import bcrypt
+import jwt
+import logging
+import os
+import random
+import uuid
+from datetime import datetime, timedelta, timezone
 from fastapi import HTTPException, status, Depends
 from fastapi.security import HTTPBearer
 from sqlalchemy.orm import Session
-import bcrypt
-import uuid
-import jwt
-import os
-from datetime import datetime, timedelta, timezone
+
 from app.models.auth import User
 from app.schemas.auth import (
     RegisterRequest,
@@ -16,7 +19,8 @@ from app.schemas.auth import (
 )
 from app.db.database import get_db
 from app.utils.email_service import EmailService
-import random
+
+logger = logging.getLogger(__name__)
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 if not SECRET_KEY:
@@ -93,6 +97,7 @@ def register_user(db: Session, payload: RegisterRequest) -> User:
         id=str(uuid.uuid4()),
         email=payload.email,
         password=hash_password(payload.password),
+        is_verified=True,
         verification_code=otp,
         verification_code_expires_at=otp_expires_at,
         company_name=payload.company_name,
@@ -102,8 +107,15 @@ def register_user(db: Session, payload: RegisterRequest) -> User:
     db.commit()
     db.refresh(user)
     
-    # Send OTP email
-    EmailService.send_otp_email(payload.email, otp, payload.company_name)
+    # Keep OTP generation in place for compatibility, but never block registration on email delivery.
+    try:
+        EmailService.send_otp_email(payload.email, otp, payload.company_name)
+    except Exception as exc:
+        logger.warning(
+            "Email sending failed for %s - continuing without email: %s",
+            payload.email,
+            str(exc),
+        )
     
     return user
 
@@ -167,8 +179,14 @@ def resend_otp(db: Session, payload: ResendOtpRequest) -> None:
     user.verification_code_expires_at = otp_expires_at
     db.commit()
     db.refresh(user)
-    # Send OTP email
-    EmailService.send_otp_email(payload.email, otp, user.company_name)
+    try:
+        EmailService.send_otp_email(payload.email, otp, user.company_name)
+    except Exception as exc:
+        logger.warning(
+            "Email sending failed for %s - continuing without email: %s",
+            payload.email,
+            str(exc),
+        )
     # No return
 
 

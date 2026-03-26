@@ -138,30 +138,27 @@ class InvoiceServiceTests(unittest.TestCase):
 
     @mock.patch.object(EmailService, "send_invoice_email", return_value=False)
     @mock.patch.object(EmailService, "send_invoice_created_notification", return_value=True)
-    def test_create_sent_invoice_keeps_saved_draft_when_delivery_fails(
+    def test_create_sent_invoice_returns_success_when_delivery_fails(
         self,
         notify_mock: mock.Mock,
         client_mock: mock.Mock,
     ) -> None:
-        with self.assertRaises(HTTPException) as context:
-            InvoiceService.create_invoice(
-                db=self.db,
-                invoice_data=self._invoice_create("INV-SEND-FAIL-001", "sent"),
-                user=self.user,
-            )
-
-        self.assertEqual(context.exception.status_code, 502)
-        self.assertIn("invoice_id", context.exception.detail)
+        created = InvoiceService.create_invoice(
+            db=self.db,
+            invoice_data=self._invoice_create("INV-SEND-FAIL-001", "sent"),
+            user=self.user,
+        )
 
         saved_invoice = self.db.query(Invoice).filter(Invoice.invoice_number == "INV-SEND-FAIL-001").first()
         self.assertIsNotNone(saved_invoice)
-        self.assertEqual(saved_invoice.status, "draft")
+        self.assertEqual(created.status, "sent")
+        self.assertEqual(saved_invoice.status, "sent")
         client_mock.assert_called_once()
-        notify_mock.assert_not_called()
+        notify_mock.assert_called_once()
 
     @mock.patch.object(EmailService, "send_invoice_email", return_value=False)
     @mock.patch.object(EmailService, "send_invoice_created_notification", return_value=True)
-    def test_updating_draft_to_sent_keeps_draft_status_when_delivery_fails(
+    def test_updating_draft_to_sent_returns_success_when_delivery_fails(
         self,
         notify_mock: mock.Mock,
         client_mock: mock.Mock,
@@ -175,20 +172,19 @@ class InvoiceServiceTests(unittest.TestCase):
         notify_mock.reset_mock()
         client_mock.reset_mock()
 
-        with self.assertRaises(HTTPException) as context:
-            InvoiceService.update_invoice(
-                db=self.db,
-                invoice_id=created.id,
-                invoice_data=InvoiceUpdate(status="sent"),
-                user=self.user,
-            )
+        updated = InvoiceService.update_invoice(
+            db=self.db,
+            invoice_id=created.id,
+            invoice_data=InvoiceUpdate(status="sent"),
+            user=self.user,
+        )
 
-        self.assertEqual(context.exception.status_code, 502)
         refreshed = self.db.query(Invoice).filter(Invoice.id == created.id).first()
         self.assertIsNotNone(refreshed)
-        self.assertEqual(refreshed.status, "draft")
+        self.assertEqual(updated.status, "sent")
+        self.assertEqual(refreshed.status, "sent")
         client_mock.assert_called_once()
-        notify_mock.assert_not_called()
+        notify_mock.assert_called_once()
 
     @mock.patch.object(EmailService, "send_invoice_email", return_value=True)
     @mock.patch.object(EmailService, "send_invoice_created_notification", return_value=True)

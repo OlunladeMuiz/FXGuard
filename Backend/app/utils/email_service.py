@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_SMTP_SERVER = "smtp.gmail.com"
 DEFAULT_SMTP_PORT = 587
-DEFAULT_SMTP_TIMEOUT_SECONDS = 10.0
+DEFAULT_SMTP_TIMEOUT_SECONDS = 3.0
 
 # Template directory
 TEMPLATE_DIR = Path(__file__).parent.parent / "templates"
@@ -60,7 +60,7 @@ class EmailService:
 
     @staticmethod
     def _get_smtp_server() -> str:
-        configured_server = os.getenv("SMTP_SERVER", "").strip()
+        configured_server = (os.getenv("SMTP_SERVER") or os.getenv("SMTP_HOST") or "").strip()
         return configured_server or DEFAULT_SMTP_SERVER
 
     @staticmethod
@@ -89,6 +89,13 @@ class EmailService:
             timeout_seconds = float(configured_timeout)
             if timeout_seconds <= 0:
                 raise ValueError
+            if timeout_seconds > DEFAULT_SMTP_TIMEOUT_SECONDS:
+                logger.warning(
+                    "Configured SMTP timeout %.1fs is too high. Using %.1fs for fast failure.",
+                    timeout_seconds,
+                    DEFAULT_SMTP_TIMEOUT_SECONDS,
+                )
+                return DEFAULT_SMTP_TIMEOUT_SECONDS
             return timeout_seconds
         except ValueError:
             logger.warning(
@@ -112,7 +119,13 @@ class EmailService:
 
     @staticmethod
     def _get_smtp_username() -> str | None:
-        return (os.getenv("SMTP_USERNAME") or os.getenv("GMAIL_ADDRESS") or "").strip() or None
+        return (
+            os.getenv("SMTP_USERNAME")
+            or os.getenv("SMTP_USER")
+            or os.getenv("GMAIL_USER")
+            or os.getenv("GMAIL_ADDRESS")
+            or ""
+        ).strip() or None
 
     @staticmethod
     def _get_smtp_password() -> str | None:
@@ -152,10 +165,7 @@ class EmailService:
         use_ssl = EmailService._should_use_ssl()
 
         if not smtp_username or not smtp_password or not from_address:
-            logger.error(
-                "SMTP credentials are not configured. Set SMTP_USERNAME/SMTP_PASSWORD "
-                "or GMAIL_ADDRESS/GMAIL_PASSWORD."
-            )
+            logger.warning("Email provider not configured — skipping")
             return False
         
         try:
