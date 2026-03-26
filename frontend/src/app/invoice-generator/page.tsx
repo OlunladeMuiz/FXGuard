@@ -6,7 +6,7 @@ import styles from './page.module.css';
 import { fetchRealFXRate, fetchRealFXRateOnDate } from '@/lib/api/fx';
 import { fetchRecommendation } from '@/lib/api/recommendation';
 import { getPreferredCurrency, getUser, User } from '@/lib/api/auth';
-import { formatApiError } from '@/lib/api/errors';
+import { extractInvoiceIdFromApiError, formatApiError } from '@/lib/api/errors';
 import { Recommendation, getActionDisplayText } from '@/lib/types/recommendation';
 import {
   InvoiceEditorState,
@@ -321,6 +321,16 @@ export default function InvoiceGeneratorPage() {
         router.push(`/invoice-generator/review?id=${record.id}`);
       }
     } catch (submitError: unknown) {
+      const persistedInvoiceId = extractInvoiceIdFromApiError(submitError);
+      if (persistedInvoiceId && !draft.persistedInvoiceId) {
+        const nextDraft = {
+          ...draft,
+          persistedInvoiceId,
+        };
+        setDraft(nextDraft);
+        saveInvoiceDraft(nextDraft);
+      }
+
       setError(formatApiError(submitError, 'Invoice action failed. Please try again.'));
     } finally {
       setSubmittingAction(null);

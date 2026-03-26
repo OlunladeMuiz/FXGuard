@@ -12,8 +12,8 @@ import { getMockTransactions, mockTransactions } from './mockData';
  * Falls back to mock data when backend is unavailable
  */
 
-// Flag to enable mock mode (set to true for development without backend)
-const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === 'true';
+// Production builds must use the real backend.
+const USE_MOCK = false;
 
 interface FetchTransactionsParams {
   walletId: string;
@@ -43,7 +43,6 @@ export const fetchTransactions = async (
 ) => {
   // Use mock data if enabled or backend unavailable
   if (USE_MOCK) {
-    console.log('[DEV] Using mock transaction data');
     return getMockTransactions(
       params.page || 1,
       params.limit || 20,

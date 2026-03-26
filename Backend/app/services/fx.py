@@ -189,9 +189,9 @@ def _calculate_candle_stats(candles: list[dict[str, Any]]) -> dict[str, float]:
     avg_close = mean(closes)
     std_dev = pstdev(closes) if len(closes) > 1 else 0.0
     normalized_volatility = min((std_dev / avg_close) * 10, 1.0) if avg_close else 0.0
-    first_close = closes[0]
+    first_open = float(candles[0]["open"])
     last_close = closes[-1]
-    change_percent = ((last_close - first_close) / first_close) * 100 if first_close else 0.0
+    change_percent = ((last_close - first_open) / first_open) * 100 if first_open else 0.0
 
     return {
         "min": round(min(candle["low"] for candle in candles), 5),

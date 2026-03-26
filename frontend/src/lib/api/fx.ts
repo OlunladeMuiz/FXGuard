@@ -11,7 +11,7 @@ import {
 } from '@/types/fx';
 import { calculateVolatility } from '@/utils/calculations';
 
-const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === 'true' || false;
+const USE_MOCK = false;
 
 type HistoryPeriod = '1d' | '7d' | '30d' | '90d' | '1y';
 type CandleInterval = '1min' | '5min' | '15min' | '30min' | '1h' | '4h' | '1day' | '1week';

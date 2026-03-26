@@ -8,8 +8,8 @@ import {
   InvoiceListResponse,
 } from '@/types/invoice';
 
-// Mock data flag
-const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === 'true';
+// Production builds must use the real backend.
+const USE_MOCK = false;
 
 /**
  * Mock invoices for development
@@ -88,7 +88,6 @@ export const fetchInvoices = async (
   pageSize: number = 20
 ): Promise<InvoiceListResponse> => {
   if (USE_MOCK) {
-    console.log('[DEV] Using mock invoices');
     const start = (page - 1) * pageSize;
     const end = start + pageSize;
     const paginatedData = mockInvoices.slice(start, end);
@@ -126,7 +125,6 @@ export const fetchInvoices = async (
  */
 export const fetchInvoiceById = async (id: string): Promise<Invoice> => {
   if (USE_MOCK) {
-    console.log('[DEV] Using mock invoice');
     const invoice = mockInvoices.find((inv) => inv.id === id);
     if (!invoice) {
       throw new Error(`Invoice not found: ${id}`);
@@ -158,7 +156,6 @@ export const createInvoice = async (payload: CreateInvoicePayload): Promise<Invo
   const validatedPayload = CreateInvoiceSchema.parse(payload);
 
   if (USE_MOCK) {
-    console.log('[DEV] Creating mock invoice');
     // Simulate network delay
     await new Promise((resolve) => setTimeout(resolve, 500));
     
@@ -196,7 +193,6 @@ export const updateInvoice = async (
   payload: Partial<CreateInvoicePayload>
 ): Promise<Invoice> => {
   if (USE_MOCK) {
-    console.log('[DEV] Updating mock invoice');
     const index = mockInvoices.findIndex((inv) => inv.id === id);
     if (index === -1) {
       throw new Error(`Invoice not found: ${id}`);
@@ -239,7 +235,6 @@ export const updateInvoice = async (
  */
 export const deleteInvoice = async (id: string): Promise<void> => {
   if (USE_MOCK) {
-    console.log('[DEV] Deleting mock invoice');
     const index = mockInvoices.findIndex((inv) => inv.id === id);
     if (index === -1) {
       throw new Error(`Invoice not found: ${id}`);

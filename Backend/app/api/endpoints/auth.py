@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 
+from app.api.router import limiter
 from app.db.database import get_db
 from app.schemas.auth import (
     RegisterRequest, RegisterResponse,
@@ -21,7 +22,8 @@ router = APIRouter()
 
 
 @router.post("/register", response_model=RegisterResponse, status_code=201)
-def register_user(payload: RegisterRequest, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def register_user(request: Request, payload: RegisterRequest, db: Session = Depends(get_db)):
     user = create_user(db=db, payload=payload)
     return RegisterResponse(
         message="Verify your email to complete registration",
@@ -36,13 +38,15 @@ def verify_otp(payload: VerifyOtpRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/resend-otp", response_model=MessageResponse)
-def resend_otp(payload: ResendOtpRequest, db: Session = Depends(get_db)):
+@limiter.limit("3/minute")
+def resend_otp(request: Request, payload: ResendOtpRequest, db: Session = Depends(get_db)):
     resend_user_otp(db=db, payload=payload)
     return MessageResponse(message="A new verification code has been sent to your email")
 
 
 @router.post("/login", response_model=LoginResponse)
-def login(payload: LoginRequest, db: Session = Depends(get_db)):
+@limiter.limit("10/minute")
+def login(request: Request, payload: LoginRequest, db: Session = Depends(get_db)):
     return login_user(db=db, payload=payload)
 
 

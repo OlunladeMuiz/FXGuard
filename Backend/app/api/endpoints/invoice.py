@@ -1,5 +1,10 @@
+import jwt
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
+
+from slowapi.util import get_remote_address
+
+from app.api.router import limiter
 from app.db.database import get_db
 from app.models.auth import User
 from app.schemas.auth import BVNVerifyRequest
@@ -10,10 +15,25 @@ from app.schemas.invoice import (
     PaymentLinkResponse,
 )
 from app.services.auth import get_current_user
+from app.services.auth import ALGORITHM, SECRET_KEY
 from app.services.invoice import InvoiceService
 from app.services.interswitch import InterswitchService
 
 router = APIRouter(prefix="/invoices", tags=["invoices"])
+
+
+def payment_link_rate_limit_key(request: Request) -> str:
+    authorization = request.headers.get("Authorization", "")
+    if authorization.startswith("Bearer "):
+        token = authorization.removeprefix("Bearer ").strip()
+        try:
+            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+            user_id = payload.get("sub")
+            if user_id:
+                return f"user:{user_id}"
+        except jwt.InvalidTokenError:
+            pass
+    return f"ip:{get_remote_address(request)}"
 
 
 @router.post("/", response_model=InvoiceResponse, status_code=status.HTTP_201_CREATED)
@@ -99,7 +119,9 @@ async def delete_invoice(
 
 
 @router.post("/{invoice_id}/payment-link", response_model=InvoiceResponse)
+@limiter.limit("20/minute", key_func=payment_link_rate_limit_key)
 async def generate_payment_link(
+    request: Request,
     invoice_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),

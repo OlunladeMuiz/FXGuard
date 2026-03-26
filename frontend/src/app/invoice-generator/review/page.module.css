@@ -22,7 +22,8 @@
 .breadcrumbLink {
   color: var(--color-primary);
   background: none;
-  padding: 0;
+  padding: 10px 10px;
+  border-radius: 10px;
 }
 
 .header p {

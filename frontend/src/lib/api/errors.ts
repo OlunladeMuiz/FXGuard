@@ -88,3 +88,16 @@ export function formatApiError(error: unknown, fallback: string): string {
 
   return fallback;
 }
+
+export function extractInvoiceIdFromApiError(error: unknown): string | null {
+  if (!axios.isAxiosError<ApiErrorPayload>(error)) {
+    return null;
+  }
+
+  const detail = error.response?.data?.detail;
+  if (!isRecord(detail)) {
+    return null;
+  }
+
+  return typeof detail.invoice_id === 'string' ? detail.invoice_id : null;
+}
