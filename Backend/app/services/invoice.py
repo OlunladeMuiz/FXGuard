@@ -1,11 +1,14 @@
 """
 Invoice service - handles business logic for invoice operations
 """
-from sqlalchemy.orm import Session
 from datetime import datetime, timezone
-import uuid
 import logging
+import os
+import uuid
+
 from fastapi import HTTPException, status
+from sqlalchemy.orm import Session
+
 from app.models.invoice import Invoice, InvoiceItem
 from app.models.auth import User
 from app.schemas.invoice import (
@@ -21,6 +24,29 @@ logger = logging.getLogger(__name__)
 
 class InvoiceService:
     """Service for handling invoice operations"""
+
+    @staticmethod
+    def _build_payment_redirect_url(invoice_id: str) -> str:
+        frontend_base_url = (
+            os.getenv("FRONTEND_URL")
+            or os.getenv("FRONTEND_BASE_URL")
+            or os.getenv("NEXT_PUBLIC_APP_URL")
+            or "http://localhost:3000"
+        ).rstrip("/")
+        return f"{frontend_base_url}/invoice-generator/review?id={invoice_id}"
+
+    @staticmethod
+    def _invoice_delivery_error(invoice: Invoice) -> HTTPException:
+        return HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail={
+                "message": (
+                    "We saved this invoice as a draft because the client email could not "
+                    "be delivered. Please review your email settings and try sending again."
+                ),
+                "invoice_id": invoice.id,
+            },
+        )
 
     @staticmethod
     def _send_invoice_emails(invoice: Invoice, user: User) -> None:
@@ -41,26 +67,6 @@ class InvoiceService:
                 'unit_price': f"{item.unit_price:.2f}",
                 'total': f"{item_total:.2f}"
             })
-
-        user_email_sent = EmailService.send_invoice_created_notification(
-            to_email=user.email,
-            user_name=getattr(user, 'first_name', user.email.split('@')[0]),
-            invoice_number=invoice.invoice_number,
-            client_name=invoice.client_name,
-            currency=invoice.currency,
-            due_date=due_date_str,
-            items_count=len(invoice.items),
-            line_items=line_items,
-            subtotal=f"{subtotal:.2f}",
-            discount=f"{discount_amount:.2f}",
-            tax_rate=invoice.tax_rate or 0,
-            tax_amount=f"{tax_amount:.2f}",
-            total=f"{final_total:.2f}"
-        )
-        if user_email_sent:
-            logger.info(f"Invoice creation email sent successfully to user {user.email}")
-        else:
-            logger.warning(f"Failed to send invoice creation email to user {user.email}")
 
         client_email_sent = EmailService.send_invoice_email(
             to_email=invoice.client_email,
@@ -85,6 +91,40 @@ class InvoiceService:
             logger.info(f"Invoice notification email sent successfully to client {invoice.client_email}")
         else:
             logger.warning(f"Failed to send invoice notification email to client {invoice.client_email}")
+            raise InvoiceService._invoice_delivery_error(invoice)
+
+        user_email_sent = EmailService.send_invoice_created_notification(
+            to_email=user.email,
+            user_name=getattr(user, 'first_name', None) or user.email.split('@')[0],
+            invoice_number=invoice.invoice_number,
+            client_name=invoice.client_name,
+            currency=invoice.currency,
+            due_date=due_date_str,
+            items_count=len(invoice.items),
+            line_items=line_items,
+            subtotal=f"{subtotal:.2f}",
+            discount=f"{discount_amount:.2f}",
+            tax_rate=invoice.tax_rate or 0,
+            tax_amount=f"{tax_amount:.2f}",
+            total=f"{final_total:.2f}"
+        )
+        if user_email_sent:
+            logger.info(f"Invoice creation email sent successfully to user {user.email}")
+        else:
+            logger.warning(f"Failed to send invoice creation email to user {user.email}")
+
+    @staticmethod
+    def _mark_invoice_as_sent(
+        db: Session,
+        invoice: Invoice,
+        user: User,
+    ) -> Invoice:
+        InvoiceService._send_invoice_emails(invoice, user)
+        invoice.status = "sent"
+        invoice.updated_at = datetime.now(timezone.utc)
+        db.commit()
+        db.refresh(invoice)
+        return invoice
     
     @staticmethod
     def create_invoice(
@@ -118,6 +158,9 @@ class InvoiceService:
                 detail="You already have an invoice with this number"
             )
         
+        requested_status = invoice_data.status
+        persisted_status = "draft" if requested_status == "sent" else requested_status
+
         # Create invoice
         invoice = Invoice(
             id=str(uuid.uuid4()),
@@ -140,7 +183,7 @@ class InvoiceService:
             account_name=invoice_data.account_name,
             bank_name=invoice_data.bank_name,
             account_number=invoice_data.account_number,
-            status=invoice_data.status,
+            status=persisted_status,
             created_at=datetime.now(timezone.utc),
             updated_at=datetime.now(timezone.utc),
         )
@@ -161,13 +204,10 @@ class InvoiceService:
         
         db.commit()
         db.refresh(invoice)
-        
-        if invoice.status != "draft":
-            try:
-                InvoiceService._send_invoice_emails(invoice, user)
-            except Exception as e:
-                logger.error(f"Error sending invoice emails: {type(e).__name__}: {str(e)}", exc_info=True)
-        
+
+        if requested_status == "sent":
+            return InvoiceService._mark_invoice_as_sent(db, invoice, user)
+
         return invoice
     
     @staticmethod
@@ -267,9 +307,13 @@ class InvoiceService:
             )
 
         original_status = invoice.status
-        
+        requested_status = invoice_data.status if invoice_data.status is not None else invoice.status
+        should_send_invoice = original_status == "draft" and requested_status == "sent"
+
         # Update invoice fields
         update_data = invoice_data.model_dump(exclude_unset=True, exclude={"items"})
+        if should_send_invoice:
+            update_data["status"] = original_status
         for field, value in update_data.items():
             setattr(invoice, field, value)
         
@@ -294,12 +338,9 @@ class InvoiceService:
         db.commit()
         db.refresh(invoice)
 
-        if original_status == "draft" and invoice.status != "draft":
-            try:
-                InvoiceService._send_invoice_emails(invoice, user)
-            except Exception as e:
-                logger.error(f"Error sending invoice emails: {type(e).__name__}: {str(e)}", exc_info=True)
-        
+        if should_send_invoice:
+            return InvoiceService._mark_invoice_as_sent(db, invoice, user)
+
         return invoice
     
     @staticmethod
@@ -387,6 +428,8 @@ class InvoiceService:
                 currency=invoice.currency,
                 description=f"Payment for Invoice {invoice.invoice_number}",
                 customer_email=invoice.client_email,
+                redirect_url=InvoiceService._build_payment_redirect_url(invoice.id),
+                customer_id=invoice.client_email,
             )
         except RuntimeError as exc:
             logger.error(
@@ -414,7 +457,11 @@ class InvoiceService:
             or result.get("checkoutUrl")
             or result.get("url")
         )
-        invoice.payment_reference = result.get("transactionReference") or invoice.id
+        invoice.payment_reference = (
+            result.get("reference")
+            or result.get("transactionReference")
+            or invoice.id
+        )
         invoice.updated_at = datetime.now(timezone.utc)
 
         db.commit()
@@ -437,9 +484,20 @@ class InvoiceService:
         Returns:
             dict with a 'status' key of either 'processed' or 'ignored'.
         """
-        reference = (
-            payload.get("transactionReference")
-            or payload.get("merchantReference")
+        reference = next(
+            (
+                candidate
+                for candidate in (
+                    payload.get("reference"),
+                    payload.get("transactionReference"),
+                    payload.get("merchantReference"),
+                    payload.get("paymentReference"),
+                    payload.get("PaymentReference"),
+                    payload.get("MerchantReference"),
+                )
+                if candidate
+            ),
+            None,
         )
 
         if not reference:

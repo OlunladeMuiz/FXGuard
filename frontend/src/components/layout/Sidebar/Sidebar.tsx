@@ -87,6 +87,15 @@ const navItems: SidebarItem[] = [
   },
 ];
 
+const PROTECTED_PREFIXES = [
+  '/dashboard',
+  '/fx-analytics',
+  '/invoice-generator',
+  '/settings',
+  '/transactions',
+  '/wallet',
+] as const;
+
 /**
  * Sidebar Component - Hamburger Menu Style
  * Shows a hamburger icon that expands to show navigation items
@@ -95,6 +104,9 @@ export const Sidebar: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
   const menuRef = useRef<HTMLDivElement>(null);
+  const shouldRender = PROTECTED_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+  );
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -117,6 +129,10 @@ export const Sidebar: React.FC = () => {
   useEffect(() => {
     setIsOpen(false);
   }, [pathname]);
+
+  if (!shouldRender) {
+    return null;
+  }
 
   return (
     <div className={styles.hamburgerContainer} ref={menuRef}>

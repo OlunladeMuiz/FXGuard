@@ -99,6 +99,7 @@ export default function InvoiceReviewPage() {
   const [submittingAction, setSubmittingAction] = useState<'draft' | 'sent' | null>(null);
   const [hasConnectedPaymentProvider, setHasConnectedPaymentProvider] = useState(false);
   const [providerStatusLoading, setProviderStatusLoading] = useState(true);
+  const [copyLinkStatus, setCopyLinkStatus] = useState<'idle' | 'copied'>('idle');
 
   useEffect(() => {
     let isActive = true;
@@ -294,6 +295,20 @@ export default function InvoiceReviewPage() {
     };
   }, [invoiceCurrency, invoiceTotal, settlementCurrency]);
 
+  useEffect(() => {
+    if (copyLinkStatus !== 'copied') {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setCopyLinkStatus('idle');
+    }, 2200);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [copyLinkStatus]);
+
   const persistInvoiceStatus = async (status: 'draft' | 'sent') => {
     if (!invoice || !draft) {
       return;
@@ -367,11 +382,27 @@ export default function InvoiceReviewPage() {
       setInvoice(updatedRecord);
       setDraft(nextDraft);
       saveInvoiceDraft(nextDraft);
+      setCopyLinkStatus('idle');
       setSuccess('Payment link generated successfully.');
     } catch (linkErr: unknown) {
       setLinkError(formatApiError(linkErr, 'Failed to generate payment link. Please try again.'));
     } finally {
       setGeneratingLink(false);
+    }
+  };
+
+  const handleCopyPaymentLink = async () => {
+    if (!invoice?.paymentLink) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(invoice.paymentLink);
+      setCopyLinkStatus('copied');
+      setLinkError('');
+    } catch {
+      setCopyLinkStatus('idle');
+      setLinkError('Unable to copy the payment link right now. Please copy it manually.');
     }
   };
 
@@ -644,13 +675,19 @@ export default function InvoiceReviewPage() {
                       <button
                         type="button"
                         className={styles.secondary}
-                        onClick={() => {
-                          navigator.clipboard.writeText(invoice.paymentLink);
-                          setSuccess('Payment link copied to clipboard.');
-                        }}
+                        onClick={() => void handleCopyPaymentLink()}
                       >
-                        Copy Link
+                        {copyLinkStatus === 'copied' ? 'Link Copied Successfully' : 'Copy Link'}
                       </button>
+                      {copyLinkStatus === 'copied' && (
+                        <p
+                          className={styles.helperText}
+                          style={{ marginTop: 'var(--spacing-1)', color: 'var(--color-success)' }}
+                          aria-live="polite"
+                        >
+                          Link copied successfully.
+                        </p>
+                      )}
                     </div>
                   ) : (
                     <>

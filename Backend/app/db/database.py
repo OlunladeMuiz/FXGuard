@@ -1,6 +1,7 @@
 import importlib.util
 import logging
 import os
+import re
 from pathlib import Path
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.exc import OperationalError, SQLAlchemyError
@@ -8,6 +9,7 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 from dotenv import load_dotenv
 
 logger = logging.getLogger(__name__)
+SAFE_SQL_IDENTIFIER = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 BASE_DIR = Path(__file__).resolve().parents[2]
 DEFAULT_SQLITE_PATH = (BASE_DIR / "test.db").resolve()
@@ -47,7 +49,16 @@ def _resolve_database_url(raw_url: str | None) -> str:
 
 def _create_engine(database_url: str):
     connect_args = {"check_same_thread": False} if database_url.startswith("sqlite") else {}
-    return create_engine(database_url, connect_args=connect_args)
+    engine_kwargs = {"connect_args": connect_args}
+
+    if not database_url.startswith("sqlite"):
+        engine_kwargs.update(
+            pool_size=5,
+            max_overflow=10,
+            pool_pre_ping=True,
+        )
+
+    return create_engine(database_url, **engine_kwargs)
 
 
 DATABASE_URL = _resolve_database_url(os.getenv("DATABASE_URL", "sqlite:///./test.db"))
@@ -114,9 +125,13 @@ def _sync_user_columns() -> None:
             missing_columns.append(column)
 
         for column in missing_columns:
+            if not SAFE_SQL_IDENTIFIER.fullmatch(column.name):
+                raise RuntimeError(
+                    f"Unsafe column name generated during user schema sync: {column.name}"
+                )
             column_type = column.type.compile(dialect=engine.dialect)
             connection.execute(
-                text(f"ALTER TABLE users ADD COLUMN {column.name} {column_type}")
+                text(f'ALTER TABLE "users" ADD COLUMN "{column.name}" {column_type}')
             )
 
 
@@ -125,6 +140,10 @@ def initialize_database() -> None:
     _load_models()
     Base.metadata.create_all(bind=engine)
     _sync_user_columns()
+
+
+def close_database() -> None:
+    engine.dispose()
 
 def get_db():
     db = SessionLocal()

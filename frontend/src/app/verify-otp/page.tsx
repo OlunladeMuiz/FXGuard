@@ -1,13 +1,43 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import styles from './page.module.css';
 import { verifyOtp, resendOtp } from '@/lib/api/auth';
 import { formatApiError } from '@/lib/api/errors';
 
-export default function VerifyOtpPage() {
+function VerifyOtpCard() {
+  return (
+    <div className={styles.page}>
+      <header className={styles.header}>
+        <div className={styles.logo}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4 18V6" />
+            <path d="M20 18V6" />
+            <path d="M7 13l3-3 4 4 3-3" />
+          </svg>
+        </div>
+        <span className={styles.brand}>FXGuard</span>
+      </header>
+
+      <div className={styles.card}>
+        <div className={styles.iconWrapper}>
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="5" width="18" height="14" rx="2" />
+            <path d="m3 7 9 6 9-6" />
+          </svg>
+        </div>
+        <h1>Verify your email</h1>
+        <p className={styles.subtitle}>
+          We&apos;ve sent a 6-digit verification code to your email address. Enter the code below to verify your account.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function VerifyOtpContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
@@ -132,5 +162,13 @@ export default function VerifyOtpPage() {
         </form>
       </div>
     </div>
+  );
+}
+
+export default function VerifyOtpPage() {
+  return (
+    <Suspense fallback={<VerifyOtpCard />}>
+      <VerifyOtpContent />
+    </Suspense>
   );
 }

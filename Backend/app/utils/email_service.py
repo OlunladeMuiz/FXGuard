@@ -103,6 +103,14 @@ class EmailService:
         return os.getenv("SMTP_USE_TLS", "true").strip().lower() not in {"0", "false", "no"}
 
     @staticmethod
+    def _should_use_ssl() -> bool:
+        configured_value = os.getenv("SMTP_USE_SSL")
+        if configured_value is not None:
+            return configured_value.strip().lower() not in {"0", "false", "no"}
+
+        return EmailService._get_smtp_port() == 465
+
+    @staticmethod
     def _get_smtp_username() -> str | None:
         return (os.getenv("SMTP_USERNAME") or os.getenv("GMAIL_ADDRESS") or "").strip() or None
 
@@ -141,6 +149,7 @@ class EmailService:
         smtp_server = EmailService._get_smtp_server()
         smtp_port = EmailService._get_smtp_port()
         smtp_timeout_seconds = EmailService._get_smtp_timeout_seconds()
+        use_ssl = EmailService._should_use_ssl()
 
         if not smtp_username or not smtp_password or not from_address:
             logger.error(
@@ -167,13 +176,14 @@ class EmailService:
                 recipients.extend(to_emails)
             
             # Send email via SMTP
-            with smtplib.SMTP(
+            smtp_client = smtplib.SMTP_SSL if use_ssl else smtplib.SMTP
+            with smtp_client(
                 smtp_server,
                 smtp_port,
                 timeout=smtp_timeout_seconds,
             ) as server:
                 server.ehlo()
-                if EmailService._should_use_tls():
+                if not use_ssl and EmailService._should_use_tls():
                     server.starttls()  # Secure connection
                     server.ehlo()
                 server.login(smtp_username, smtp_password)

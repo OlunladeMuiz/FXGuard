@@ -30,6 +30,7 @@ MANIFEST
 # Environment Variables
 .env
 .env.local
+.env.production
 .env.*.local
 
 # IDE
@@ -46,7 +47,6 @@ MANIFEST
 *.sqlite
 *.sqlite3
 test.db
-migrations/versions/
 
 # Logs
 *.log

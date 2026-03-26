@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest import mock
 
+from fastapi import HTTPException
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -101,6 +102,19 @@ class InvoiceServiceTests(unittest.TestCase):
 
     @mock.patch.object(EmailService, "send_invoice_email", return_value=True)
     @mock.patch.object(EmailService, "send_invoice_created_notification", return_value=True)
+    def test_create_paid_invoice_does_not_send_emails(self, notify_mock: mock.Mock, client_mock: mock.Mock) -> None:
+        created = InvoiceService.create_invoice(
+            db=self.db,
+            invoice_data=self._invoice_create("INV-PAID-CREATE-001", "paid"),
+            user=self.user,
+        )
+
+        self.assertEqual(created.status, "paid")
+        notify_mock.assert_not_called()
+        client_mock.assert_not_called()
+
+    @mock.patch.object(EmailService, "send_invoice_email", return_value=True)
+    @mock.patch.object(EmailService, "send_invoice_created_notification", return_value=True)
     def test_updating_draft_to_sent_sends_emails_once(self, notify_mock: mock.Mock, client_mock: mock.Mock) -> None:
         created = InvoiceService.create_invoice(
             db=self.db,
@@ -121,6 +135,103 @@ class InvoiceServiceTests(unittest.TestCase):
         self.assertEqual(updated.status, "sent")
         notify_mock.assert_called_once()
         client_mock.assert_called_once()
+
+    @mock.patch.object(EmailService, "send_invoice_email", return_value=False)
+    @mock.patch.object(EmailService, "send_invoice_created_notification", return_value=True)
+    def test_create_sent_invoice_keeps_saved_draft_when_delivery_fails(
+        self,
+        notify_mock: mock.Mock,
+        client_mock: mock.Mock,
+    ) -> None:
+        with self.assertRaises(HTTPException) as context:
+            InvoiceService.create_invoice(
+                db=self.db,
+                invoice_data=self._invoice_create("INV-SEND-FAIL-001", "sent"),
+                user=self.user,
+            )
+
+        self.assertEqual(context.exception.status_code, 502)
+        self.assertIn("invoice_id", context.exception.detail)
+
+        saved_invoice = self.db.query(Invoice).filter(Invoice.invoice_number == "INV-SEND-FAIL-001").first()
+        self.assertIsNotNone(saved_invoice)
+        self.assertEqual(saved_invoice.status, "draft")
+        client_mock.assert_called_once()
+        notify_mock.assert_not_called()
+
+    @mock.patch.object(EmailService, "send_invoice_email", return_value=False)
+    @mock.patch.object(EmailService, "send_invoice_created_notification", return_value=True)
+    def test_updating_draft_to_sent_keeps_draft_status_when_delivery_fails(
+        self,
+        notify_mock: mock.Mock,
+        client_mock: mock.Mock,
+    ) -> None:
+        created = InvoiceService.create_invoice(
+            db=self.db,
+            invoice_data=self._invoice_create("INV-UPDATE-FAIL-001", "draft"),
+            user=self.user,
+        )
+
+        notify_mock.reset_mock()
+        client_mock.reset_mock()
+
+        with self.assertRaises(HTTPException) as context:
+            InvoiceService.update_invoice(
+                db=self.db,
+                invoice_id=created.id,
+                invoice_data=InvoiceUpdate(status="sent"),
+                user=self.user,
+            )
+
+        self.assertEqual(context.exception.status_code, 502)
+        refreshed = self.db.query(Invoice).filter(Invoice.id == created.id).first()
+        self.assertIsNotNone(refreshed)
+        self.assertEqual(refreshed.status, "draft")
+        client_mock.assert_called_once()
+        notify_mock.assert_not_called()
+
+    @mock.patch.object(EmailService, "send_invoice_email", return_value=True)
+    @mock.patch.object(EmailService, "send_invoice_created_notification", return_value=True)
+    def test_updating_draft_to_paid_does_not_send_emails(self, notify_mock: mock.Mock, client_mock: mock.Mock) -> None:
+        created = InvoiceService.create_invoice(
+            db=self.db,
+            invoice_data=self._invoice_create("INV-PAID-001", "draft"),
+            user=self.user,
+        )
+
+        updated = InvoiceService.update_invoice(
+            db=self.db,
+            invoice_id=created.id,
+            invoice_data=InvoiceUpdate(status="paid"),
+            user=self.user,
+        )
+
+        self.assertEqual(updated.status, "paid")
+        notify_mock.assert_not_called()
+        client_mock.assert_not_called()
+
+    @mock.patch("app.services.invoice.InterswitchService.generate_payment_link")
+    def test_generate_payment_link_persists_gateway_url_and_reference(self, generate_mock: mock.Mock) -> None:
+        created = InvoiceService.create_invoice(
+            db=self.db,
+            invoice_data=self._invoice_create("INV-PAYMENT-LINK-001", "draft"),
+            user=self.user,
+        )
+        generate_mock.return_value = {
+            "paymentUrl": "https://qa.interswitchng.com/payment/link/123",
+            "reference": "isw-reference-123",
+            "transactionReference": created.id,
+        }
+
+        updated = InvoiceService.generate_payment_link(
+            db=self.db,
+            invoice_id=created.id,
+            user=self.user,
+        )
+
+        self.assertEqual(updated.payment_link, "https://qa.interswitchng.com/payment/link/123")
+        self.assertEqual(updated.payment_reference, "isw-reference-123")
+        generate_mock.assert_called_once()
 
 
 if __name__ == "__main__":

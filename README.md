@@ -1,350 +1,536 @@
-# FXGuard - FX Risk Management Dashboard
+# FXGuard
 
-[![Next.js](https://img.shields.io/badge/Next.js-14.1.0-black)](https://nextjs.org/)
-[![React](https://img.shields.io/badge/React-18.2.0-blue)](https://reactjs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.3.3-blue)](https://www.typescriptlang.org/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4.1-38B2AC)](https://tailwindcss.com/)
+**AI-powered FX risk management for African SMEs handling cross-border payments**
 
-Production-grade FX risk management dashboard for monitoring currency exposures, live exchange rates, and hedge recommendations.
+Built by **NEXUS LABS**, FXGuard is a startup-grade fintech platform that helps small and mid-sized businesses understand currency exposure, act on live FX intelligence, and execute collections through connected payment providers.
 
-![Dashboard Preview](https://via.placeholder.com/800x400?text=FXGuard+Dashboard)
+## Overview
 
-## Features
+FXGuard is designed for businesses that invoice internationally but do not have a treasury desk, in-house FX analysts, or tightly integrated payment operations. Instead of forcing teams to juggle spreadsheets, market tabs, and disconnected payment tools, FXGuard brings market monitoring, invoice workflows, recommendation logic, and payment execution into one operating layer.
 
-- **Live FX Rates** - Real-time exchange rates with auto-refresh (30s intervals)
-- **Exposure Tracking** - Monitor receivables and payables by currency
-- **Hedge Recommendations** - AI-powered suggestions for forward contracts, options, and swaps
-- **Smart Alerts** - Notifications for overdue exposures, upcoming due dates, and large positions
-- **Dark Mode** - Automatic dark/light theme based on system preferences
-- **Performance Optimized** - React.memo, useCallback, useMemo for zero unnecessary re-renders
+The product is intentionally positioned beyond a demo dashboard. It combines a modern Next.js frontend, a service-oriented FastAPI backend, persisted FX market history, rule-based and AI-assisted recommendation logic, and a provider integration layer for payment-link generation.
+
+## Problem Statement
+
+African SMEs doing cross-border business face a structural FX challenge:
+
+- Currency volatility can materially reduce invoice value between issuance and settlement.
+- Many businesses convert at the wrong time because they lack market context, technical indicators, or risk signals.
+- Available FX tools are often built for traders, not operators managing invoices and cash flow.
+- Payment collection and FX decision-making are fragmented across separate products.
+- Historical market visibility is unreliable when teams depend directly on third-party APIs without storing their own data.
+
+The result is avoidable loss, delayed decisions, and poor visibility into when to convert, hedge, or wait.
+
+## Solution
+
+FXGuard solves this by combining four layers into a single workflow:
+
+- **Data-driven FX insights** through persisted exchange-rate history, live snapshots, and analytics.
+- **AI-powered recommendations** that interpret technical indicators in plain business language.
+- **Payment execution rails** through external providers that generate executable payment links.
+- **A centralized operator dashboard** for settings, invoices, analytics, and provider readiness.
+
+Rather than acting as a bank or custodial wallet, FXGuard functions as an intelligent decision and execution layer on top of trusted financial rails.
+
+## Key Features
+
+- **FX analytics dashboard** for live rates, tracked movement, and business-facing market summaries.
+- **AI recommendation engine** that suggests when to convert now, wait, hedge, or split conversion.
+- **Multi-currency invoice workflows** with pricing, settlement context, and invoice review.
+- **Payment link generation** via connected providers for invoice collection.
+- **Email-enabled invoice delivery** with safe draft-to-send transitions.
+- **Settings control center** for profile, business identity, bank details, notifications, and integrations.
+- **Historical FX storage** with daily rate persistence and intraday candle fallback.
+- **Provider readiness workflow** that ensures at least one payment provider is connected before link execution.
+- **BVN verification path** through Interswitch for identity/compliance flows.
+
+## System Architecture
+
+FXGuard uses a layered architecture that separates customer experience, business logic, market data processing, and third-party integrations.
+
+```text
+Users
+  |
+  v
+Next.js Frontend (App Router, TypeScript, CSS Modules)
+  |
+  v
+Centralized API layer (Axios + Zod validation)
+  |
+  v
+FastAPI Backend
+  |-- Auth service
+  |-- FX service
+  |-- Recommendation service
+  |-- Invoice service
+  |-- Interswitch service
+  |
+  v
+PostgreSQL / SQLAlchemy models
+  |-- users
+  |-- invoices
+  |-- invoice_items
+  |-- fx_rates
+  |-- fx_candles
+  |
+  +--> ExchangeRate API (daily FX snapshots/history)
+  +--> Twelve Data (intraday candles fallback)
+  +--> Anthropic (AI interpretation layer)
+  +--> Interswitch (payment links + BVN verification)
+  +--> SMTP / Gmail (transactional email)
+```
+
+### Data Flow
+
+1. A user signs in through the frontend and interacts with dashboard, invoice, analytics, or settings screens.
+2. The frontend calls a centralized API client that targets the FastAPI backend.
+3. The backend authenticates the user via JWT, loads or updates persisted records, and coordinates external service calls.
+4. FX data is normalized and stored locally before being used for analytics or AI recommendations.
+5. Invoices are persisted server-side and can be sent by email or linked to a payment provider.
+6. Payment providers return payment URLs and references, which are stored back on the invoice record.
 
 ## Tech Stack
 
-| Technology | Version | Purpose |
-|------------|---------|---------|
-| Next.js | 14.1.0 | React framework with App Router |
-| React | 18.2.0 | UI library |
-| TypeScript | 5.3.3 | Type safety |
-| Tailwind CSS | 3.4.1 | Utility-first styling |
+### Frontend
 
-## Project Structure
+- **Next.js 14**
+- **React 18**
+- **TypeScript**
+- **CSS Modules**
+- **Axios**
+- **Zod**
 
+### Backend
+
+- **FastAPI**
+- **Python**
+- **SQLAlchemy**
+- **httpx**
+- **PyJWT**
+- **bcrypt**
+
+### Data & Infrastructure
+
+- **PostgreSQL** as the primary application database
+- **SQLite fallback** for lightweight local/testing scenarios
+- **Alembic** for schema migration support
+- **SMTP / Gmail** for transactional mail delivery
+
+### External Services
+
+- **ExchangeRate API**
+- **Twelve Data**
+- **Anthropic**
+- **Interswitch**
+
+## Key Engineering Decisions
+
+### 1. Centralized API layer on the frontend
+
+All network access is routed through shared API helpers in `frontend/src/lib/api`. This keeps request logic, response parsing, fallback behavior, and validation out of page components.
+
+### 2. Strict typed boundaries
+
+The frontend validates backend responses with **Zod**, while the backend uses **Pydantic** schemas for request and response enforcement. This reduces silent data-shape drift across the stack.
+
+### 3. Modular backend services
+
+FX logic, recommendations, invoices, authentication, and provider integrations are split into dedicated service modules. This makes the backend easier to test, reason about, and extend.
+
+### 4. Separation of concerns between insight and execution
+
+FXGuard does not try to become a bank. Recommendation logic is independent from payment execution logic, allowing the product to provide treasury intelligence while delegating transactions to regulated third-party providers.
+
+### 5. Local persistence over direct API dependency
+
+Instead of relying on external FX APIs at render time for every decision, FXGuard stores normalized market data locally. This improves resilience, consistency, and analytical depth.
+
+### 6. Defensive fallbacks for critical flows
+
+The system uses deterministic fallbacks when:
+
+- FX history is incomplete
+- intraday candles are needed as provisional substitutes
+- AI interpretation fails
+- email delivery fails during invoice send
+
+This keeps the platform usable even when external dependencies are degraded.
+
+## FX Data Architecture
+
+This is one of the most important engineering choices in FXGuard.
+
+### Why not rely directly on external APIs?
+
+Direct API dependency creates multiple problems:
+
+- market history can disappear behind plan limits or provider outages
+- the same request can return different results at different times
+- recommendations become impossible to audit later
+- analytics become fragile if the provider is slow or incomplete
+
+FXGuard avoids this by treating external APIs as **data sources**, not the source of truth for product behavior.
+
+### Internal FX history store
+
+FXGuard persists market data into two dedicated tables:
+
+- **`fx_rates`** for normalized daily FX observations
+- **`fx_candles`** for intraday candle series used when daily history is insufficient
+
+Each stored rate includes:
+
+- base currency
+- quote currency
+- observed date
+- source
+- synthetic/real quality marker
+
+### USD base strategy and cross-rate handling
+
+In the UI and analytics flows, FXGuard frequently standardizes around **USD as a stable reference base** and derives inverse display pairs where needed. This reduces the number of provider calls required for broad coverage and simplifies rate normalization across screens.
+
+The dashboard, for example, pulls USD snapshots and derives user-facing pairs such as `EUR/USD` by inversion where appropriate. This avoids hard-coding every direct pair and keeps the display model consistent.
+
+### Reliability improvements
+
+This architecture improves reliability in several ways:
+
+- persisted history makes recommendations reproducible
+- upsert logic prevents duplicate rate rows while keeping data fresh
+- seeded history fills gaps when historical APIs are unavailable
+- candle fallback creates provisional signals instead of hard failures
+- same-currency virtual points avoid unnecessary provider calls
+
+In practice, FXGuard is building its own internal market memory rather than asking external APIs to serve as both ingestion layer and live analytics engine.
+
+## AI Recommendation Engine
+
+FXGuard’s recommendation engine is not a static tip generator. It combines market data engineering with an AI interpretation layer.
+
+### How it works
+
+1. The backend loads the last 30 days of stored FX history for the requested pair.
+2. It computes technical and statistical indicators such as:
+   - RSI
+   - SMA(7)
+   - SMA(20)
+   - volatility
+   - 7-day and 30-day change
+   - current range position
+3. It classifies the data quality as `full`, `mixed`, `seeded`, `same_currency`, or `candle_fallback`.
+4. It decides whether the recommendation should be treated as:
+   - `ready`
+   - `limited_data`
+   - `insufficient_data`
+   - `provisional_data`
+5. It sends a structured prompt to Anthropic to convert those indicators into business-language guidance.
+
+### Why this is better than static insights
+
+- It is grounded in **real stored FX data**, not generic advice.
+- It explains **why** the recommendation exists in plain English.
+- It degrades gracefully when the AI layer is unavailable.
+- It adapts confidence based on real vs synthetic data quality.
+
+### Fallback logic
+
+If AI fails, FXGuard falls back to deterministic recommendation logic based on:
+
+- RSI conditions
+- volatility thresholds
+- range position
+- history quality
+- signal maturity
+
+This ensures the recommendation system remains usable even when external AI is unavailable or returns invalid output.
+
+## Integrations
+
+Integrations are critical because **FXGuard does not hold funds** and does not attempt to replace regulated financial rails. Instead, it orchestrates execution through external providers.
+
+### Why integrations matter
+
+- FXGuard helps businesses decide **when** to act on FX exposure.
+- Payment providers help businesses actually **collect** money.
+- The platform needs both layers to turn treasury insight into business execution.
+
+### Provider model
+
+The settings experience currently presents three payment providers:
+
+- **Paystack**
+- **Flutterwave**
+- **Interswitch**
+
+The provider registry and connection UX are already present in the product, allowing teams to model provider readiness from the settings area. In the current implementation, **Interswitch is the fully wired backend payment-link path**, while Paystack and Flutterwave are represented in the integration layer for future execution expansion.
+
+### Interswitch integration
+
+Interswitch is used in FXGuard for:
+
+- payment-link generation for invoices
+- payment-reference capture
+- invoice payment-status updates through webhook handling
+- BVN verification support
+
+### How payment links work
+
+When a user requests a payment link for an invoice:
+
+1. FXGuard loads the invoice record from the backend.
+2. The backend authenticates with Interswitch Passport.
+3. It creates a bill payment link on the Interswitch `paybill` API.
+4. The returned `paymentUrl` and reference are saved on the invoice.
+5. The frontend displays the generated payment link so it can be copied or shared with the client.
+
+### Working payload structure
+
+The successful Interswitch bill request uses:
+
+```json
+{
+  "merchantCode": "YOUR_MERCHANT_CODE",
+  "payableCode": "YOUR_PAYABLE_CODE",
+  "amount": 10000,
+  "redirectUrl": "https://your-frontend-url/invoice-generator/review?id=<invoice_id>",
+  "customerId": "client@example.com",
+  "currencyCode": "566",
+  "customerEmail": "client@example.com",
+  "transactionReference": "invoice-uuid"
+}
 ```
-src/
-├── app/
-│   ├── api/                    # API Routes
-│   │   ├── fx-rates/
-│   │   │   └── route.ts        # GET /api/fx-rates
-│   │   └── exposures/
-│   │       └── route.ts        # GET /api/exposures
-│   ├── dashboard/
-│   │   └── page.tsx            # Main dashboard page
-│   ├── layout.tsx              # Root layout
-│   ├── page.tsx                # Home (redirects to dashboard)
-│   └── globals.css             # Global styles
-│
-├── components/
-│   ├── dashboard/              # Dashboard components
-│   │   ├── DashboardHeader.tsx
-│   │   ├── FXRatesPanel.tsx
-│   │   ├── ExposuresPanel.tsx
-│   │   ├── HedgeRecommendationsPanel.tsx
-│   │   └── AlertsPanel.tsx
-│   ├── ui/                     # Reusable UI components
-│   │   ├── Button/
-│   │   ├── Input/
-│   │   ├── Card/
-│   │   └── Loader/
-│   ├── currency/               # Currency-specific components
-│   │   ├── CurrencySelector/
-│   │   ├── CurrencyBalanceCard/
-│   │   └── FXRateDisplay/
-│   └── layout/                 # Layout components
-│       ├── Navbar/
-│       └── Sidebar/
-│
-├── hooks/                      # Custom React hooks
-│   ├── useFXRates.ts           # FX rates with auto-refresh
-│   ├── useExposures.ts         # Currency exposures
-│   ├── useHedgeRecommendations.ts  # Hedge suggestions
-│   ├── useWallet.ts
-│   └── useTransactions.ts
-│
-├── lib/
-│   ├── api/                    # API service layer
-│   │   ├── client.ts
-│   │   ├── wallet.ts
-│   │   ├── fx.ts
-│   │   └── transactions.ts
-│   ├── types/                  # TypeScript types
-│   │   ├── currency.ts
-│   │   ├── wallet.ts
-│   │   └── transaction.ts
-│   ├── utils/                  # Utility functions
-│   │   ├── formatCurrency.ts
-│   │   └── calculateConversion.ts
-│   └── constants/
-│       ├── currencyPairs.ts
-│       └── config.ts
-│
-└── styles/
-    └── globals.css
-```
+
+Notes:
+
+- `amount` is sent in the **minor unit**
+- `currencyCode` is numeric
+- `transactionReference` is the merchant reference
+- `redirectUrl` is required for checkout completion flow
+
+### Authentication challenges and what went wrong
+
+Interswitch was one of the hardest parts of the project because the initial implementation was pointed at the wrong sandbox assumptions.
+
+The issues encountered included:
+
+- using the wrong Passport auth host
+- calling the wrong payment-link endpoint
+- sending the wrong payload fields
+- stale merchant credentials in local config
+
+### How it was solved
+
+The final working integration uses:
+
+- the correct **QA Passport** token host
+- the correct **`/paymentgateway/api/v1/paybill`** endpoint
+- the correct bill payload contract
+- proper reference persistence on the invoice
+- redirect URL generation from backend config
+
+This is a strong example of real-world fintech integration work: the technical challenge was not just writing HTTP calls, but reconciling documentation, auth hosts, provider-specific payload formats, and invoice domain behavior.
+
+## Challenges & Solutions
+
+### 1. Historical FX API limitations
+
+**Challenge:** Free or sandbox market-data providers can have missing historical coverage, sparse pairs, or plan-restricted endpoints.
+
+**Solution:** FXGuard stores its own `fx_rates` history, seeds gaps when needed, and uses candle fallback when daily history is insufficient.
+
+### 2. Data consistency for analytics
+
+**Challenge:** Recommendations are unreliable if market data is fetched ad hoc on every request.
+
+**Solution:** The backend normalizes and persists rates locally using upsert logic and quality metadata, so analytics operate on stable stored history.
+
+### 3. Early-stage signal quality
+
+**Challenge:** A system cannot pretend to have strong recommendation confidence when only a few market points exist.
+
+**Solution:** FXGuard labels recommendation maturity explicitly with `ready`, `limited_data`, `insufficient_data`, and `provisional_data`.
+
+### 4. CORS and frontend/backend coordination
+
+**Challenge:** The frontend and backend run on separate localhost origins during development.
+
+**Solution:** FastAPI is configured with explicit CORS settings for development origins, and the frontend uses a centralized `NEXT_PUBLIC_API_URL` configuration.
+
+### 5. Invoice delivery integrity
+
+**Challenge:** An invoice should not appear “sent” if email delivery fails.
+
+**Solution:** FXGuard saves failed send attempts as drafts and returns actionable errors instead of silently marking the invoice as delivered.
+
+### 6. Interswitch integration complexity
+
+**Challenge:** Payment generation initially failed because auth, endpoint, and payload assumptions did not match the real sandbox contract.
+
+**Solution:** The integration was corrected to use the QA Passport host, the `paybill` endpoint, proper currency code formatting, and invoice-linked redirect/reference handling.
+
+## Team & Contributions
+
+**Team Name:** NEXUS LABS
+
+### 1. Olunlade Abdulmuiz
+
+**Role:** Full Stack Developer
+
+**Contributions:**
+
+- Designed the overall system architecture
+- Built the frontend dashboard, settings, and FX analytics experience
+- Integrated FX APIs and the data-ingestion pipeline
+- Implemented the recommendation engine flow
+- Connected frontend experiences to backend services
+- Managed repositories and deployments
+
+### 2. Osemen Esezobor
+
+**Role:** Backend Developer
+
+**Contributions:**
+
+- Built and structured the FastAPI backend
+- Implemented core API endpoints
+- Worked on integration logic
+- Contributed backend improvements through remote branches
+- Handled backend service and data-flow design
+
+### 3. Precious Liberty
+
+**Role:** UI/UX Designer
+
+**Contributions:**
+
+- Designed the product interface and user experience
+- Created intuitive layouts for dashboard and settings flows
+- Helped shape a clean and user-friendly design system
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js 18+
-- npm or yarn
+- **Node.js 18+**
+- **Python 3.11+**
+- **PostgreSQL**
 
-### Installation
+### 1. Clone the repository
 
 ```bash
-# Clone the repository
 git clone https://github.com/OlunladeMuiz/FXGuard.git
 cd FXGuard
+```
 
-# Install dependencies
+### 2. Install frontend dependencies
+
+```bash
 npm install
 ```
 
-### Development
+### 3. Create and activate a Python virtual environment
+
+#### Windows (PowerShell)
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r Backend\requirements.txt
+```
+
+#### macOS / Linux
 
 ```bash
-# Start development server
-npm run dev
-
-# Type check
-npm run type-check
-
-# Lint code
-npm run lint
-
-# Format code
-npm run format
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r Backend/requirements.txt
 ```
 
-### Production Build
+### 4. Configure environment variables
+
+Create `Backend/.env` with values like:
+
+```env
+DATABASE_URL=postgresql://username:password@localhost:5432/fxguard
+SECRET_KEY=replace_with_a_secure_secret
+
+EXCHANGE_RATE_API_KEY=replace_with_exchange_rate_api_key
+TWELVE_DATA_API_KEY=replace_with_twelve_data_api_key
+
+GMAIL_ADDRESS=replace_with_sender_email
+GMAIL_PASSWORD=replace_with_app_password
+SMTP_SERVER=smtp.gmail.com
+SMTP_PORT=465
+SMTP_USE_SSL=true
+SMTP_USE_TLS=false
+SMTP_TIMEOUT_SECONDS=30
+
+INTERSWITCH_BASE_URL=https://qa.interswitchng.com
+INTERSWITCH_AUTH_BASE_URL=https://qa.interswitchng.com
+INTERSWITCH_CLIENT_ID=replace_with_interswitch_client_id
+INTERSWITCH_CLIENT_SECRET=replace_with_interswitch_client_secret
+INTERSWITCH_MERCHANT_CODE=replace_with_merchant_code
+INTERSWITCH_PAYABLE_CODE=replace_with_payable_code
+FRONTEND_BASE_URL=http://localhost:3000
+
+ANTHROPIC_API_KEY=replace_with_anthropic_api_key
+ANTHROPIC_MODEL=claude-3-5-sonnet-latest
+```
+
+Optional frontend environment:
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8000/api
+NEXT_PUBLIC_USE_MOCK=false
+```
+
+### 5. Run the backend
 
 ```bash
-# Build for production
-npm run build
-
-# Start production server
-npm start
+cd Backend
+..\.venv\Scripts\python.exe -m uvicorn app.main:app --reload
 ```
 
-## API Documentation
+On macOS / Linux:
 
-### GET `/api/fx-rates`
-
-Fetches live foreign exchange rates.
-
-**Query Parameters:**
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `base` | string | No | Base currency (default: `USD`) |
-| `symbols` | string | Yes | Comma-separated currency codes |
-
-**Request:**
-```
-GET /api/fx-rates?base=USD&symbols=EUR,GBP,JPY,CHF
+```bash
+cd Backend
+../.venv/bin/python -m uvicorn app.main:app --reload
 ```
 
-**Response:**
-```json
-{
-  "base": "USD",
-  "timestamp": "2026-03-04T14:30:00.000Z",
-  "rates": {
-    "EUR": 0.9198,
-    "GBP": 0.7902,
-    "JPY": 149.4825,
-    "CHF": 0.8796
-  }
-}
+The backend will be available at `http://localhost:8000`.
+
+### 6. Run the frontend
+
+From the repository root:
+
+```bash
+npm run dev --workspace=frontend
 ```
 
-**Supported Currencies:** USD, EUR, GBP, JPY, CHF, CAD, AUD, NZD, CNY, INR, MXN, BRL, SGD, HKD, KRW, SEK, NOK, DKK, PLN, ZAR
+The frontend will be available at `http://localhost:3000`.
+
+### 7. Run quality checks
+
+```bash
+npm run type-check --workspace=frontend
+npm run lint --workspace=frontend
+.\.venv\Scripts\python.exe -m unittest discover Backend/tests
+```
+
+## Future Improvements
+
+- Add real payout and bank settlement orchestration beyond payment-link collection
+- Expand provider execution from Interswitch to deeper Paystack and Flutterwave backend flows
+- Introduce richer treasury workflows such as approval chains and hedging playbooks
+- Add more currencies and regional corridors across African trade routes
+- Build a mobile companion app for founders and finance teams
+- Improve prediction depth with more advanced ML/AI forecasting layers
+- Add live trading and hedge execution integrations where regulation and provider capabilities allow
+- Move provider connection state from browser local storage into secure backend credential management
 
 ---
 
-### GET `/api/exposures`
-
-Fetches all currency exposures.
-
-**Request:**
-```
-GET /api/exposures
-```
-
-**Response:**
-```json
-{
-  "exposures": [
-    {
-      "id": "exp-001",
-      "currency": "EUR",
-      "amount": 500000,
-      "type": "receivable",
-      "dueDate": "2026-04-15",
-      "counterparty": "Acme Corp EU",
-      "description": "Q1 2026 Services Invoice"
-    }
-  ],
-  "timestamp": "2026-03-04T14:30:00.000Z"
-}
-```
-
-## Custom Hooks
-
-### `useFXRates(options)`
-
-Fetches FX rates with auto-refresh and race condition handling.
-
-```typescript
-const fxOptions = useMemo(() => ({
-  base: "USD",
-  symbols: ["EUR", "GBP", "JPY"],
-  refreshMs: 30000,
-}), []);
-
-const { rates, loading, error, refetch } = useFXRates(fxOptions);
-```
-
-### `useExposures()`
-
-Fetches currency exposures with automatic error handling.
-
-```typescript
-const { exposures, loading, error, refetch } = useExposures();
-```
-
-### `useHedgeRecommendations(exposures, rates)`
-
-Generates hedge recommendations based on exposures and rates.
-
-```typescript
-const { recommendations, loading, error } = useHedgeRecommendations(exposures, rates);
-```
-
-## Performance Optimizations
-
-### Preventing Infinite Re-renders
-
-The `useFXRates` hook uses stable dependencies to prevent infinite loops:
-
-```typescript
-// ❌ Bad - array causes infinite re-renders
-useEffect(() => { ... }, [symbols]);
-
-// ✅ Good - stable string key
-const symbolsKey = useMemo(() => [...symbols].sort().join(","), [symbols]);
-useEffect(() => { ... }, [symbolsKey]);
-```
-
-### Memoization Strategy
-
-| Optimization | Usage |
-|--------------|-------|
-| `useMemo` | FX options, sorted lists, derived data |
-| `useCallback` | Event handlers, refetch functions |
-| `React.memo` | All dashboard panel components |
-| `useRef` | Mount tracking, fetch counting |
-
-### Race Condition Handling
-
-```typescript
-const fetchCountRef = useRef(0);
-
-const run = useCallback(async () => {
-  const currentFetch = ++fetchCountRef.current;
-  const data = await fetchData();
-  
-  // Ignore stale responses
-  if (currentFetch !== fetchCountRef.current) return;
-  
-  setState(data);
-}, []);
-```
-
-## Dashboard Components
-
-| Component | Description |
-|-----------|-------------|
-| `DashboardHeader` | Top navigation with base currency selector and refresh button |
-| `FXRatesPanel` | Live exchange rates display with currency flags |
-| `ExposuresPanel` | Receivables/payables sorted by due date with urgency indicators |
-| `HedgeRecommendationsPanel` | Prioritized hedge suggestions with cost estimates |
-| `AlertsPanel` | Critical, warning, and info alerts for exposures |
-
-## Architecture
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                      Dashboard Page                          │
-│  ┌─────────────────────────────────────────────────────────┐│
-│  │                  DashboardHeader                        ││
-│  └─────────────────────────────────────────────────────────┘│
-│  ┌──────────────────────┐  ┌──────────────────────────────┐│
-│  │    FXRatesPanel      │  │       AlertsPanel            ││
-│  │  ┌────────────────┐  │  │  ┌────────────────────────┐  ││
-│  │  │ useFXRates()   │  │  │  │ generateAlerts()       │  ││
-│  │  └────────────────┘  │  │  └────────────────────────┘  ││
-│  └──────────────────────┘  └──────────────────────────────┘│
-│  ┌──────────────────────┐  ┌──────────────────────────────┐│
-│  │   ExposuresPanel     │  │ HedgeRecommendationsPanel    ││
-│  │  ┌────────────────┐  │  │  ┌────────────────────────┐  ││
-│  │  │ useExposures() │  │  │  │ useHedgeRecommendations││  ││
-│  │  └────────────────┘  │  │  └────────────────────────┘  ││
-│  └──────────────────────┘  └──────────────────────────────┘│
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                     API Routes                               │
-│  ┌─────────────────────┐  ┌─────────────────────────────┐   │
-│  │  /api/fx-rates      │  │  /api/exposures             │   │
-│  └─────────────────────┘  └─────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────┘
-```
-
-## Environment Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `NEXT_PUBLIC_API_URL` | External API base URL (optional) | Internal API routes |
-
-## Roadmap
-
-- [x] Live FX rates with auto-refresh
-- [x] Exposure tracking (receivables/payables)
-- [x] Hedge recommendations engine
-- [x] Smart alerts system
-- [x] Dark mode support
-- [x] Performance optimizations
-- [ ] Real FX rate API integration (Open Exchange Rates, Fixer.io)
-- [ ] Database integration (PostgreSQL/MongoDB)
-- [ ] User authentication
-- [ ] Historical rate charts
-- [ ] Hedge execution functionality
-- [ ] Email/SMS notifications
-- [ ] Export reports (PDF/Excel)
-
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## License
-
-MIT License - see [LICENSE](LICENSE) for details.
-
----
-
-Built with ❤️ by [OlunladeMuiz](https://github.com/OlunladeMuiz)
+**FXGuard by NEXUS LABS** is more than a rate dashboard. It is an operating system for SMEs that need to understand FX risk, act with confidence, and execute collections through trusted financial rails.

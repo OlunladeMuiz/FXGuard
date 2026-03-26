@@ -1,7 +1,7 @@
 """
-Interswitch API service — handles all communication with Interswitch APIs.
-Sandbox base URL: https://sandbox.interswitchng.com
-Production base URL: https://api.interswitchng.com
+Interswitch API service - handles all communication with Interswitch APIs.
+Sandbox base URL: https://qa.interswitchng.com
+Production base URL: https://webpay.interswitchng.com
 """
 import base64
 import logging
@@ -18,13 +18,52 @@ PLACEHOLDER_VALUES = {
     "your-payable-code",
 }
 
-INTERSWITCH_BASE_URL = os.getenv(
-    "INTERSWITCH_BASE_URL", "https://sandbox.interswitchng.com"
-)
-INTERSWITCH_CLIENT_ID = os.getenv("INTERSWITCH_CLIENT_ID")
-INTERSWITCH_CLIENT_SECRET = os.getenv("INTERSWITCH_CLIENT_SECRET")
-INTERSWITCH_MERCHANT_CODE = os.getenv("INTERSWITCH_MERCHANT_CODE")
-INTERSWITCH_PAYABLE_CODE = os.getenv("INTERSWITCH_PAYABLE_CODE")
+CURRENCY_NUMERIC_CODES = {
+    "NGN": "566",
+    "USD": "840",
+    "EUR": "978",
+    "GBP": "826",
+    "CAD": "124",
+}
+SANDBOX_BASE_URL = "https://sandbox.interswitchng.com"
+QA_BASE_URL = "https://qa.interswitchng.com"
+
+
+def _normalise_base_url(value: str) -> str:
+    return value.rstrip("/")
+
+
+def _canonicalise_sandbox_base_url(value: str) -> str:
+    normalized = _normalise_base_url(value)
+    if normalized == SANDBOX_BASE_URL:
+        return QA_BASE_URL
+    return normalized
+
+
+def _get_base_url() -> str:
+    configured_value = (os.getenv("INTERSWITCH_BASE_URL") or "").strip()
+    return _canonicalise_sandbox_base_url(configured_value or QA_BASE_URL)
+
+
+def _get_auth_base_url() -> str:
+    configured_value = (os.getenv("INTERSWITCH_AUTH_BASE_URL") or "").strip()
+    return _canonicalise_sandbox_base_url(configured_value or _get_base_url())
+
+
+def _get_client_id() -> str | None:
+    return (os.getenv("INTERSWITCH_CLIENT_ID") or "").strip() or None
+
+
+def _get_client_secret() -> str | None:
+    return (os.getenv("INTERSWITCH_CLIENT_SECRET") or "").strip() or None
+
+
+def _get_merchant_code() -> str | None:
+    return (os.getenv("INTERSWITCH_MERCHANT_CODE") or "").strip() or None
+
+
+def _get_payable_code() -> str | None:
+    return (os.getenv("INTERSWITCH_PAYABLE_CODE") or "").strip() or None
 
 
 def _require_config(name: str, value: str | None) -> str:
@@ -41,9 +80,9 @@ def _get_access_token() -> str:
     Fetch a short-lived OAuth2 access token from Interswitch Passport.
     Raises RuntimeError if credentials are not configured.
     """
-    client_id = _require_config("INTERSWITCH_CLIENT_ID", INTERSWITCH_CLIENT_ID)
+    client_id = _require_config("INTERSWITCH_CLIENT_ID", _get_client_id())
     client_secret = _require_config(
-        "INTERSWITCH_CLIENT_SECRET", INTERSWITCH_CLIENT_SECRET
+        "INTERSWITCH_CLIENT_SECRET", _get_client_secret()
     )
 
     credentials = base64.b64encode(
@@ -51,7 +90,7 @@ def _get_access_token() -> str:
     ).decode()
 
     response = httpx.post(
-        f"{INTERSWITCH_BASE_URL}/passport/oauth/token",
+        f"{_get_auth_base_url()}/passport/oauth/token",
         headers={
             "Authorization": f"Basic {credentials}",
             "Content-Type": "application/x-www-form-urlencoded",
@@ -76,46 +115,58 @@ class InterswitchService:
         currency: str,
         description: str,
         customer_email: str,
+        redirect_url: str,
+        customer_id: str | None = None,
     ) -> dict:
         """
-        Generate an Interswitch Web Checkout payment link for an invoice.
+        Generate an Interswitch bill payment link for an invoice.
 
         Args:
-            invoice_id: Used as the unique transaction reference.
+            invoice_id: Used as the unique merchant transaction reference.
             amount: Invoice total in the major currency unit (e.g. 100.00 for NGN 100).
-            currency: ISO 4217 currency code (e.g. NGN, USD).
+            currency: ISO 4217 alphabetic currency code (e.g. NGN, USD).
             description: Short description shown to the payer.
             customer_email: Email address of the payer.
+            redirect_url: URL that Interswitch redirects back to after payment.
+            customer_id: Merchant-side identifier for the customer.
 
         Returns:
-            dict containing at minimum a payment URL under the key
-            'paymentUrl' or 'checkoutUrl' depending on the Interswitch
-            sandbox response shape.
+            dict containing the created payment link details, including `paymentUrl`.
 
         Raises:
             httpx.HTTPStatusError: If the Interswitch API returns a non-2xx status.
-            RuntimeError: If credentials are missing.
+            RuntimeError: If credentials are missing or the currency is unsupported.
         """
+        del description  # The pay-bill API does not accept a description field.
+
         token = _get_access_token()
         merchant_code = _require_config(
-            "INTERSWITCH_MERCHANT_CODE", INTERSWITCH_MERCHANT_CODE
+            "INTERSWITCH_MERCHANT_CODE", _get_merchant_code()
         )
         payable_code = _require_config(
-            "INTERSWITCH_PAYABLE_CODE", INTERSWITCH_PAYABLE_CODE
+            "INTERSWITCH_PAYABLE_CODE", _get_payable_code()
         )
+
+        currency_code = CURRENCY_NUMERIC_CODES.get((currency or "").strip().upper())
+        if not currency_code:
+            raise RuntimeError(
+                f"Interswitch payment links do not support currency '{currency}'. "
+                f"Supported mappings: {', '.join(sorted(CURRENCY_NUMERIC_CODES))}."
+            )
 
         payload = {
             "merchantCode": merchant_code,
             "payableCode": payable_code,
-            "amount": int(amount * 100),  # Convert to kobo / lowest denomination
-            "transactionReference": invoice_id,
+            "amount": int(round(amount * 100)),
+            "redirectUrl": redirect_url,
+            "customerId": customer_id or customer_email,
+            "currencyCode": currency_code,
             "customerEmail": customer_email,
-            "currency": currency,
-            "description": description,
+            "transactionReference": invoice_id,
         }
 
         response = httpx.post(
-            f"{INTERSWITCH_BASE_URL}/collections/api/v1/pay",
+            f"{_get_base_url()}/paymentgateway/api/v1/paybill",
             headers={
                 "Authorization": f"Bearer {token}",
                 "Content-Type": "application/json",
@@ -130,13 +181,13 @@ class InterswitchService:
         return response.json()
 
     @staticmethod
-    def verify_transaction(reference: str) -> dict:
+    def verify_transaction(reference: str, amount_minor: int) -> dict:
         """
         Query Interswitch for the current status of a transaction.
 
         Args:
-            reference: The transaction reference used when the payment link
-                       was created (matches invoice.payment_reference).
+            reference: The Interswitch reference returned when the payment link was created.
+            amount_minor: The expected amount in the minor currency unit.
 
         Returns:
             dict containing transaction details including responseCode.
@@ -144,13 +195,20 @@ class InterswitchService:
 
         Raises:
             httpx.HTTPStatusError: If the Interswitch API returns a non-2xx status.
+            RuntimeError: If merchant credentials are missing.
         """
-        token = _get_access_token()
+        merchant_code = _require_config(
+            "INTERSWITCH_MERCHANT_CODE", _get_merchant_code()
+        )
 
         response = httpx.get(
-            f"{INTERSWITCH_BASE_URL}/collections/api/v1/gettransaction/reference",
-            headers={"Authorization": f"Bearer {token}"},
-            params={"reference": reference},
+            f"{_get_base_url()}/collections/api/v1/gettransaction.json",
+            headers={"Content-Type": "application/json"},
+            params={
+                "merchantcode": merchant_code,
+                "transactionreference": reference,
+                "amount": amount_minor,
+            },
             timeout=15.0,
         )
         response.raise_for_status()
@@ -174,7 +232,7 @@ class InterswitchService:
         token = _get_access_token()
 
         response = httpx.get(
-            f"{INTERSWITCH_BASE_URL}/api/v1/identity/bvn/{bvn}",
+            f"{_get_base_url()}/api/v1/identity/bvn/{bvn}",
             headers={"Authorization": f"Bearer {token}"},
             timeout=15.0,
         )
