@@ -36,19 +36,6 @@ class InvoiceService:
         return f"{frontend_base_url}/invoice-generator/review?id={invoice_id}"
 
     @staticmethod
-    def _invoice_delivery_error(invoice: Invoice) -> HTTPException:
-        return HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail={
-                "message": (
-                    "We saved this invoice as a draft because the client email could not "
-                    "be delivered. Please review your email settings and try sending again."
-                ),
-                "invoice_id": invoice.id,
-            },
-        )
-
-    @staticmethod
     def _send_invoice_emails(invoice: Invoice, user: User) -> None:
         due_date_str = invoice.due_date.strftime("%b %d, %Y") if invoice.due_date else "Not specified"
 
@@ -68,50 +55,63 @@ class InvoiceService:
                 'total': f"{item_total:.2f}"
             })
 
-        client_email_sent = EmailService.send_invoice_email(
-            to_email=invoice.client_email,
-            client_name=invoice.client_name,
-            invoice_number=invoice.invoice_number,
-            currency=invoice.currency,
-            due_date=due_date_str,
-            amount=invoice.amount,
-            description=invoice.description,
-            payment_method=invoice.payment_method,
-            account_name=invoice.account_name or "",
-            bank=invoice.bank_name or "",
-            account_number=invoice.account_number or "",
-            tax_rate=invoice.tax_rate,
-            line_items=line_items,
-            subtotal=f"{subtotal:.2f}",
-            discount=f"{discount_amount:.2f}",
-            tax_amount=f"{tax_amount:.2f}",
-            total=f"{final_total:.2f}"
-        )
-        if client_email_sent:
-            logger.info(f"Invoice notification email sent successfully to client {invoice.client_email}")
-        else:
-            logger.warning(f"Failed to send invoice notification email to client {invoice.client_email}")
-            raise InvoiceService._invoice_delivery_error(invoice)
+        try:
+            client_email_sent = EmailService.send_invoice_email(
+                to_email=invoice.client_email,
+                client_name=invoice.client_name,
+                invoice_number=invoice.invoice_number,
+                currency=invoice.currency,
+                due_date=due_date_str,
+                amount=invoice.amount,
+                description=invoice.description,
+                payment_method=invoice.payment_method,
+                account_name=invoice.account_name or "",
+                bank=invoice.bank_name or "",
+                account_number=invoice.account_number or "",
+                tax_rate=invoice.tax_rate,
+                line_items=line_items,
+                subtotal=f"{subtotal:.2f}",
+                discount=f"{discount_amount:.2f}",
+                tax_amount=f"{tax_amount:.2f}",
+                total=f"{final_total:.2f}"
+            )
+            if client_email_sent:
+                logger.info(f"Invoice notification email sent successfully to client {invoice.client_email}")
+            else:
+                logger.warning(f"Failed to send invoice notification email to client {invoice.client_email}")
+        except Exception as exc:
+            logger.warning(
+                "Email sending failed for %s - continuing without email: %s",
+                invoice.client_email,
+                str(exc),
+            )
 
-        user_email_sent = EmailService.send_invoice_created_notification(
-            to_email=user.email,
-            user_name=getattr(user, 'first_name', None) or user.email.split('@')[0],
-            invoice_number=invoice.invoice_number,
-            client_name=invoice.client_name,
-            currency=invoice.currency,
-            due_date=due_date_str,
-            items_count=len(invoice.items),
-            line_items=line_items,
-            subtotal=f"{subtotal:.2f}",
-            discount=f"{discount_amount:.2f}",
-            tax_rate=invoice.tax_rate or 0,
-            tax_amount=f"{tax_amount:.2f}",
-            total=f"{final_total:.2f}"
-        )
-        if user_email_sent:
-            logger.info(f"Invoice creation email sent successfully to user {user.email}")
-        else:
-            logger.warning(f"Failed to send invoice creation email to user {user.email}")
+        try:
+            user_email_sent = EmailService.send_invoice_created_notification(
+                to_email=user.email,
+                user_name=getattr(user, 'first_name', None) or user.email.split('@')[0],
+                invoice_number=invoice.invoice_number,
+                client_name=invoice.client_name,
+                currency=invoice.currency,
+                due_date=due_date_str,
+                items_count=len(invoice.items),
+                line_items=line_items,
+                subtotal=f"{subtotal:.2f}",
+                discount=f"{discount_amount:.2f}",
+                tax_rate=invoice.tax_rate or 0,
+                tax_amount=f"{tax_amount:.2f}",
+                total=f"{final_total:.2f}"
+            )
+            if user_email_sent:
+                logger.info(f"Invoice creation email sent successfully to user {user.email}")
+            else:
+                logger.warning(f"Failed to send invoice creation email to user {user.email}")
+        except Exception as exc:
+            logger.warning(
+                "Email sending failed for %s - continuing without email: %s",
+                user.email,
+                str(exc),
+            )
 
     @staticmethod
     def _mark_invoice_as_sent(

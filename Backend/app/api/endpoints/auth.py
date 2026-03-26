@@ -21,12 +21,12 @@ from app.models.auth import User as UserModel
 router = APIRouter()
                                                                                                                                  
 
-@router.post("/register", response_model=RegisterResponse, status_code=201)
+@router.post("/register", response_model=RegisterResponse, status_code=200)
 @limiter.limit("5/minute")
 def register_user(request: Request, payload: RegisterRequest, db: Session = Depends(get_db)):
     user = create_user(db=db, payload=payload)
     return RegisterResponse(
-        message="Verify your email to complete registration",
+        message="Account created successfully. You can now log in.",
         user=user
     )
 

@@ -2,7 +2,7 @@ import sys
 import unittest
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 from fastapi import HTTPException
 
@@ -11,8 +11,8 @@ BACKEND_DIR = Path(__file__).resolve().parents[1]
 if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
-from app.schemas.auth import ProfileUpdateRequest, VerifyOtpRequest
-from app.services.auth import update_user_profile, verify_otp
+from app.schemas.auth import ProfileUpdateRequest, RegisterRequest, VerifyOtpRequest
+from app.services.auth import register_user, update_user_profile, verify_otp
 
 
 class VerifyOtpTests(unittest.TestCase):
@@ -56,6 +56,30 @@ class VerifyOtpTests(unittest.TestCase):
 
         self.assertEqual(context.exception.status_code, 400)
         self.assertEqual(context.exception.detail, "OTP has expired. Please request a new one.")
+
+
+class RegisterUserTests(unittest.TestCase):
+    @patch("app.services.auth.EmailService.send_otp_email", side_effect=RuntimeError("smtp unavailable"))
+    def test_register_user_auto_verifies_when_email_delivery_fails(self, send_otp_mock: Mock) -> None:
+        db = Mock()
+        db.query.return_value.filter.return_value.first.return_value = None
+
+        created = register_user(
+            db=db,
+            payload=RegisterRequest(
+                email="new@example.com",
+                company_name="FXGuard",
+                password="Test1234!",
+                password_confirmation="Test1234!",
+            ),
+        )
+
+        self.assertEqual(created.email, "new@example.com")
+        self.assertTrue(created.is_verified)
+        db.add.assert_called_once_with(created)
+        db.commit.assert_called_once()
+        db.refresh.assert_called_once_with(created)
+        send_otp_mock.assert_called_once()
 
 
 class UpdateUserProfileTests(unittest.TestCase):

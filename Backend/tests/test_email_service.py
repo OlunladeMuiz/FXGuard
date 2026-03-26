@@ -41,7 +41,7 @@ class EmailServiceTests(unittest.TestCase):
             )
 
         self.assertTrue(result)
-        smtp_mock.assert_called_once_with("smtp.example.com", 2525, timeout=7.5)
+        smtp_mock.assert_called_once_with("smtp.example.com", 2525, timeout=3.0)
         server.ehlo.assert_called()
         server.starttls.assert_called_once()
         server.login.assert_called_once_with("mailer@example.com", "secret-password")
@@ -102,11 +102,37 @@ class EmailServiceTests(unittest.TestCase):
                 )
 
         self.assertTrue(result)
-        smtp_ssl_mock.assert_called_once_with("smtp.example.com", 465, timeout=7.5)
+        smtp_ssl_mock.assert_called_once_with("smtp.example.com", 465, timeout=3.0)
         smtp_mock.assert_not_called()
         server.starttls.assert_not_called()
         server.login.assert_called_once_with("mailer@example.com", "secret-password")
         server.sendmail.assert_called_once()
+
+    @mock.patch.dict(
+        os.environ,
+        {
+            "SMTP_USERNAME": "",
+            "SMTP_PASSWORD": "",
+            "EMAIL_FROM_ADDRESS": "",
+            "GMAIL_ADDRESS": "",
+            "GMAIL_PASSWORD": "",
+        },
+        clear=False,
+    )
+    def test_send_email_skips_immediately_when_provider_is_not_configured(self) -> None:
+        with mock.patch("app.utils.email_service.logger.warning") as warning_mock:
+            with mock.patch("app.utils.email_service.smtplib.SMTP") as smtp_mock:
+                with mock.patch("app.utils.email_service.smtplib.SMTP_SSL") as smtp_ssl_mock:
+                    result = EmailService.send_email(
+                        to_email="finance@example.com",
+                        subject="Invoice created",
+                        html_body="<p>Hello</p>",
+                    )
+
+        self.assertFalse(result)
+        smtp_mock.assert_not_called()
+        smtp_ssl_mock.assert_not_called()
+        warning_mock.assert_any_call("Email provider not configured — skipping")
 
 
 if __name__ == "__main__":
