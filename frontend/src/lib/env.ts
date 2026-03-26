@@ -1,9 +1,7 @@
-const REQUIRED_VARS = ['NEXT_PUBLIC_API_URL'] as const;
+const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
-REQUIRED_VARS.forEach((key) => {
-  if (!process.env[key]) {
-    throw new Error(`Missing required env var: ${key}`);
-  }
-});
+if (!apiUrl) {
+  throw new Error('Missing required env var: NEXT_PUBLIC_API_URL');
+}
 
-export const API_URL = process.env.NEXT_PUBLIC_API_URL!;
+export const API_URL = apiUrl;
