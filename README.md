@@ -486,6 +486,33 @@ NEXT_PUBLIC_API_URL=http://localhost:8000/api
 NEXT_PUBLIC_USE_MOCK=false
 ```
 
+### Railway backend deployment
+
+For Railway, create a backend service from this repository and set the **Root Directory** to `Backend`.
+
+If you want Railway to use the checked-in deployment settings, point the service's config-as-code path to:
+
+```text
+/Backend/railway.json
+```
+
+Key production variables for Railway include:
+
+```env
+DATABASE_URL=<Railway Postgres connection string>
+SECRET_KEY=<generated secret>
+FRONTEND_URL=https://your-frontend.vercel.app
+FRONTEND_BASE_URL=https://your-frontend.vercel.app
+LOG_LEVEL=INFO
+```
+
+Your Vercel frontend should then use:
+
+```env
+NEXT_PUBLIC_API_URL=https://your-backend.up.railway.app/api
+NEXT_PUBLIC_USE_MOCK=false
+```
+
 ### 5. Run the backend
 
 ```bash

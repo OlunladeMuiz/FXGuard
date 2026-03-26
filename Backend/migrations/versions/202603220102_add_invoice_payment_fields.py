@@ -16,12 +16,26 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.add_column("invoices", sa.Column("account_name", sa.String(), nullable=True))
-    op.add_column("invoices", sa.Column("bank_name", sa.String(), nullable=True))
-    op.add_column("invoices", sa.Column("account_number", sa.String(), nullable=True))
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    existing_columns = {column["name"] for column in inspector.get_columns("invoices")}
+
+    if "account_name" not in existing_columns:
+        op.add_column("invoices", sa.Column("account_name", sa.String(), nullable=True))
+    if "bank_name" not in existing_columns:
+        op.add_column("invoices", sa.Column("bank_name", sa.String(), nullable=True))
+    if "account_number" not in existing_columns:
+        op.add_column("invoices", sa.Column("account_number", sa.String(), nullable=True))
 
 
 def downgrade() -> None:
-    op.drop_column("invoices", "account_number")
-    op.drop_column("invoices", "bank_name")
-    op.drop_column("invoices", "account_name")
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    existing_columns = {column["name"] for column in inspector.get_columns("invoices")}
+
+    if "account_number" in existing_columns:
+        op.drop_column("invoices", "account_number")
+    if "bank_name" in existing_columns:
+        op.drop_column("invoices", "bank_name")
+    if "account_name" in existing_columns:
+        op.drop_column("invoices", "account_name")
