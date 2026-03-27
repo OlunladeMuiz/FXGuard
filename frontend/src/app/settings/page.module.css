@@ -280,6 +280,7 @@
 
 .primaryButton,
 .secondaryButton,
+.dangerButton,
 .inlineButton {
   display: inline-flex;
   align-items: center;
@@ -304,6 +305,7 @@
 }
 
 .secondaryButton,
+.dangerButton,
 .inlineButton {
   padding: 0.75rem 1rem;
   border: 1px solid rgba(148, 163, 184, 0.28);
@@ -311,8 +313,20 @@
   color: #0f172a;
 }
 
+.dangerButton {
+  border-color: rgba(239, 68, 68, 0.2);
+  background: #be123c;  
+  color: #fff1f2;
+}
+
+.dangerButton:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 24px rgba(239, 68, 68, 0.12);
+}
+
 .primaryButton:disabled,
 .secondaryButton:disabled,
+.dangerButton:disabled,
 .inlineButton:disabled {
   opacity: 0.65;
   cursor: not-allowed;

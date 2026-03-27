@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 import styles from './page.module.css';
@@ -11,6 +11,7 @@ import { NotificationsSection } from '@/components/settings/NotificationsSection
 import { ProfileSecuritySection } from '@/components/settings/ProfileSecuritySection';
 import { SETTINGS_NAV_ITEMS } from '@/components/settings/navigation';
 import { SettingsSidebar } from '@/components/settings/SettingsSidebar';
+import { clearAuthTokens } from '@/lib/api/auth';
 import { useBankDetails } from '@/hooks/useBankDetails';
 import { useBusinessDetails } from '@/hooks/useBusinessDetails';
 import { useIntegrations } from '@/hooks/useIntegrations';
@@ -28,6 +29,7 @@ export default function SettingsPage() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const activeSection = parseSection(searchParams.get('section'));
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const profile = useProfileSettings();
   const business = useBusinessDetails();
@@ -49,6 +51,12 @@ export default function SettingsPage() {
   const connectedProvidersCount = integrations.integrations.filter(
     (integration) => integration.status === 'connected',
   ).length;
+
+  const handleLogout = () => {
+    setIsLoggingOut(true);
+    clearAuthTokens();
+    router.replace('/login');
+  };
 
   const renderActiveSection = () => {
     switch (activeSection) {
@@ -110,6 +118,8 @@ export default function SettingsPage() {
             successMessage={profile.successMessage}
             setField={profile.setField}
             save={profile.save}
+            isLoggingOut={isLoggingOut}
+            onLogout={handleLogout}
           />
         );
     }
