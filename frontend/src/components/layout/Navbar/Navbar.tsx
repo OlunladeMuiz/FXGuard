@@ -2,9 +2,9 @@
 
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import styles from './Navbar.module.css';
-import { AUTH_USER_UPDATED_EVENT, getUser, getUserDisplayName, User } from '@/lib/api/auth';
+import { AUTH_USER_UPDATED_EVENT, clearAuthTokens, getUser, getUserDisplayName, User } from '@/lib/api/auth';
 
 const marketingLinks = [
   { href: '#features', label: 'Features' },
@@ -61,29 +61,6 @@ const navMenuItems = [
     ),
   },
   {
-    id: 'wallet',
-    label: 'Wallet',
-    href: '/wallet',
-    icon: (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path d="M21 4H3a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z" />
-        <path d="M17 12a2 2 0 1 0 0 4 2 2 0 0 0 0-4z" />
-      </svg>
-    ),
-  },
-  {
-    id: 'transactions',
-    label: 'Transactions',
-    href: '/transactions',
-    icon: (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <polyline points="20 6 9 17 4 12" />
-        <line x1="4" y1="6" x2="20" y2="6" />
-        <line x1="4" y1="12" x2="9" y2="12" />
-      </svg>
-    ),
-  },
-  {
     id: 'settings',
     label: 'Settings',
     href: '/settings',
@@ -98,8 +75,10 @@ const navMenuItems = [
 
 export const Navbar: React.FC = () => {
   const pathname = usePathname();
+  const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [displayName, setDisplayName] = useState('User');
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -154,6 +133,13 @@ export const Navbar: React.FC = () => {
     if (pathname.startsWith('/settings')) return '/settings';
     return '/dashboard';
   }, [pathname]);
+
+  const handleLogout = () => {
+    setIsLoggingOut(true);
+    setMenuOpen(false);
+    clearAuthTokens();
+    router.replace('/login');
+  };
 
   if (isAuth || isMinimal) return null;
 
@@ -307,6 +293,22 @@ export const Navbar: React.FC = () => {
                       );
                     })}
                   </ul>
+                  <div className={styles.menuDivider} />
+                  <button
+                    type="button"
+                    className={`${styles.menuActionButton} ${styles.menuActionDanger}`}
+                    onClick={handleLogout}
+                    disabled={isLoggingOut}
+                  >
+                    <span className={styles.menuIcon}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                        <path d="m16 17 5-5-5-5" />
+                        <path d="M21 12H9" />
+                      </svg>
+                    </span>
+                    <span className={styles.menuLabel}>{isLoggingOut ? 'Signing Out...' : 'Log Out'}</span>
+                  </button>
                 </nav>
               </div>
 

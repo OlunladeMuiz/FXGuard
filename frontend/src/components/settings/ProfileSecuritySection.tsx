@@ -9,6 +9,8 @@ interface ProfileSecuritySectionProps {
   successMessage: string | null;
   setField: <Key extends keyof ProfileSettingsForm>(field: Key, value: ProfileSettingsForm[Key]) => void;
   save: () => Promise<void>;
+  isLoggingOut: boolean;
+  onLogout: () => void;
 }
 
 const preferredCurrencyOptions = [
@@ -54,6 +56,14 @@ const mobileIcon = (
   </svg>
 );
 
+const logoutIcon = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+    <path d="m16 17 5-5-5-5" />
+    <path d="M21 12H9" />
+  </svg>
+);
+
 export function ProfileSecuritySection({
   form,
   loading,
@@ -62,6 +72,8 @@ export function ProfileSecuritySection({
   successMessage,
   setField,
   save,
+  isLoggingOut,
+  onLogout,
 }: ProfileSecuritySectionProps) {
   return (
     <>
@@ -215,6 +227,24 @@ export function ProfileSecuritySection({
               </div>
             </div>
             <button type="button" className={styles.inlineButton}>Revoke</button>
+          </div>
+
+          <div className={styles.securityRow}>
+            <div className={styles.securityMeta}>
+              <span className={styles.securityIcon}>{logoutIcon}</span>
+              <div>
+                <strong>Logout</strong>
+                <p>Sign out of this browser and return to the login screen.</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              className={styles.dangerButton}
+              onClick={onLogout}
+              disabled={isLoggingOut}
+            >
+              {isLoggingOut ? 'Signing Out...' : 'Log Out'}
+            </button>
           </div>
         </div>
       </section>
