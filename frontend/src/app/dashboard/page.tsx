@@ -350,7 +350,7 @@ export default function DashboardPage() {
 
       <section className={styles.commandHeader}>
         <div className={styles.commandStory}>
-          <span className={styles.commandTag}>Treasury Terminal</span>
+          <span className={styles.commandTag}>Control Room</span>
           <h1 className={styles.commandHeadline}>Welcome back, {displayName}. {commandHeadline}</h1>
           <p className={styles.commandNarrative}>{commandNarrative}</p>
 
