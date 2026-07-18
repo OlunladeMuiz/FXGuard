@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
@@ -80,6 +80,7 @@ export const Navbar: React.FC = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [displayName, setDisplayName] = useState('User');
+  const [isAdmin, setIsAdmin] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Close menu when clicking outside
@@ -109,7 +110,9 @@ export const Navbar: React.FC = () => {
     const syncDisplayName = (event?: Event) => {
       const updatedUser =
         event instanceof CustomEvent ? (event.detail as User | null | undefined) : undefined;
-      setDisplayName(getUserDisplayName(updatedUser ?? getUser()));
+      const finalUser = updatedUser ?? getUser();
+      setDisplayName(getUserDisplayName(finalUser));
+      setIsAdmin(finalUser?.is_admin ?? false);
     };
 
     syncDisplayName();
@@ -131,6 +134,7 @@ export const Navbar: React.FC = () => {
     if (pathname.startsWith('/fx-analytics')) return '/fx-analytics';
     if (pathname.startsWith('/invoice-generator')) return '/invoice-generator';
     if (pathname.startsWith('/settings')) return '/settings';
+    if (pathname.startsWith('/internal/health')) return '/internal/health';
     return '/dashboard';
   }, [pathname]);
 
@@ -230,6 +234,17 @@ export const Navbar: React.FC = () => {
                   {link.label}
                 </Link>
               ))}
+              {isAdmin && (
+                <Link
+                  href="/internal/health"
+                  className={`${styles.tab} ${activeTab === '/internal/health' ? styles.tabActive : ''}`}
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+                  </svg>
+                  System Health
+                </Link>
+              )}
             </nav>
             <div className={styles.appActions}>
               <div className={styles.search}>

@@ -49,6 +49,7 @@ export interface User {
   preferred_currency?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
+  is_admin?: boolean;
 }
 
 function titleCase(value: string): string {

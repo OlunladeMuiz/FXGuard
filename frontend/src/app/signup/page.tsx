@@ -71,13 +71,13 @@ export default function SignupPage() {
       </header>
 
       <div className={styles.card}>
-        <h1>Create your account</h1>
+        <h1 className={styles.cardTitle}>Create your account</h1>
         <p className={styles.subtitle}>Start optimizing your cross-border payments today</p>
 
         <form className={styles.form} onSubmit={handleSubmit}>
           {error && <div className={styles.error}>{error}</div>}
 
-          <label>Company Name<span className={styles.required}>*</span></label>
+          <label className={styles.formLabel}>Company Name<span className={styles.required}>*</span></label>
           <div className={styles.inputRow}>
             <span className={styles.icon}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -91,6 +91,7 @@ export default function SignupPage() {
               </svg>
             </span>
             <input
+              className={styles.formInput}
               placeholder="Your company name"
               value={companyName}
               onChange={(e) => setCompanyName(e.target.value)}
@@ -98,7 +99,7 @@ export default function SignupPage() {
             />
           </div>
 
-          <label>Business Email<span className={styles.required}>*</span></label>
+          <label className={styles.formLabel}>Business Email<span className={styles.required}>*</span></label>
           <div className={styles.inputRow}>
             <span className={styles.icon}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -107,6 +108,7 @@ export default function SignupPage() {
               </svg>
             </span>
             <input 
+              className={styles.formInput}
               type="email"
               placeholder="you@company.com" 
               value={email}
@@ -116,7 +118,7 @@ export default function SignupPage() {
           </div>
           <span className={styles.helper}>Use your business email address</span>
 
-          <label>Password<span className={styles.required}>*</span></label>
+          <label className={styles.formLabel}>Password<span className={styles.required}>*</span></label>
           <div className={styles.inputRow}>
             <span className={styles.icon}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -125,6 +127,7 @@ export default function SignupPage() {
               </svg>
             </span>
             <input
+              className={styles.formInput}
               type={showPassword ? 'text' : 'password'}
               placeholder="Create a strong password" 
               value={password}
@@ -156,7 +159,7 @@ export default function SignupPage() {
             <li>Include numbers and special characters</li>
           </ul>
 
-          <label>Confirm Password<span className={styles.required}>*</span></label>
+          <label className={styles.formLabel}>Confirm Password<span className={styles.required}>*</span></label>
           <div className={styles.inputRow}>
             <span className={styles.icon}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -165,6 +168,7 @@ export default function SignupPage() {
               </svg>
             </span>
             <input
+              className={styles.formInput}
               type={showPasswordConfirmation ? 'text' : 'password'}
               placeholder="Re-enter your password" 
               value={passwordConfirmation}
@@ -192,7 +196,7 @@ export default function SignupPage() {
             </button>
           </div>
 
-          <label>Referral Code <span className={styles.optional}>(Optional)</span></label>
+          <label className={styles.formLabel}>Referral Code <span className={styles.optional}>(Optional)</span></label>
           <div className={styles.inputRow}>
             <span className={styles.icon}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -200,7 +204,7 @@ export default function SignupPage() {
                 <path d="M7 7V5h10v2" />
               </svg>
             </span>
-            <input placeholder="Enter referral code" />
+            <input className={styles.formInput} placeholder="Enter referral code" />
           </div>
           <span className={styles.helper}>Get 3 months free with a valid referral code</span>
 
@@ -238,7 +242,7 @@ export default function SignupPage() {
           </div>
 
           <p className={styles.footerText}>
-            Already have an account? <Link href="/login">Sign in</Link>
+            Already have an account? <Link href="/login" className={styles.footerLink}>Sign in</Link>
           </p>
         </form>
       </div>
@@ -249,13 +253,13 @@ export default function SignupPage() {
             <path d="M12 2l7 4v6c0 5-3.5 9-7 10-3.5-1-7-5-7-10V6l7-4z" />
           </svg>
         </div>
-        <div>
-          <strong>Your data is secure</strong>
-          <p>We use bank-grade 256-bit SSL encryption and are SOC 2 compliant.</p>
+        <div className={styles.trustContent}>
+          <strong className={styles.trustTitle}>Your data is secure</strong>
+          <p className={styles.trustDescription}>We use bank-grade 256-bit SSL encryption and are SOC 2 compliant.</p>
           <div className={styles.badges}>
-            <span>FCA Regulated</span>
-            <span>GDPR Compliant</span>
-            <span>ISO 27001</span>
+            <span className={styles.badgeLabel}>FCA Regulated</span>
+            <span className={styles.badgeLabel}>GDPR Compliant</span>
+            <span className={styles.badgeLabel}>ISO 27001</span>
           </div>
         </div>
       </div>

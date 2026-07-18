@@ -4,13 +4,14 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import styles from './page.module.css';
+import RecommendationPanel from '@/components/fx/RecommendationPanel';
 import { fetchRealFXRate, fetchRealFXRateOnDate } from '@/lib/api/fx';
 import { fetchRecommendation } from '@/lib/api/recommendation';
 import { getPreferredCurrency, getUser, User } from '@/lib/api/auth';
 import client from '@/lib/api/client';
 import { formatApiError } from '@/lib/api/errors';
 import { hasConnectedIntegration } from '@/lib/api/integrations';
-import { Recommendation, getActionDisplayText } from '@/lib/types/recommendation';
+import { Recommendation } from '@/lib/types/recommendation';
 import {
   BackendInvoiceRecord,
   InvoiceEditorState,
@@ -51,31 +52,6 @@ function mergeRecordWithDraft(record: InvoiceRecord, preferredCurrency: string):
   const nextDraft = mapInvoiceRecordToDraft(record);
   nextDraft.settlementCurrency = preferredCurrency;
   return nextDraft;
-}
-
-function getRecommendationTitle(recommendation: Recommendation): string {
-  if (recommendation.status === 'provisional_data') {
-    return `${getActionDisplayText(recommendation.action)} (Intraday Signal)`;
-  }
-  if (recommendation.status === 'insufficient_data') {
-    return 'Collecting Local History';
-  }
-  if (recommendation.status === 'limited_data') {
-    return `${getActionDisplayText(recommendation.action)} (Early Signal)`;
-  }
-  return getActionDisplayText(recommendation.action);
-}
-
-function getRecommendationSupportText(recommendation: Recommendation): string {
-  if (recommendation.historyQuality === 'full') {
-    return `${recommendation.realDataPoints} stored market closes support this view.`;
-  }
-
-  if (recommendation.historyQuality === 'candle_fallback') {
-    return `Using stored intraday candles as a provisional fallback because only ${recommendation.dataPoints} stored daily close${recommendation.dataPoints === 1 ? ' is' : 's are'} available locally.`;
-  }
-
-  return `History quality: ${recommendation.historyQuality.replace('_', ' ')} (${recommendation.realDataPoints} real, ${recommendation.syntheticDataPoints} seeded).`;
 }
 
 export default function InvoiceReviewPage() {
@@ -446,9 +422,20 @@ export default function InvoiceReviewPage() {
             <p>Invoice review is not available.</p>
           </section>
         ) : (
-          <div className={styles.layout}>
+          <div className={styles.pageStack}>
+            <RecommendationPanel
+              recommendation={recommendation}
+              loading={recommendationLoading}
+              error={recommendationError ? new Error(recommendationError) : null}
+              primaryActionHref="#invoice-preview"
+              primaryActionLabel="Review invoice preview"
+              secondaryActionHref="/fx-analytics/deep"
+              compact={false}
+            />
+
+            <div className={styles.layout}>
             <div className={styles.main}>
-              <section className={styles.card}>
+              <section className={styles.card} id="invoice-preview">
                 <div className={styles.cardHeader}>
                   <h3>Invoice Preview</h3>
                   <div className={styles.cardActions}>
@@ -563,48 +550,6 @@ export default function InvoiceReviewPage() {
                     <strong>{recommendation?.optimalWindow || (recommendationLoading ? 'Analysing...' : 'Unavailable')}</strong>
                   </div>
                 </div>
-                <div className={styles.recommendationBox}>
-                  {recommendationLoading ? (
-                    <p className={styles.recommendationMuted}>Analysing live market data for this invoice...</p>
-                  ) : recommendation ? (
-                    <>
-                      <div className={styles.recommendationHeader}>
-                        <div>
-                          <p className={styles.recommendationEyebrow}>AI Recommendation</p>
-                          <strong>{getRecommendationTitle(recommendation)}</strong>
-                        </div>
-                        <span className={styles.recommendationBadge}>
-                          {Math.round(recommendation.confidence * 100)}% confidence
-                        </span>
-                      </div>
-                      <p className={styles.recommendationText}>{recommendation.explanation}</p>
-                      <p className={styles.recommendationMuted}>
-                        {getRecommendationSupportText(recommendation)}
-                      </p>
-                      <div className={styles.recommendationFactors}>
-                        {recommendation.factors?.map((factor) => (
-                          <div key={factor.name} className={styles.recommendationFactor}>
-                            <span className={`${styles.recommendationDot} ${
-                              factor.impact === 'positive'
-                                ? styles.recommendationPositive
-                                : factor.impact === 'negative'
-                                  ? styles.recommendationNegative
-                                  : styles.recommendationNeutral
-                            }`}></span>
-                            <div>
-                              <strong>{factor.name}</strong>
-                              <p>{factor.description}</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </>
-                  ) : (
-                    <p className={styles.recommendationMuted}>
-                      {recommendationError || 'No recommendation available for this invoice yet.'}
-                    </p>
-                  )}
-                </div>
               </section>
 
               <section className={styles.card}>
@@ -670,7 +615,7 @@ export default function InvoiceReviewPage() {
                         className={styles.input}
                         value={invoice.paymentLink}
                         readOnly
-                        style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-primary)' }}
+                        style={{ fontSize: 'var(--font-size-xs)', color: 'var(--brass)' }}
                       />
                       <button
                         type="button"
@@ -682,7 +627,7 @@ export default function InvoiceReviewPage() {
                       {copyLinkStatus === 'copied' && (
                         <p
                           className={styles.helperText}
-                          style={{ marginTop: 'var(--spacing-1)', color: 'var(--color-success)' }}
+                          style={{ marginTop: 'var(--spacing-1)', color: 'var(--act-convert)' }}
                           aria-live="polite"
                         >
                           Link copied successfully.
@@ -756,6 +701,7 @@ export default function InvoiceReviewPage() {
                 </div>
               </section>
             </aside>
+            </div>
           </div>
         )}
       </div>

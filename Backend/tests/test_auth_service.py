@@ -11,8 +11,9 @@ BACKEND_DIR = Path(__file__).resolve().parents[1]
 if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
-from app.schemas.auth import LoginRequest, ProfileUpdateRequest, RegisterRequest, VerifyOtpRequest
-from app.services.auth import hash_password, login_user, register_user, update_user_profile, verify_otp
+from app.schemas.auth import LoginRequest, ProfileUpdateRequest, RegisterRequest, VerifyOtpRequest, RefreshRequest
+from app.services.auth import hash_password, login_user, register_user, update_user_profile, verify_otp, refresh_user_token, create_refresh_token, SECRET_KEY, ALGORITHM
+import jwt
 
 
 class VerifyOtpTests(unittest.TestCase):
@@ -92,6 +93,7 @@ class LoginUserTests(unittest.TestCase):
         user.verification_code = 123456
         user.verification_code_expires_at = datetime.now(timezone.utc) + timedelta(minutes=5)
         user.preferred_currency = "USD"
+        user.is_admin = False
 
         db = Mock()
         db.query.return_value.filter.return_value.first.return_value = user
@@ -211,6 +213,77 @@ class UpdateUserProfileTests(unittest.TestCase):
         self.assertEqual(current_user.phone, "+2348111111111")
         self.assertEqual(current_user.time_zone, "Europe/London")
         self.assertEqual(current_user.preferred_currency, "USD")
+
+
+class RefreshUserTokenTests(unittest.TestCase):
+    def test_refresh_user_token_valid(self) -> None:
+        user = Mock()
+        user.id = "user-123"
+        user.email = "test@example.com"
+        user.is_admin = False
+
+        db = Mock()
+        db.query.return_value.filter.return_value.first.return_value = user
+
+        refresh_token = create_refresh_token({"sub": "user-123", "email": "test@example.com"})
+        payload = RefreshRequest(refresh_token=refresh_token)
+
+        result = refresh_user_token(db=db, payload=payload)
+
+        self.assertEqual(result["token_type"], "bearer")
+        self.assertIn("access_token", result)
+        
+        decoded = jwt.decode(result["access_token"], SECRET_KEY, algorithms=[ALGORITHM])
+        self.assertEqual(decoded["sub"], "user-123")
+        self.assertFalse(decoded["is_admin"])
+
+    def test_refresh_user_token_expired(self) -> None:
+        db = Mock()
+
+        # create explicitly expired token
+        to_encode = {"sub": "user-123", "email": "test@example.com"}
+        to_encode["exp"] = datetime.now(timezone.utc) - timedelta(days=1)
+        expired_token = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+        payload = RefreshRequest(refresh_token=expired_token)
+
+        with self.assertRaises(HTTPException) as context:
+            refresh_user_token(db=db, payload=payload)
+
+        self.assertEqual(context.exception.status_code, 401)
+        self.assertEqual(context.exception.detail, "Refresh token has expired")
+
+    def test_refresh_user_token_malformed(self) -> None:
+        db = Mock()
+
+        payload = RefreshRequest(refresh_token="not.a.real.token")
+
+        with self.assertRaises(HTTPException) as context:
+            refresh_user_token(db=db, payload=payload)
+
+        self.assertEqual(context.exception.status_code, 401)
+        self.assertEqual(context.exception.detail, "Invalid refresh token")
+
+    def test_refresh_user_token_is_admin_freshness(self) -> None:
+        # Simulate user having is_admin updated in DB since original login
+        user = Mock()
+        user.id = "user-123"
+        user.email = "admin@example.com"
+        user.is_admin = True  # Fresh state in DB
+
+        db = Mock()
+        db.query.return_value.filter.return_value.first.return_value = user
+
+        # Refresh token has no is_admin claim
+        refresh_token = create_refresh_token({"sub": "user-123", "email": "admin@example.com"})
+        payload = RefreshRequest(refresh_token=refresh_token)
+
+        result = refresh_user_token(db=db, payload=payload)
+
+        # Verify new access token correctly pulls is_admin=True from fresh DB user
+        decoded = jwt.decode(result["access_token"], SECRET_KEY, algorithms=[ALGORITHM])
+        self.assertEqual(decoded["sub"], "user-123")
+        self.assertTrue(decoded["is_admin"])
 
 
 if __name__ == "__main__":

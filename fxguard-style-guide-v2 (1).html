@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>FXGuard Design System v2 — Recommendation-First</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0B0F0E; --surface:#12181A; --surface-elevated:#1A2220; --surface-sunken:#080B0A;
+    --accent:#34D399; --accent-hover:#5EE7B3; --accent-muted:#1B4332;
+    --text-primary:#F5F7F6; --text-secondary:#9BA6A2; --text-tertiary:#5C6764; --text-on-accent:#06120D;
+    --border:#232B29; --border-strong:#35403D;
+    --action-convert-now:#34D399; --action-convert-now-bg:#12281F;
+    --action-wait:#F2B84B; --action-wait-bg:#2A2213;
+    --action-hedge:#F2A65A; --action-hedge-bg:#2A1F13;
+    --action-split:#5AA9E6; --action-split-bg:#131F2A;
+    --confidence-high:#34D399; --confidence-medium:#F2B84B; --confidence-low:#EF6461; --confidence-track:#1A2220;
+    --data-live:#34D399; --data-limited:#F2B84B; --data-synthetic:#9BA6A2;
+    --font-display:"Fraunces",serif; --font-body:"Manrope",sans-serif; --font-mono:"IBM Plex Mono",monospace;
+    --ease-settle: cubic-bezier(0.16,1,0.3,1);
+  }
+  * { box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text-primary); font-family:var(--font-body); margin:0; padding:56px 24px 120px; }
+  .wrap { max-width:760px; margin:0 auto; }
+  .kicker { font-family:var(--font-mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--accent); margin-bottom:8px; }
+  h1.title { font-family:var(--font-display); font-weight:500; font-size:2.25rem; margin:0 0 8px; }
+  .sub { color:var(--text-secondary); font-size:.95rem; max-width:560px; line-height:1.5; margin-bottom:48px; }
+  h2.section-title { font-family:var(--font-display); font-weight:500; font-size:1.25rem; margin:0 0 6px; }
+  .section-note { color:var(--text-tertiary); font-size:.8rem; margin-bottom:20px; max-width:520px; line-height:1.5; }
+  section { margin-bottom:56px; }
+
+  /* ============ PRIMARY: Recommendation Card ============ */
+  .rec-card {
+    background:var(--surface); border:1px solid var(--border); border-radius:20px;
+    padding:28px; position:relative; overflow:hidden;
+  }
+  .rec-card.state-convert { border-color:rgba(52,211,153,0.35); box-shadow:0 0 40px rgba(52,211,153,0.08); }
+  .rec-badge {
+    display:inline-flex; align-items:center; gap:8px; font-family:var(--font-mono);
+    font-size:12px; font-weight:600; letter-spacing:.02em; padding:6px 14px 6px 10px;
+    border-radius:999px; margin-bottom:20px;
+  }
+  .rec-badge .dot { width:7px; height:7px; border-radius:999px; }
+  .state-convert .rec-badge { background:var(--action-convert-now-bg); color:var(--action-convert-now); }
+  .state-convert .rec-badge .dot { background:var(--action-convert-now); }
+
+  .rec-headline { font-family:var(--font-display); font-weight:500; font-size:1.75rem; line-height:1.2; margin:0 0 12px; }
+  .rec-explanation { color:var(--text-secondary); font-size:.95rem; line-height:1.55; margin:0 0 24px; max-width:480px; }
+
+  .rec-meta-row { display:flex; gap:28px; margin-bottom:24px; flex-wrap:wrap; }
+  .rec-meta-item .label { font-family:var(--font-mono); font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:var(--text-tertiary); display:block; margin-bottom:6px; }
+
+  /* confidence bar */
+  .confidence-wrap { width:180px; }
+  .confidence-track { height:6px; background:var(--confidence-track); border-radius:999px; overflow:hidden; margin-bottom:6px; }
+  .confidence-fill { height:100%; background:var(--confidence-high); border-radius:999px; width:87%; }
+  .confidence-label { font-size:12px; color:var(--text-primary); font-weight:600; }
+  .confidence-label .pct { color:var(--confidence-high); font-family:var(--font-mono); }
+
+  /* data quality disclosure — always visible, never hidden */
+  .data-quality { display:flex; align-items:center; gap:6px; font-family:var(--font-mono); font-size:11px; color:var(--data-live); }
+  .data-quality .dot { width:6px; height:6px; border-radius:999px; background:var(--data-live); }
+  .data-quality.limited { color:var(--data-limited); }
+  .data-quality.limited .dot { background:var(--data-limited); }
+  .data-quality.synthetic { color:var(--data-synthetic); }
+  .data-quality.synthetic .dot { background:var(--data-synthetic); border:1px dashed var(--data-synthetic); background:transparent; }
+
+  .rec-cta { display:flex; gap:12px; align-items:center; }
+  .btn-primary { background:var(--accent); color:var(--text-on-accent); border:none; font-family:var(--font-body); font-weight:700; font-size:.9rem; padding:13px 26px; border-radius:999px; cursor:pointer; }
+  .btn-ghost { background:transparent; color:var(--text-secondary); border:1px solid var(--border-strong); font-weight:600; font-size:.85rem; padding:12px 20px; border-radius:999px; cursor:pointer; }
+
+  /* ============ Other action states, shown small ============ */
+  .state-row { display:flex; gap:12px; flex-wrap:wrap; margin-top:16px; }
+  .mini-badge { display:inline-flex; align-items:center; gap:7px; font-family:var(--font-mono); font-size:11px; font-weight:600; padding:7px 12px; border-radius:999px; }
+  .mini-badge .dot { width:6px; height:6px; border-radius:999px; }
+  .badge-wait { background:var(--action-wait-bg); color:var(--action-wait); }
+  .badge-wait .dot { background:var(--action-wait); }
+  .badge-hedge { background:var(--action-hedge-bg); color:var(--action-hedge); }
+  .badge-hedge .dot { background:var(--action-hedge); }
+  .badge-split { background:var(--action-split-bg); color:var(--action-split); }
+  .badge-split .dot { background:var(--action-split); }
+
+  /* ============ SECONDARY: deep analytics preview, deliberately calm ============ */
+  .secondary-frame { background:var(--surface-sunken); border:1px solid var(--border); border-radius:16px; padding:20px; opacity:0.82; }
+  .secondary-label { font-family:var(--font-mono); font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:var(--text-tertiary); margin-bottom:14px; }
+  .indicator-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(110px,1fr)); gap:14px; }
+  .indicator { }
+  .indicator .k { font-family:var(--font-mono); font-size:10px; color:var(--text-tertiary); display:block; margin-bottom:4px; }
+  .indicator .v { font-family:var(--font-mono); font-size:14px; color:var(--text-secondary); }
+  .see-more { margin-top:16px; background:none; border:none; color:var(--accent); font-family:var(--font-body); font-size:.85rem; font-weight:600; cursor:pointer; padding:0; }
+
+  /* hierarchy diagram */
+  .hierarchy-flow { display:flex; align-items:center; gap:12px; font-family:var(--font-mono); font-size:12px; color:var(--text-secondary); flex-wrap:wrap; }
+  .flow-box { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:10px 16px; }
+  .flow-box.primary { border-color:var(--accent); color:var(--accent); }
+  .flow-arrow { color:var(--text-tertiary); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="kicker">FXGuard / Design System v2</div>
+  <h1 class="title">Recommendation-first,<br>not dashboard-first.</h1>
+  <p class="sub">Every token here traces to a real field in <code>RecommendationResponse</code>. The rule: the action, the confidence, and the explanation are the loudest thing on screen — the indicators that produced them live one click away, not on the main path.</p>
+
+  <section>
+    <h2 class="section-title">The primary screen</h2>
+    <p class="section-note">This is what invoice-generator/review should lead with — before the invoice form, before the analytics. One card, one decision.</p>
+
+    <div class="rec-card state-convert">
+      <div class="rec-badge"><span class="dot"></span>CONVERT NOW</div>
+      <h3 class="rec-headline">Convert your $12,400 invoice today</h3>
+      <p class="rec-explanation">USD/NGN is oversold and sitting near its 30-day low — historically a favorable entry point. Waiting carries more downside risk than upside based on current volatility.</p>
+
+      <div class="rec-meta-row">
+        <div class="rec-meta-item">
+          <span class="label">Confidence</span>
+          <div class="confidence-wrap">
+            <div class="confidence-track"><div class="confidence-fill"></div></div>
+            <div class="confidence-label"><span class="pct">87%</span> High</div>
+          </div>
+        </div>
+        <div class="rec-meta-item">
+          <span class="label">Data quality</span>
+          <div class="data-quality"><span class="dot"></span>Live · 90 real data points</div>
+        </div>
+      </div>
+
+      <div class="rec-cta">
+        <button class="btn-primary">Convert & Generate Payment Link</button>
+        <button class="btn-ghost">See why →</button>
+      </div>
+    </div>
+
+    <p class="section-note" style="margin-top:20px;margin-bottom:8px">The other three action states — same card shape, different color, never mixed:</p>
+    <div class="state-row">
+      <span class="mini-badge badge-wait"><span class="dot"></span>WAIT</span>
+      <span class="mini-badge badge-hedge"><span class="dot"></span>HEDGE</span>
+      <span class="mini-badge badge-split"><span class="dot"></span>SPLIT CONVERSION</span>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="section-title">Honest data disclosure</h2>
+    <p class="section-note">This is the fix for the silent-mock-fallback issue — every recommendation state must show one of these three, always. No exceptions, no silent fake numbers.</p>
+    <div class="state-row">
+      <div class="data-quality"><span class="dot"></span>Live · 90 real data points</div>
+      <div class="data-quality limited"><span class="dot"></span>Limited data · 6 real points</div>
+      <div class="data-quality synthetic"><span class="dot"></span>Estimated · synthetic history</div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="section-title">Secondary: deep analytics</h2>
+    <p class="section-note">Everything from /fx-analytics/deep — GARCH, seasonality, news, Brent, spread — lives here. Deliberately desaturated (82% opacity, sunken background) so it never competes with the recommendation above it.</p>
+    <div class="secondary-frame">
+      <div class="secondary-label">Underlying indicators</div>
+      <div class="indicator-grid">
+        <div class="indicator"><span class="k">RSI (14)</span><span class="v">28.4</span></div>
+        <div class="indicator"><span class="k">SMA 7</span><span class="v">1,542.10</span></div>
+        <div class="indicator"><span class="k">SMA 20</span><span class="v">1,558.90</span></div>
+        <div class="indicator"><span class="k">Volatility</span><span class="v">1.4%</span></div>
+        <div class="indicator"><span class="k">7d change</span><span class="v">-2.1%</span></div>
+        <div class="indicator"><span class="k">Range pos.</span><span class="v">12th pct</span></div>
+      </div>
+      <button class="see-more">Open full analysis →</button>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="section-title">Information hierarchy</h2>
+    <div class="hierarchy-flow">
+      <div class="flow-box primary">Dashboard</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box primary">Recommendation card</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box">Convert / Payment link</div>
+    </div>
+    <div class="hierarchy-flow" style="margin-top:12px">
+      <div class="flow-box">Recommendation card</div>
+      <span class="flow-arrow">— one click →</span>
+      <div class="flow-box" style="opacity:.7">fx-analytics/deep (GARCH, seasonality, news, Brent)</div>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

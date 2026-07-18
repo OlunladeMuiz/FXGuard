@@ -8,15 +8,17 @@ This guide provides step-by-step instructions for setting up the FXGuard Backend
 
 ```bash
 git clone https://github.com/OlunladeMuiz/FXGuard
-cd FXGuard/backend
+cd FXGuard/Backend
 ```
 
 ### 2. Create and Activate Virtual Environment
 
+Use Python 3.14 in this workspace. The existing virtual environment here was created with Python 3.14, and the backend now starts locally on that runtime.
+
 #### For Windows (PowerShell):
 ```powershell
 # Create virtual environment
-python -m venv .venv
+python -3.14 -m venv .venv
 
 # Activate virtual environment
 .\.venv\Scripts\Activate.ps1
@@ -41,20 +43,7 @@ DATABASE_URL=postgresql://username:password@host:5432/dbname?sslmode=require
 
 ### 3. Install Dependencies
 
-First, create a `requirements.txt` file in the project root if it doesn't exist:
-
-```txt
-fastapi==0.104.1
-uvicorn==0.24.0
-sqlalchemy==2.0.23
-python-dotenv==1.0.0
-bcrypt==4.1.1
-PyJWT==2.8.1
-pydantic==2.5.0
-pydantic-settings==2.1.0
-psycopg2-binary==2.9.9
-alembic==1.12.1
-```
+Install the dependencies listed in [Backend/requirements.txt](Backend/requirements.txt):
 
 Install all dependencies:
 
@@ -63,15 +52,11 @@ pip install -r requirements.txt
 ```
 
 ### 4. Configure Environment Variables
-Generate a secure secret key before filling in the .env file:
-python -c "import secrets; print(secrets.token_hex(32))"
-Copy the output and use it as your SECRET_KEY value.
-
-Create a `.env` file in the project root with the following variables:
+For local development, the backend now starts without a manual `.env` file. If you want to override defaults, create a `.env` file in the project root with the following variables:
 
 ```env
 # Database connection
-DATABASE_URL=postgresql://username:password@host:port/dbname?sslmode=require
+DATABASE_URL=sqlite:///./test.db
 
 # Email service
 GMAIL_ADDRESS=your-email@gmail.com
@@ -96,6 +81,8 @@ uvicorn app.main:app --reload
 # Or specify a specific host and port
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
+
+If you are starting locally in this workspace, the backend is designed to run without manually setting `SECRET_KEY` or `DATABASE_URL`. `SECRET_KEY` is generated for the process when missing, and `DATABASE_URL` falls back to SQLite.
 
 The API will be available at: `http://localhost:8000`
 

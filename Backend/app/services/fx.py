@@ -249,27 +249,6 @@ def _upsert_fx_rate(
         "updated_at": now,
     }
 
-    dialect_name = db.get_bind().dialect.name
-    table = FXRate.__table__
-
-    if dialect_name == "sqlite":
-        statement = sqlite_insert(table).values(**values)
-        statement = statement.on_conflict_do_update(
-            index_elements=["base_currency", "quote_currency", "observed_on"],
-            set_=update_values,
-        )
-        db.execute(statement)
-        return
-
-    if dialect_name == "postgresql":
-        statement = postgres_insert(table).values(**values)
-        statement = statement.on_conflict_do_update(
-            index_elements=["base_currency", "quote_currency", "observed_on"],
-            set_=update_values,
-        )
-        db.execute(statement)
-        return
-
     existing = (
         db.query(FXRate)
         .filter(
@@ -279,6 +258,44 @@ def _upsert_fx_rate(
         )
         .first()
     )
+    if existing is not None and not existing.is_synthetic and is_synthetic:
+        return
+
+    dialect_name = db.get_bind().dialect.name
+    table = FXRate.__table__
+
+    if dialect_name == "sqlite":
+        statement = sqlite_insert(table).values(**values)
+        if is_synthetic:
+            statement = statement.on_conflict_do_update(
+                index_elements=["base_currency", "quote_currency", "observed_on"],
+                set_=update_values,
+                where=table.c.is_synthetic.is_(True),
+            )
+        else:
+            statement = statement.on_conflict_do_update(
+                index_elements=["base_currency", "quote_currency", "observed_on"],
+                set_=update_values,
+            )
+        db.execute(statement)
+        return
+
+    if dialect_name == "postgresql":
+        statement = postgres_insert(table).values(**values)
+        if is_synthetic:
+            statement = statement.on_conflict_do_update(
+                index_elements=["base_currency", "quote_currency", "observed_on"],
+                set_=update_values,
+                where=table.c.is_synthetic.is_(True),
+            )
+        else:
+            statement = statement.on_conflict_do_update(
+                index_elements=["base_currency", "quote_currency", "observed_on"],
+                set_=update_values,
+            )
+        db.execute(statement)
+        return
+
     if existing is None:
         db.add(FXRate(**values))
         return

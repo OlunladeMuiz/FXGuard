@@ -34,6 +34,7 @@ class Invoice(Base):
     payment_link = Column(String, nullable=True)
     payment_reference = Column(String, nullable=True, index=True)
     payment_completed_at = Column(DateTime, nullable=True)
+    is_seeded = Column(Boolean, default=False, server_default="false", nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     items = relationship("InvoiceItem", back_populates="invoice", cascade="all, delete-orphan")

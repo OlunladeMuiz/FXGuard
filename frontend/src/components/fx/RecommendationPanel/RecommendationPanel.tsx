@@ -1,195 +1,244 @@
 'use client';
 
-import React from 'react';
+import Link from 'next/link';
+
 import styles from './RecommendationPanel.module.css';
-import { Card } from '@/components/ui/Card/Card';
-import { Button } from '@/components/ui/Button/Button';
-import { Loader } from '@/components/ui/Loader/Loader';
-import { FXVolatilityMeter } from '@/components/fx/FXVolatilityMeter';
-import { RiskScoreBadge } from '@/components/fx/RiskScoreBadge';
-import { SavingsEstimator } from '@/components/fx/SavingsEstimator';
-import { BestRateComparison } from '@/components/fx/BestRateComparison';
-import { Recommendation, getActionDisplayText, getConfidenceDisplayText } from '@/types/recommendation';
-import { FXHistoryPoint } from '@/types/fx';
+import { getActionDisplayText, Recommendation } from '@/types/recommendation';
 
 interface RecommendationPanelProps {
   recommendation: Recommendation | null;
   loading: boolean;
   error: Error | null;
-  invoiceAmount: number;
-  currentRate: number;
-  averageRate: number;
-  historicalRates: FXHistoryPoint[];
-  targetCurrency: string;
-  volatility: number;
+  compact?: boolean;
+  primaryActionHref?: string;
+  primaryActionLabel?: string;
+  secondaryActionHref?: string;
+  secondaryActionLabel?: string;
   onRefresh?: () => void;
 }
 
 /**
- * RecommendationPanel Component
- * Comprehensive panel displaying AI recommendation with all insights
- * Combines RiskScoreBadge, FXVolatilityMeter, SavingsEstimator, BestRateComparison
+ * FXGuard v2 Recommendation Card
+ *
+ * Matches fxguard-style-guide-v2.html exactly:
+ * - Dark surface card with action-colored badge/dot
+ * - Prominent headline + explanation
+ * - Confidence bar (High/Medium/Low) + data quality indicator (always visible)
+ * - "Convert & Generate Payment Link" CTA + "See why →" ghost link
+ *
+ * Three consumers:
+ * - invoice-generator/page.tsx (compact)
+ * - invoice-generator/review/page.tsx (full)
+ * - dashboard/page.tsx (full)
  */
-export const RecommendationPanel: React.FC<RecommendationPanelProps> = ({
+export const RecommendationPanel = ({
   recommendation,
   loading,
   error,
-  invoiceAmount,
-  currentRate,
-  averageRate,
-  historicalRates,
-  targetCurrency,
-  volatility,
+  compact = false,
+  primaryActionHref,
+  primaryActionLabel = 'Convert & Generate Payment Link',
+  secondaryActionHref,
+  secondaryActionLabel = 'See why →',
   onRefresh,
-}) => {
+}: RecommendationPanelProps) => {
+  /* ── Loading state ── */
   if (loading) {
     return (
-      <Card className={styles.panel}>
-        <Loader message="Loading recommendation..." />
-      </Card>
+      <section className={styles.recCard} aria-busy="true">
+        <div className={styles.stateBlock}>
+          <span className={styles.stateKicker}>Recommendation</span>
+          <h2 className={styles.stateTitle}>Checking market data</h2>
+          <p className={styles.stateBody}>
+            Loading the latest rates and indicators before showing guidance.
+          </p>
+        </div>
+      </section>
     );
   }
 
+  /* ── Error state ── */
   if (error) {
     return (
-      <Card className={styles.panel}>
-        <div className={styles.errorState}>
-          <h3>Unable to Load Recommendation</h3>
-          <p>{error.message}</p>
-          {onRefresh && (
-            <Button variant="secondary" onClick={onRefresh}>
-              Try Again
-            </Button>
-          )}
+      <section className={styles.recCard} role="alert">
+        <div className={styles.stateBlock}>
+          <span className={styles.stateKicker}>Recommendation</span>
+          <h2 className={styles.stateTitle}>Unable to load guidance</h2>
+          <p className={styles.stateBody}>{error.message}</p>
+          {onRefresh ? (
+            <div className={styles.stateAction}>
+              <button className={styles.btnGhost} type="button" onClick={onRefresh}>
+                Try again
+              </button>
+            </div>
+          ) : null}
         </div>
-      </Card>
+      </section>
     );
   }
 
+  /* ── Empty state ── */
   if (!recommendation) {
     return (
-      <Card className={styles.panel}>
-        <div className={styles.emptyState}>
-          <h3>No Recommendation Available</h3>
-          <p>Select an invoice to view AI-powered recommendations.</p>
+      <section className={styles.recCard}>
+        <div className={styles.stateBlock}>
+          <span className={styles.stateKicker}>Recommendation</span>
+          <h2 className={styles.stateTitle}>No recommendation available yet</h2>
+          <p className={styles.stateBody}>
+            Select an invoice and currency pair to load a decision.
+          </p>
         </div>
-      </Card>
+      </section>
     );
   }
 
-  const getActionColor = (action: string): string => {
-    const colors: Record<string, string> = {
-      convert_now: 'var(--color-success)',
-      wait: 'var(--color-warning)',
-      hedge: 'var(--color-primary)',
-      split_conversion: 'var(--color-primary)',
-    };
-    return colors[action] || 'var(--color-neutral-700)';
+  /* ── Data helpers ── */
+
+  // Action → CSS class map
+  const actionCss =
+    (recommendation.action === 'convert_now' ? styles.actionConvert
+      : recommendation.action === 'wait' ? styles.actionWait
+      : recommendation.action === 'hedge' ? styles.actionHedge
+      : recommendation.action === 'split_conversion' ? styles.actionSplit
+      : styles.actionWait) ?? '';
+
+  // Confidence bucketing
+  const confidencePct = Math.round(recommendation.confidence * 100);
+  let confidenceBucket: 'High' | 'Medium' | 'Low';
+  let confidenceCss: string;
+
+  if (recommendation.confidence >= 0.8) {
+    confidenceBucket = 'High';
+    confidenceCss = styles.confidenceHigh ?? '';
+  } else if (recommendation.confidence >= 0.5) {
+    confidenceBucket = 'Medium';
+    confidenceCss = styles.confidenceMedium ?? '';
+  } else {
+    confidenceBucket = 'Low';
+    confidenceCss = styles.confidenceLow ?? '';
+  }
+
+  // Data quality disclosure — always visible
+  const isSynthetic = recommendation.containsSynthetic;
+  const isFullHistory = recommendation.historyQuality === 'full';
+  const realPoints = recommendation.realDataPoints;
+
+  let qualityLabel: string;
+  let qualityCss: string;
+
+  if (isSynthetic) {
+    qualityLabel = 'Estimated · synthetic history';
+    qualityCss = styles.dataQualitySynthetic ?? '';
+  } else if (isFullHistory) {
+    qualityLabel = `Live · ${realPoints} real data points`;
+    qualityCss = styles.dataQuality ?? '';
+  } else {
+    qualityLabel = `Limited data · ${realPoints} real points`;
+    qualityCss = styles.dataQualityLimited ?? '';
+  }
+
+  // Headline: Dynamic based on recommendation action
+  const amountFormatted = recommendation.amount.toLocaleString('en-US', {
+    style: 'currency',
+    currency: recommendation.base,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  });
+
+  const getDynamicHeadline = (action: string, amount: string): string => {
+    switch (action) {
+      case 'convert_now':
+        return `Convert your ${amount} invoice today`;
+      case 'wait':
+        return `Hold off converting your ${amount} invoice`;
+      case 'hedge':
+        return `Hedge your ${amount} invoice exposure`;
+      case 'split_conversion':
+        return `Split the conversion of your ${amount} invoice`;
+      default:
+        return `Review your ${amount} invoice`;
+    }
   };
 
+  const headline = getDynamicHeadline(recommendation.action, amountFormatted);
+
+  // "convert_now" gets the special state class on the card (border glow)
+  const isConvert = recommendation.action === 'convert_now';
+  const cardStateCss = isConvert ? (styles.stateConvert ?? '') : '';
+
+  // Button background color tied to recommendation action
+  const btnActionClass =
+    (recommendation.action === 'convert_now' ? styles.btnConvert
+      : recommendation.action === 'wait' ? styles.btnWait
+      : recommendation.action === 'hedge' ? styles.btnHedge
+      : recommendation.action === 'split_conversion' ? styles.btnSplit
+      : styles.btnWait) ?? '';
+
+  /* ── Full card ── */
   return (
-    <Card className={styles.panel}>
-      <div className={styles.header}>
-        <h2 className={styles.title}>AI Recommendation</h2>
-        {onRefresh && (
-          <Button variant="secondary" size="sm" onClick={onRefresh}>
-            Refresh
-          </Button>
-        )}
+    <section className={`${styles.recCard} ${cardStateCss}`.trim()}>
+      {/* Action badge with dot */}
+      <div className={`${styles.actionBadge} ${actionCss}`}>
+        <span className={styles.actionBadgeDot} />
+        {getActionDisplayText(recommendation.action)}
       </div>
 
-      {/* Main Recommendation */}
-      <div className={styles.mainRecommendation}>
-        <div 
-          className={styles.actionBadge}
-          style={{ backgroundColor: getActionColor(recommendation.action) }}
-        >
-          {getActionDisplayText(recommendation.action)}
-        </div>
-        
-        <div className={styles.confidenceRow}>
-          <span className={styles.confidenceLabel}>Confidence:</span>
-          <span className={styles.confidenceValue}>
-            {getConfidenceDisplayText(recommendation.confidence)}
-            <span className={styles.confidencePercent}>
-              ({(recommendation.confidence * 100).toFixed(0)}%)
-            </span>
-          </span>
-        </div>
+      {compact ? null : (
+        <>
+          {/* Headline */}
+          <h3 className={styles.headline}>{headline}</h3>
 
-        <p className={styles.explanation}>{recommendation.explanation}</p>
-
-        <div className={styles.riskRow}>
-          <span className={styles.riskLabel}>Risk Assessment:</span>
-          <RiskScoreBadge riskScore={recommendation.riskScore} size="sm" />
-        </div>
-      </div>
-
-      {/* Volatility Meter */}
-      <div className={styles.section}>
-        <FXVolatilityMeter volatility={volatility} size="md" />
-      </div>
-
-      {/* Savings Estimator */}
-      <div className={styles.section}>
-        <SavingsEstimator
-          amount={invoiceAmount}
-          currentRate={currentRate}
-          averageRate={averageRate}
-          targetCurrency={targetCurrency}
-        />
-      </div>
-
-      {/* Best Rate Comparison */}
-      <div className={styles.section}>
-        <BestRateComparison
-          amount={invoiceAmount}
-          currentRate={currentRate}
-          historicalRates={historicalRates}
-          targetCurrency={targetCurrency}
-        />
-      </div>
-
-      {/* Factors */}
-      {recommendation.factors && recommendation.factors.length > 0 && (
-        <div className={styles.section}>
-          <h3 className={styles.sectionTitle}>Key Factors</h3>
-          <div className={styles.factorsList}>
-            {recommendation.factors.map((factor, index) => (
-              <div key={index} className={styles.factorItem}>
-                <span 
-                  className={`${styles.factorImpact} ${styles[`impact--${factor.impact}`]}`}
-                />
-                <div className={styles.factorContent}>
-                  <span className={styles.factorName}>{factor.name}</span>
-                  <span className={styles.factorDescription}>{factor.description}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+          {/* Explanation */}
+          <p className={styles.explanation}>{recommendation.explanation}</p>
+        </>
       )}
 
-      {/* Alternative Actions */}
-      {recommendation.alternativeActions && recommendation.alternativeActions.length > 0 && (
-        <div className={styles.section}>
-          <h3 className={styles.sectionTitle}>Alternative Strategies</h3>
-          <div className={styles.alternativesList}>
-            {recommendation.alternativeActions.map((alt, index) => (
-              <div key={index} className={styles.alternativeItem}>
-                <span className={styles.altAction}>
-                  {getActionDisplayText(alt.action)}
-                </span>
-                <span className={styles.altConfidence}>
-                  {(alt.confidence * 100).toFixed(0)}% confidence
-                </span>
-                <span className={styles.altReason}>{alt.reason}</span>
-              </div>
-            ))}
+      {/* Meta row: confidence + data quality */}
+      <div className={styles.metaRow}>
+        <div className={styles.metaItem}>
+          <span className={styles.metaLabel}>Confidence</span>
+          <div className={`${styles.confidenceWrap} ${confidenceCss}`}>
+            <div className={styles.confidenceTrack}>
+              <div
+                className={styles.confidenceFill}
+                style={{ width: `${confidencePct}%` }}
+              />
+            </div>
+            <div className={styles.confidenceLabel}>
+              <span className={styles.confidencePct}>{confidencePct}%</span> {confidenceBucket}
+            </div>
           </div>
         </div>
+
+        <div className={styles.metaItem}>
+          <span className={styles.metaLabel}>Data quality</span>
+          <div className={`${styles.dataQuality} ${qualityCss}`}>
+            <span className={styles.dataQualityDot} />
+            {qualityLabel}
+          </div>
+        </div>
+      </div>
+
+      {/* CTA buttons (hidden in compact mode) */}
+      {compact ? null : (
+        <div className={styles.ctaRow}>
+          {primaryActionHref ? (
+            <Link className={`${styles.btnPrimary} ${btnActionClass}`} href={primaryActionHref}>
+              {primaryActionLabel}
+            </Link>
+          ) : (
+            <button className={`${styles.btnPrimary} ${btnActionClass}`} type="button" disabled>
+              {primaryActionLabel}
+            </button>
+          )}
+          {secondaryActionHref && (
+            <Link className={styles.btnGhost} href={secondaryActionHref}>
+              {secondaryActionLabel}
+            </Link>
+          )}
+        </div>
       )}
-    </Card>
+    </section>
   );
 };
 

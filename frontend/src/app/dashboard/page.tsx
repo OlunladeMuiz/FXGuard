@@ -1,54 +1,237 @@
-﻿'use client';
+'use client';
 
-import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
+
 import styles from './page.module.css';
-import { AUTH_USER_UPDATED_EVENT, getUser, getUserDisplayName, User } from '@/lib/api/auth';
-import { fetchRealFXSnapshot } from '@/lib/api/fx';
+import RecommendationPanel from '@/components/fx/RecommendationPanel';
+import { AUTH_USER_UPDATED_EVENT, getUser, getUserDisplayName, type User } from '@/lib/api/auth';
+import { fetchRecommendation } from '@/lib/api/recommendation';
+import { type Recommendation } from '@/lib/types/recommendation';
+import { fetchAllInvoiceRecords, formatCurrency, type InvoiceRecord } from '@/lib/invoices/editor';
 
-interface FXRateData {
-  pair: string;
-  base: string;
-  description: string;
-  rate: string;
-  change: string;
-  changeType: 'positive' | 'negative';
+type InvoiceSummary = {
+  totalCount: number;
+  openCount: number;
+  overdueCount: number;
+  dueTodayCount: number;
+  dueSoonCount: number;
+  currencyCount: number;
+  largestOpenInvoice: InvoiceRecord | null;
+  priorityInvoice: InvoiceRecord | null;
+  settlementQueue: InvoiceRecord[];
+};
+
+type SettlementTone = 'critical' | 'watch' | 'steady';
+
+const OPEN_INVOICE_STATUSES = new Set(['draft', 'sent', 'overdue', 'pending']);
+
+const QUICK_ACTIONS = [
+  {
+    href: '/invoice-generator',
+    label: 'Issue invoice',
+    detail: 'Create the next receivable and keep the queue moving.',
+  },
+];
+
+const EMPTY_INVOICE_SUMMARY: InvoiceSummary = {
+  totalCount: 0,
+  openCount: 0,
+  overdueCount: 0,
+  dueTodayCount: 0,
+  dueSoonCount: 0,
+  currencyCount: 0,
+  largestOpenInvoice: null,
+  priorityInvoice: null,
+  settlementQueue: [],
+};
+
+function formatInvoiceDate(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
 }
 
-interface StatData {
+function getDaysUntilDue(value: string): number | null {
+  const dueDate = new Date(value);
+  if (Number.isNaN(dueDate.getTime())) {
+    return null;
+  }
+
+  const today = new Date();
+  const normalizedDue = new Date(dueDate);
+  const normalizedToday = new Date(today);
+  normalizedDue.setHours(0, 0, 0, 0);
+  normalizedToday.setHours(0, 0, 0, 0);
+
+  return Math.ceil((normalizedDue.getTime() - normalizedToday.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+function getInvoicePriorityRank(invoice: InvoiceRecord): number {
+  const daysUntilDue = getDaysUntilDue(invoice.dueDate);
+
+  if (daysUntilDue === null) {
+    return 4;
+  }
+  if (daysUntilDue < 0) {
+    return 0;
+  }
+  if (daysUntilDue === 0) {
+    return 1;
+  }
+  if (daysUntilDue <= 7) {
+    return 2;
+  }
+  return 3;
+}
+
+function compareOpenInvoices(left: InvoiceRecord, right: InvoiceRecord): number {
+  const leftRank = getInvoicePriorityRank(left);
+  const rightRank = getInvoicePriorityRank(right);
+  if (leftRank !== rightRank) {
+    return leftRank - rightRank;
+  }
+
+  const leftDays = getDaysUntilDue(left.dueDate);
+  const rightDays = getDaysUntilDue(right.dueDate);
+  if (leftDays !== rightDays) {
+    if (leftDays === null) {
+      return 1;
+    }
+    if (rightDays === null) {
+      return -1;
+    }
+    return leftDays - rightDays;
+  }
+
+  return right.amount - left.amount;
+}
+
+function getInvoiceSummary(invoices: InvoiceRecord[]): InvoiceSummary {
+  const openInvoices = invoices
+    .filter((invoice) => OPEN_INVOICE_STATUSES.has(invoice.status.toLowerCase()))
+    .sort(compareOpenInvoices);
+
+  const dueTodayCount = openInvoices.filter((invoice) => getDaysUntilDue(invoice.dueDate) === 0).length;
+  const dueSoonCount = openInvoices.filter((invoice) => {
+    const daysUntilDue = getDaysUntilDue(invoice.dueDate);
+    return daysUntilDue !== null && daysUntilDue >= 0 && daysUntilDue <= 7;
+  }).length;
+
+  const largestOpenInvoice = openInvoices.reduce<InvoiceRecord | null>((largest, invoice) => {
+    if (!largest || invoice.amount > largest.amount) {
+      return invoice;
+    }
+    return largest;
+  }, null);
+
+  return {
+    totalCount: invoices.length,
+    openCount: openInvoices.length,
+    overdueCount: openInvoices.filter((invoice) => {
+      const daysUntilDue = getDaysUntilDue(invoice.dueDate);
+      return daysUntilDue !== null && daysUntilDue < 0;
+    }).length,
+    dueTodayCount,
+    dueSoonCount,
+    currencyCount: new Set(openInvoices.map((invoice) => invoice.currency.toUpperCase())).size,
+    largestOpenInvoice,
+    priorityInvoice: openInvoices[0] ?? null,
+    settlementQueue: openInvoices.slice(0, 6),
+  };
+}
+
+function getClientInitials(name: string): string {
+  const initials = name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('');
+
+  return initials || 'FX';
+}
+
+function getSettlementWindow(daysUntilDue: number | null): {
   label: string;
-  value: string;
-  change: string;
-  changeType: 'positive' | 'negative' | 'warning';
-  subtitle: string;
-  icon: string;
+  note: string;
+  tone: SettlementTone;
+} {
+  if (daysUntilDue === null) {
+    return {
+      label: 'Schedule pending',
+      note: 'The due date could not be parsed, so this settlement should be reviewed manually.',
+      tone: 'steady',
+    };
+  }
+
+  if (daysUntilDue < 0) {
+    return {
+      label: `${Math.abs(daysUntilDue)} day${Math.abs(daysUntilDue) === 1 ? '' : 's'} overdue`,
+      note: 'This invoice has passed its due date and belongs at the front of the execution queue.',
+      tone: 'critical',
+    };
+  }
+
+  if (daysUntilDue === 0) {
+    return {
+      label: 'Due today',
+      note: "This settlement sits inside today's conversion window and should be treated as active treasury work.",
+      tone: 'critical',
+    };
+  }
+
+  if (daysUntilDue <= 7) {
+    return {
+      label: `${daysUntilDue} day${daysUntilDue === 1 ? '' : 's'} left`,
+      note: 'This receivable is entering the live execution window, so timing decisions now have visible impact.',
+      tone: 'watch',
+    };
+  }
+
+  return {
+    label: `${daysUntilDue} day${daysUntilDue === 1 ? '' : 's'} left`,
+    note: 'This settlement still has runway, but it should remain on the active treasury board.',
+    tone: 'steady',
+  };
 }
 
-const watchlist = [
-  { pair: 'EUR/GBP', status: 'Watching', currentRate: '0.8574', targetRate: '0.8600', progress: 85 },
-  { pair: 'USD/JPY', status: 'Target Hit', currentRate: '148.25', targetRate: '148.00', progress: 100 },
-  { pair: 'GBP/CAD', status: 'Watching', currentRate: '1.7845', targetRate: '1.7500', progress: 42 },
-];
+function getCommandHeadline(invoiceSummary: InvoiceSummary): string {
+  if (invoiceSummary.overdueCount > 0) {
+    return 'Overdue settlements need attention.';
+  }
 
-const spreads = [
-  { pair: 'EUR/USD', bid: '1.08465', ask: '1.08475', spread: '1.0 pips', status: 'Tight' },
-  { pair: 'GBP/USD', bid: '1.26535', ask: '1.26555', spread: '2.0 pips', status: 'Normal' },
-  { pair: 'USD/JPY', bid: '148.245', ask: '148.260', spread: '1.5 pips', status: 'Tight' },
-  { pair: 'AUD/USD', bid: '0.65415', ask: '0.65435', spread: '2.0 pips', status: 'Normal' },
-];
+  if (invoiceSummary.dueTodayCount > 0) {
+    return "Today's window is live. Sequence the queue carefully.";
+  }
 
-const invoices = [
-  { status: 'Pending', client: 'Acme Corp', avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=32&h=32&fit=crop', currency: 'EUR', amount: '€12,450', dueDate: 'Dec 28, 2024' },
-];
+  return 'All settlements are currently on track.';
+}
+
+function getCommandNarrative(invoiceSummary: InvoiceSummary): string {
+  const queueSummary = `${invoiceSummary.openCount} open settlement${invoiceSummary.openCount === 1 ? '' : 's'} across ${invoiceSummary.currencyCount} currency lane${invoiceSummary.currencyCount === 1 ? '' : 's'}.`;
+  const windowSummary = invoiceSummary.dueSoonCount > 0
+    ? ` ${invoiceSummary.dueSoonCount} already sit inside the active window.`
+    : '';
+
+  return `${queueSummary}${windowSummary}`;
+}
 
 export default function DashboardPage() {
-  const [selectedPair, setSelectedPair] = useState('EUR/USD');
-  const [selectedPeriod, setSelectedPeriod] = useState('This Month');
-  const [statusFilter, setStatusFilter] = useState('All Status');
   const [user, setUser] = useState<User | null>(null);
-  const [fxRates, setFxRates] = useState<FXRateData[]>([]);
-  const [statsData, setStatsData] = useState<StatData[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [invoiceSummary, setInvoiceSummary] = useState<InvoiceSummary>(EMPTY_INVOICE_SUMMARY);
+  const [invoiceLoading, setInvoiceLoading] = useState(true);
+  const [invoiceError, setInvoiceError] = useState<string | null>(null);
+  const [recommendation, setRecommendation] = useState<Recommendation | null>(null);
+  const [recommendationLoading, setRecommendationLoading] = useState(false);
+  const [recommendationError, setRecommendationError] = useState<string | null>(null);
 
   useEffect(() => {
     const syncUser = (event?: Event) => {
@@ -68,409 +251,314 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    const fetchRealFXRates = async () => {
+    let cancelled = false;
+
+    const loadInvoices = async () => {
+      setInvoiceLoading(true);
+      setInvoiceError(null);
+
       try {
-        const getRequiredRate = (
-          snapshot: { rates: Record<string, number> },
-          currency: string,
-        ) => {
-          const rate = snapshot.rates[currency];
-          if (rate === undefined) {
-            throw new Error(`Missing ${currency} FX rate`);
-          }
-          return rate;
-        };
-
-        // Fetch current rates
-        const data = await fetchRealFXSnapshot('USD', ['EUR', 'GBP', 'CAD', 'AUD']);
-        
-        // Compare against a stored point from two days ago so the local history
-        // still supports a stable short-term change view while it backfills.
-        const previousDay = new Date();
-        previousDay.setDate(previousDay.getDate() - 2);
-        const previousDayStr = previousDay.toISOString().slice(0, 10);
-
-        const histData = await fetchRealFXSnapshot('USD', ['EUR', 'GBP', 'CAD', 'AUD'], previousDayStr);
-        
-        // Calculate rates and changes for each pair
-        const ratesArray: FXRateData[] = [];
-        
-        // EUR/USD (inverted since we want EUR as base)
-        const eurRate = 1 / getRequiredRate(data, 'EUR');
-        const eurYesterday = 1 / getRequiredRate(histData, 'EUR');
-        const eurChange = ((eurRate - eurYesterday) / eurYesterday) * 100;
-        ratesArray.push({
-          pair: 'EUR/USD',
-          base: 'EUR',
-          description: 'Euro to US Dollar',
-          rate: eurRate.toFixed(4),
-          change: `${eurChange >= 0 ? '+' : ''}${eurChange.toFixed(2)}%`,
-          changeType: eurChange >= 0 ? 'positive' : 'negative',
-        });
-        
-        // GBP/USD
-        const gbpRate = 1 / getRequiredRate(data, 'GBP');
-        const gbpYesterday = 1 / getRequiredRate(histData, 'GBP');
-        const gbpChange = ((gbpRate - gbpYesterday) / gbpYesterday) * 100;
-        ratesArray.push({
-          pair: 'GBP/USD',
-          base: 'GBP',
-          description: 'British Pound to USD',
-          rate: gbpRate.toFixed(4),
-          change: `${gbpChange >= 0 ? '+' : ''}${gbpChange.toFixed(2)}%`,
-          changeType: gbpChange >= 0 ? 'positive' : 'negative',
-        });
-        
-        // CAD/USD
-        const cadRate = 1 / getRequiredRate(data, 'CAD');
-        const cadYesterday = 1 / getRequiredRate(histData, 'CAD');
-        const cadChange = ((cadRate - cadYesterday) / cadYesterday) * 100;
-        ratesArray.push({
-          pair: 'CAD/USD',
-          base: 'CAD',
-          description: 'Canadian Dollar to USD',
-          rate: cadRate.toFixed(4),
-          change: `${cadChange >= 0 ? '+' : ''}${cadChange.toFixed(2)}%`,
-          changeType: cadChange >= 0 ? 'positive' : 'negative',
-        });
-        
-        // AUD/USD
-        const audRate = 1 / getRequiredRate(data, 'AUD');
-        const audYesterday = 1 / getRequiredRate(histData, 'AUD');
-        const audChange = ((audRate - audYesterday) / audYesterday) * 100;
-        ratesArray.push({
-          pair: 'AUD/USD',
-          base: 'AUD',
-          description: 'Australian Dollar to USD',
-          rate: audRate.toFixed(4),
-          change: `${audChange >= 0 ? '+' : ''}${audChange.toFixed(2)}%`,
-          changeType: audChange >= 0 ? 'positive' : 'negative',
-        });
-        
-        setFxRates(ratesArray);
-        
-        // Update stats with real EUR/USD rate
-        const avgChange = eurChange;
-        setStatsData([
-          { label: 'Total Exposure', value: '$247,890', change: '+12.5%', changeType: 'positive', subtitle: 'Across 5 currencies', icon: 'exposure' },
-          { label: 'Average FX Rate', value: eurRate.toFixed(4), change: `${avgChange >= 0 ? '+' : ''}${avgChange.toFixed(1)}%`, changeType: avgChange >= 0 ? 'positive' : 'negative', subtitle: 'EUR/USD (current)', icon: 'rate' },
-          { label: 'FX Savings (MTD)', value: '$2,340', change: '+$890', changeType: 'positive', subtitle: 'From optimal timing', icon: 'savings' },
-          { label: 'Pending Invoices', value: '3', change: '1 urgent', changeType: 'warning', subtitle: '$12,450 total value', icon: 'invoices' },
-        ]);
-        
+        const invoices = await fetchAllInvoiceRecords();
+        if (!cancelled) {
+          setInvoiceSummary(getInvoiceSummary(invoices));
+        }
       } catch (error) {
-        console.error('Failed to fetch FX rates:', error);
-        // Fallback to placeholder data
-        setFxRates([
-          { pair: 'EUR/USD', base: 'EUR', description: 'Euro to US Dollar', rate: '1.0847', change: '+0.12%', changeType: 'positive' },
-          { pair: 'GBP/USD', base: 'GBP', description: 'British Pound to USD', rate: '1.2654', change: '-0.08%', changeType: 'negative' },
-        ]);
-        setStatsData([
-          { label: 'Total Exposure', value: '$247,890', change: '+12.5%', changeType: 'positive', subtitle: 'Across 5 currencies', icon: 'exposure' },
-          { label: 'Average FX Rate', value: '1.0847', change: '-0.8%', changeType: 'negative', subtitle: 'EUR/USD (7 days avg)', icon: 'rate' },
-          { label: 'FX Savings (MTD)', value: '$2,340', change: '+$890', changeType: 'positive', subtitle: 'From optimal timing', icon: 'savings' },
-          { label: 'Pending Invoices', value: '3', change: '1 urgent', changeType: 'warning', subtitle: '$12,450 total value', icon: 'invoices' },
-        ]);
+        if (!cancelled) {
+          console.error('Failed to load treasury invoice queue:', error);
+          setInvoiceSummary(EMPTY_INVOICE_SUMMARY);
+          setInvoiceError('The settlement queue could not be loaded.');
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setInvoiceLoading(false);
+        }
       }
     };
-    
-    fetchRealFXRates();
+
+    void loadInvoices();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const displayName = getUserDisplayName(user);
+  const priorityInvoice = invoiceSummary.priorityInvoice;
+  const priorityWindow = priorityInvoice
+    ? getSettlementWindow(getDaysUntilDue(priorityInvoice.dueDate))
+    : null;
+  const queueRows = invoiceSummary.settlementQueue.filter((invoice) => invoice.id !== priorityInvoice?.id);
+  const preferredSettlementCurrency = user?.preferred_currency?.trim().toUpperCase() || 'NGN';
+  const commandHeadline = getCommandHeadline(invoiceSummary);
+  const commandNarrative = getCommandNarrative(invoiceSummary);
+
+  useEffect(() => {
+    if (!priorityInvoice || !priorityInvoice.currency || !priorityInvoice.amount) {
+      setRecommendation(null);
+      setRecommendationLoading(false);
+      setRecommendationError(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadRecommendation = async () => {
+      setRecommendationLoading(true);
+      setRecommendationError(null);
+
+      try {
+        const nextRecommendation = await fetchRecommendation(
+          priorityInvoice.currency,
+          preferredSettlementCurrency,
+          priorityInvoice.amount,
+        );
+
+        if (!cancelled) {
+          setRecommendation(nextRecommendation);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          console.error('Failed to load dashboard recommendation:', error);
+          setRecommendation(null);
+          setRecommendationError('Recommendation guidance is unavailable right now.');
+        }
+      } finally {
+        if (!cancelled) {
+          setRecommendationLoading(false);
+        }
+      }
+    };
+
+    void loadRecommendation();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [preferredSettlementCurrency, priorityInvoice?.amount, priorityInvoice?.currency, priorityInvoice?.id]);
 
   return (
-    <div className={styles.dashboard}>
-      {/* Welcome Header */}
-      <div className={styles.welcome}>
-        <h1>Welcome back, {displayName}</h1>
-        <p>Here&apos;s what&apos;s happening with your international invoices and FX exposure today</p>
-      </div>
+    <div className={styles.page}>
+      <RecommendationPanel
+        recommendation={recommendation}
+        loading={recommendationLoading}
+        error={recommendationError ? new Error(recommendationError) : null}
+        primaryActionHref={priorityInvoice ? `/invoice-generator/review?id=${priorityInvoice.id}` : '/invoice-generator'}
+        primaryActionLabel={priorityInvoice ? 'Open settlement review' : 'Create an invoice'}
+        compact={false}
+      />
 
-      {/* Stats Cards */}
-      {loading ? (
-        <div className={styles.statsGrid}>
-          {[1, 2, 3, 4].map((i) => (
-            <div
-              key={i}
-              className={styles.statCard}
-              style={{ opacity: 0.4, minHeight: 120, background: 'var(--color-neutral-100)' }}
-            />
-          ))}
-        </div>
-      ) : (
-        <div className={styles.statsGrid}>
-          {statsData.map((stat) => (
-            <div key={stat.label} className={styles.statCard}>
-              <div className={styles.statHeader}>
-                <div className={`${styles.statIcon} ${styles[stat.icon]}`}>
-                  {stat.icon === 'exposure' && (
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
-                      <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
-                    </svg>
-                  )}
-                  {stat.icon === 'rate' && (
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M23 6l-9.5 9.5-5-5L1 18"/>
-                      <path d="M17 6h6v6"/>
-                    </svg>
-                  )}
-                  {stat.icon === 'savings' && (
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-                    </svg>
-                  )}
-                  {stat.icon === 'invoices' && (
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <circle cx="12" cy="12" r="10"/>
-                      <polyline points="12 6 12 12 16 14"/>
-                    </svg>
-                  )}
-                </div>
-                <span className={`${styles.statChange} ${styles[stat.changeType]}`}>{stat.change}</span>
-              </div>
-              <div className={styles.statLabel}>{stat.label}</div>
-              <div className={styles.statValue}>{stat.value}</div>
-              <div className={styles.statSubtitle}>{stat.subtitle}</div>
-            </div>
-          ))}
-        </div>
-      )}
+      <section className={styles.commandHeader}>
+        <div className={styles.commandStory}>
+          <span className={styles.commandTag}>Treasury Terminal</span>
+          <h1 className={styles.commandHeadline}>Welcome back, {displayName}. {commandHeadline}</h1>
+          <p className={styles.commandNarrative}>{commandNarrative}</p>
 
-      {/* Three Column Section */}
-      <div className={styles.threeColGrid}>
-        {/* Live FX Rates */}
-        <div className={styles.card}>
-          <div className={styles.cardHeader}>
-            <h2>Live FX Rates</h2>
-            <button className={styles.viewAllBtn}>View All</button>
+          <div className={styles.commandActions}>
+            <Link href="#settlement-deck" className={styles.primaryAction}>
+              Review queue
+            </Link>
           </div>
-          <div className={styles.ratesList}>
-            {fxRates.map((rate) => (
-              <div key={rate.pair} className={styles.rateItem}>
-                <div className={styles.rateLeft}>
-                  <span className={`${styles.currencyBadge} ${styles[rate.base.toLowerCase()]}`}>{rate.base}</span>
+
+          <div className={styles.deskMetrics}>
+            <article className={styles.metricCell}>
+              <span className={styles.metricLabel}>Open queue</span>
+              <strong className={styles.metricValue}>{invoiceLoading ? '...' : invoiceSummary.openCount}</strong>
+              <p className={styles.metricHint}>
+                {invoiceLoading
+                  ? 'Loading settlement lanes...'
+                  : `${invoiceSummary.currencyCount} active currency lane${invoiceSummary.currencyCount === 1 ? '' : 's'}`}
+              </p>
+            </article>
+
+            <article className={styles.metricCell}>
+              <span className={styles.metricLabel}>Active window</span>
+              <strong className={styles.metricValue}>
+                {invoiceLoading ? '...' : invoiceSummary.dueTodayCount + invoiceSummary.overdueCount}
+              </strong>
+              <p className={styles.metricHint}>
+                {invoiceLoading
+                  ? 'Evaluating due windows...'
+                  : `${invoiceSummary.dueTodayCount} due today, ${invoiceSummary.overdueCount} overdue`}
+              </p>
+            </article>
+
+            <article className={styles.metricCell}>
+              <span className={styles.metricLabel}>Largest exposure</span>
+              <strong className={styles.metricValue}>
+                {invoiceSummary.largestOpenInvoice
+                  ? formatCurrency(invoiceSummary.largestOpenInvoice.amount, invoiceSummary.largestOpenInvoice.currency)
+                  : '---'}
+              </strong>
+              <p className={styles.metricHint}>
+                {invoiceSummary.largestOpenInvoice
+                  ? `${invoiceSummary.largestOpenInvoice.clientName}${invoiceSummary.largestOpenInvoice.isSeeded ? ' [Seeded]' : ''}`
+                  : 'No open receivable yet'}
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section className={styles.workbench}>
+        <section id="settlement-deck" className={styles.settlementDeck}>
+          <div className={styles.sectionHeader}>
+            <div>
+              <span className={styles.sectionTag}>Priority Ledger</span>
+              <h2 className={styles.sectionTitle}>Open settlements</h2>
+              <p className={styles.sectionDescription}>
+                Ranked by urgency, due date, and exposure so the next move stays obvious.
+              </p>
+            </div>
+
+            <div className={styles.sectionAside}>
+              <span>Current focus</span>
+              <strong>{priorityWindow?.label ?? 'Nothing urgent'}</strong>
+            </div>
+          </div>
+
+          {invoiceLoading ? (
+            <div className={styles.emptyState}>Loading the settlement desk...</div>
+          ) : invoiceSummary.settlementQueue.length === 0 ? (
+            <div className={styles.emptyState}>{invoiceError ?? 'Open receivables will surface here once invoices are issued.'}</div>
+          ) : (
+            <div className={styles.settlementGrid}>
+              {priorityInvoice && priorityWindow && (
+                <article className={styles.primaryBrief}>
+                  <div className={styles.briefTop}>
+                    <span className={styles.briefTag}>Primary settlement brief</span>
+                    <span className={`${styles.briefUrgency} ${styles[priorityWindow.tone]}`}>
+                      {priorityWindow.label}
+                    </span>
+                  </div>
+
+                  <div className={styles.briefAmount}>
+                    {formatCurrency(priorityInvoice.amount, priorityInvoice.currency)}
+                  </div>
+
+                  <div className={styles.briefIdentity}>
+                    <span className={styles.briefAvatar}>{getClientInitials(priorityInvoice.clientName)}</span>
+                    <div className={styles.briefIdentityCopy}>
+                      <strong>{priorityInvoice.clientName} {priorityInvoice.isSeeded && <span style={{ color: '#d97706', fontSize: '0.85em', fontWeight: 'normal' }}>[Seeded]</span>}</strong>
+                      <p>{priorityInvoice.invoiceNumber}</p>
+                    </div>
+                  </div>
+
+                  <p className={styles.briefNote}>{priorityWindow.note}</p>
+
+                  <div className={styles.briefGrid}>
+                    <div className={styles.briefStat}>
+                      <span className={styles.briefStatLabel}>Issue date</span>
+                      <strong className={styles.briefStatValue}>{formatInvoiceDate(priorityInvoice.issueDate)}</strong>
+                    </div>
+
+                    <div className={styles.briefStat}>
+                      <span className={styles.briefStatLabel}>Due date</span>
+                      <strong className={styles.briefStatValue}>{formatInvoiceDate(priorityInvoice.dueDate)}</strong>
+                    </div>
+
+                    <div className={styles.briefStat}>
+                      <span className={styles.briefStatLabel}>Status</span>
+                      <strong className={styles.briefStatValue}>{priorityInvoice.status}</strong>
+                    </div>
+
+                    <div className={styles.briefStat}>
+                      <span className={styles.briefStatLabel}>Settlement lane</span>
+                      <strong className={styles.briefStatValue}>{priorityInvoice.currency}</strong>
+                    </div>
+                  </div>
+
+                  {invoiceSummary.largestOpenInvoice && invoiceSummary.largestOpenInvoice.id !== priorityInvoice.id && (
+                    <p className={styles.briefSubline}>
+                      Largest exposure elsewhere: {formatCurrency(invoiceSummary.largestOpenInvoice.amount, invoiceSummary.largestOpenInvoice.currency)} for {invoiceSummary.largestOpenInvoice.clientName}.
+                    </p>
+                  )}
+                </article>
+              )}
+
+              <div className={styles.queuePanel}>
+                <div className={styles.queueHeader}>
                   <div>
-                    <div className={styles.ratePair}>{rate.pair}</div>
-                    <div className={styles.rateDesc}>{rate.description}</div>
+                    <span className={styles.queueTag}>Priority queue</span>
+                    <h3 className={styles.queueTitle}>Ranked by urgency</h3>
                   </div>
+                  <span className={styles.queueMeta}>{invoiceSummary.openCount} open</span>
                 </div>
-                <div className={styles.rateRight}>
-                  <div className={styles.rateValue}>{rate.rate}</div>
-                  <div className={`${styles.rateChange} ${styles[rate.changeType]}`}>{rate.change}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
 
-        {/* FX Watchlist */}
-        <div className={styles.card}>
-          <div className={styles.cardHeader}>
-            <h2>FX Watchlist</h2>
-            <button className={styles.addBtn}>+ Add Pair</button>
-          </div>
-          <div className={styles.watchlistItems}>
-            {watchlist.map((item) => (
-              <div key={item.pair} className={styles.watchItem}>
-                <div className={styles.watchHeader}>
-                  <span className={styles.watchPair}>{item.pair}</span>
-                  <span className={`${styles.watchStatus} ${item.status === 'Target Hit' ? styles.targetHit : styles.watching}`}>
-                    {item.status}
-                  </span>
-                </div>
-                <div className={styles.watchRates}>
-                  <div className={styles.watchRateRow}>
-                    <span className={styles.watchLabel}>Current Rate</span>
-                    <span className={styles.watchValue}>{item.currentRate}</span>
-                  </div>
-                  <div className={styles.watchRateRow}>
-                    <span className={styles.watchLabel}>Target Rate</span>
-                    <span className={styles.watchTarget}>{item.targetRate}</span>
-                  </div>
-                </div>
-                {item.status === 'Target Hit' ? (
-                  <button className={styles.executeBtn}>Execute Trade</button>
-                ) : (
-                  <>
-                    <div className={styles.progressBar}>
-                      <div className={styles.progressFill} style={{ width: `${item.progress}%` }} />
-                    </div>
-                    <span className={styles.progressLabel}>{item.progress}% to target</span>
-                  </>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
+                <div className={styles.queueList}>
+                  {queueRows.length === 0 ? (
+                    <div className={styles.emptyState}>Only one settlement is active right now.</div>
+                  ) : (
+                    queueRows.map((invoice) => {
+                      const settlementWindow = getSettlementWindow(getDaysUntilDue(invoice.dueDate));
 
-        {/* FX Spreads */}
-        <div className={styles.card}>
-          <div className={styles.cardHeader}>
-            <h2>FX Spreads</h2>
-            <span className={styles.lastUpdated}>Last updated: 2m ago</span>
-          </div>
-          <div className={styles.spreadsList}>
-            {spreads.map((spread) => (
-              <div key={spread.pair} className={styles.spreadItem}>
-                <div className={styles.spreadHeader}>
-                  <span className={styles.spreadPair}>{spread.pair}</span>
-                  <span className={`${styles.spreadStatus} ${spread.status === 'Tight' ? styles.tight : styles.normal}`}>
-                    {spread.status}
-                  </span>
-                </div>
-                <div className={styles.spreadValues}>
-                  <div className={styles.spreadCol}>
-                    <span className={styles.spreadLabel}>Bid</span>
-                    <span className={styles.spreadValue}>{spread.bid}</span>
-                  </div>
-                  <div className={styles.spreadCol}>
-                    <span className={styles.spreadLabel}>Ask</span>
-                    <span className={styles.spreadValue}>{spread.ask}</span>
-                  </div>
-                </div>
-                <div className={styles.spreadInfo}>Spread: <span className={styles.spreadHighlight}>{spread.spread}</span></div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+                      return (
+                        <article key={invoice.id} className={styles.queueRow}>
+                          <div className={styles.queueIdentity}>
+                            <span className={styles.queueAvatar}>{getClientInitials(invoice.clientName)}</span>
+                            <div className={styles.queueCopy}>
+                              <div className={styles.queueNameRow}>
+                                <strong>{invoice.clientName} {invoice.isSeeded && <span style={{ color: '#d97706', fontSize: '0.85em', fontWeight: 'normal' }}>[Seeded]</span>}</strong>
+                                {invoice.id === invoiceSummary.largestOpenInvoice?.id && (
+                                  <span className={styles.queueFlag}>Largest</span>
+                                )}
+                              </div>
+                              <p>{invoice.invoiceNumber}</p>
+                            </div>
+                          </div>
 
-      {/* Charts Section */}
-      <div className={styles.chartsGrid}>
-        <div className={styles.card}>
-          <div className={styles.cardHeader}>
-            <h2>FX Rate Trends (30 Days)</h2>
-            <select 
-              className={styles.select} 
-              value={selectedPair}
-              onChange={(e) => setSelectedPair(e.target.value)}
-            >
-              <option>EUR/USD</option>
-              <option>GBP/USD</option>
-              <option>USD/JPY</option>
-            </select>
-          </div>
-          <div className={styles.chartPlaceholder}>
-            <div className={styles.chartArea}>
-              <svg viewBox="0 0 400 150" className={styles.chartSvg}>
-                <path 
-                  d="M 0 100 Q 50 80, 100 90 T 200 70 T 300 85 T 400 60" 
-                  fill="none" 
-                  stroke="var(--color-primary)" 
-                  strokeWidth="2"
-                />
-                <path 
-                  d="M 0 100 Q 50 80, 100 90 T 200 70 T 300 85 T 400 60 L 400 150 L 0 150 Z" 
-                  fill="url(#gradient)" 
-                  opacity="0.1"
-                />
-                <defs>
-                  <linearGradient id="gradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stopColor="var(--color-primary)" />
-                    <stop offset="100%" stopColor="transparent" />
-                  </linearGradient>
-                </defs>
-              </svg>
-            </div>
-          </div>
-        </div>
+                          <div className={styles.queueAmount}>
+                            <span className={styles.queueAmountLabel}>Amount</span>
+                            <strong className={styles.queueAmountValue}>
+                              {formatCurrency(invoice.amount, invoice.currency)}
+                            </strong>
+                          </div>
 
-        <div className={styles.card}>
-          <div className={styles.cardHeader}>
-            <h2>Currency Exposure</h2>
-            <select 
-              className={styles.select}
-              value={selectedPeriod}
-              onChange={(e) => setSelectedPeriod(e.target.value)}
-            >
-              <option>This Month</option>
-              <option>Last Month</option>
-              <option>This Quarter</option>
-            </select>
-          </div>
-          <div className={styles.chartPlaceholder}>
-            <div className={styles.pieChartArea}>
-              <div className={styles.pieChart}>
-                <svg viewBox="0 0 100 100" className={styles.pieSvg}>
-                  <circle cx="50" cy="50" r="40" fill="none" stroke="#e2e8f0" strokeWidth="20" />
-                  <circle cx="50" cy="50" r="40" fill="none" stroke="#3b82f6" strokeWidth="20" strokeDasharray="100 151" strokeDashoffset="0" />
-                  <circle cx="50" cy="50" r="40" fill="none" stroke="#10b981" strokeWidth="20" strokeDasharray="60 191" strokeDashoffset="-100" />
-                  <circle cx="50" cy="50" r="40" fill="none" stroke="#f59e0b" strokeWidth="20" strokeDasharray="40 211" strokeDashoffset="-160" />
-                </svg>
-              </div>
-              <div className={styles.pieLegend}>
-                <div className={styles.legendItem}><span className={styles.legendDot} style={{ background: '#3b82f6' }} /> EUR 40%</div>
-                <div className={styles.legendItem}><span className={styles.legendDot} style={{ background: '#10b981' }} /> GBP 24%</div>
-                <div className={styles.legendItem}><span className={styles.legendDot} style={{ background: '#f59e0b' }} /> USD 16%</div>
-                <div className={styles.legendItem}><span className={styles.legendDot} style={{ background: '#e2e8f0' }} /> Other 20%</div>
+                          <div className={styles.queueSchedule}>
+                            <span className={styles.queueScheduleLabel}>Window</span>
+                            <strong className={`${styles.queueDueValue} ${styles[settlementWindow.tone]}`}>
+                              {settlementWindow.label}
+                            </strong>
+                            <small>{formatInvoiceDate(invoice.dueDate)}</small>
+                          </div>
+
+                          <span className={`${styles.queueStatus} ${styles[invoice.status.toLowerCase()] ?? styles.pending}`}>
+                            {invoice.status}
+                          </span>
+                        </article>
+                      );
+                    })
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
+          )}
+        </section>
+      </section>
 
-      {/* Recent Invoices */}
-      <div className={styles.card}>
-        <div className={styles.cardHeader}>
-          <h2>Recent Invoices</h2>
-          <div className={styles.invoiceActions}>
-            <select 
-              className={styles.select}
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option>All Status</option>
-              <option>Pending</option>
-              <option>Paid</option>
-              <option>Overdue</option>
-            </select>
-            <Link href="/invoice-generator" className={styles.newInvoiceBtn}>+ New Invoice</Link>
+      <section className={styles.systemDeck}>
+        <section className={styles.railPanel}>
+          <div className={styles.railHeader}>
+            <div>
+              <span className={styles.railTag}>Action Deck</span>
+              <h3 className={styles.railTitle}>Fast moves</h3>
+            </div>
+            <p className={styles.railSubtitle}>Shortcuts</p>
           </div>
-        </div>
-        <div className={styles.tableWrapper}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>Status</th>
-                <th>Client</th>
-                <th>Currency</th>
-                <th>Amount</th>
-                <th>Due Date</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {invoices.map((inv, idx) => (
-                <tr key={idx}>
-                  <td><span className={`${styles.statusBadge} ${styles[inv.status.toLowerCase()]}`}>{inv.status}</span></td>
-                  <td>
-                    <div className={styles.clientCell}>
-                      <img src={inv.avatar} alt={inv.client} className={styles.clientAvatar} />
-                      {inv.client}
-                    </div>
-                  </td>
-                  <td>{inv.currency}</td>
-                  <td>{inv.amount}</td>
-                  <td>{inv.dueDate}</td>
-                  <td>
-                    <button className={styles.moreBtn}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                        <circle cx="12" cy="5" r="2" />
-                        <circle cx="12" cy="12" r="2" />
-                        <circle cx="12" cy="19" r="2" />
-                      </svg>
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+
+          <div className={styles.commandList}>
+            {QUICK_ACTIONS.map((action) => (
+              <Link key={action.href} href={action.href} className={styles.commandCard}>
+                <div>
+                  <strong className={styles.commandCardTitle}>{action.label}</strong>
+                  <p className={styles.commandCardDetail}>{action.detail}</p>
+                </div>
+                <span className={styles.commandCardArrow}>Open</span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      </section>
     </div>
   );
 }

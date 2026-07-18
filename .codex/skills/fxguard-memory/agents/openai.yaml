@@ -1,0 +1,4 @@
+interface:
+  display_name: "FXGuard Memory"
+  short_description: "Preserve FXGuard decisions and patterns"
+  default_prompt: "Use $fxguard-memory to recover project context before changing FXGuard."

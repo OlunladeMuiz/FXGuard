@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FXGuard — Settlement Decision</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+
+  /* ============================================================
+     TOKENS — indigo-charcoal + brass/gold brand, functional
+     action colors kept deliberately separate from brand accent.
+     ============================================================ */
+  :root{
+    /* brand / surface */
+    --bg:            #12141d;
+    --bg-grain:      #14172294;
+    --surface:       #1a1d2b;
+    --surface-2:     #212439;
+    --surface-3:     #282c46;
+    --hairline:      #2e3250;
+    --hairline-soft: #23263b;
+
+    --text-hi:       #f3efe6;
+    --text-mid:      #b7bad0;
+    --text-low:      #7a7e99;
+
+    --brass:         #c9a24d;
+    --brass-hi:      #e4c274;
+    --brass-dim:     #8a7038;
+
+    /* functional action-state colors — NEVER brass */
+    --act-convert:   #3fd694;
+    --act-convert-bg:#173328;
+    --act-wait:      #f2a93c;
+    --act-wait-bg:   #332812;
+    --act-hedge:     #5b9df0;
+    --act-hedge-bg:  #16273f;
+    --act-split:     #b18cf0;
+    --act-split-bg:  #241c3d;
+
+    /* confidence */
+    --conf-high:     #3fd694;
+    --conf-med:      #f2a93c;
+    --conf-low:      #e8654a;
+
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 16px;
+
+    --font-display: 'Fraunces', serif;
+    --font-body: 'Manrope', sans-serif;
+    --font-mono: 'IBM Plex Mono', monospace;
+  }
+
+  *{ box-sizing: border-box; }
+  html{ -webkit-font-smoothing: antialiased; }
+
+  body{
+    margin:0;
+    background:
+      radial-gradient(1200px 600px at 15% -10%, #1e2236 0%, transparent 60%),
+      radial-gradient(900px 500px at 100% 0%, #1c2233 0%, transparent 55%),
+      var(--bg);
+    color: var(--text-hi);
+    font-family: var(--font-body);
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  a{ color: inherit; }
+
+  :focus-visible{
+    outline: 2px solid var(--brass-hi);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  .wrap{
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 28px 24px 80px;
+  }
+
+  /* ---------------- header ---------------- */
+  header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding-bottom: 32px;
+    border-bottom: 1px solid var(--hairline-soft);
+    margin-bottom: 36px;
+  }
+  .logo{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight:500;
+    letter-spacing: 0.01em;
+  }
+  .logo-mark{
+    width: 26px; height: 26px;
+    border-radius: 7px;
+    background: linear-gradient(155deg, var(--brass-hi), var(--brass-dim));
+    display:flex; align-items:center; justify-content:center;
+    font-family: var(--font-mono);
+    font-size: 12px; font-weight: 600;
+    color: #1a1408;
+  }
+  nav{
+    display:flex; gap: 28px;
+    font-size: 13.5px;
+    color: var(--text-mid);
+  }
+  nav span{ cursor:default; }
+  nav .active{ color: var(--text-hi); }
+  .avatar{
+    width:32px;height:32px;border-radius:50%;
+    background: var(--surface-3);
+    border:1px solid var(--hairline);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    display:flex; align-items:center; justify-content:center;
+    color: var(--text-mid);
+  }
+
+  /* ---------------- eyebrow ---------------- */
+  .context-line{
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-low);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .context-line b{ color: var(--brass-hi); font-weight: 600; }
+
+  h1.page-title{
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: clamp(24px, 3.4vw, 32px);
+    margin: 0 0 28px;
+    color: var(--text-hi);
+  }
+
+  /* ============================================================
+     SETTLEMENT PATHWAY — signature element.
+     A pulse of light travels through 4 nodes, showing the
+     reasoning trail behind the recommendation: this is FXGuard's
+     "show, don't tell" moment, tied to the product's name.
+     ============================================================ */
+  .pathway{
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--hairline-soft);
+    border-radius: var(--radius-lg);
+    padding: 26px 28px 22px;
+    margin-bottom: 22px;
+    overflow: hidden;
+  }
+  .pathway::before{
+    content:"";
+    position:absolute; inset:0;
+    background: linear-gradient(180deg, #c9a24d08, transparent 40%);
+    pointer-events:none;
+  }
+  .pathway-label{
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-low);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 18px;
+  }
+  .pathway-track{
+    position: relative;
+    display:flex;
+    justify-content: space-between;
+    align-items:flex-start;
+  }
+  .pathway-track::before{
+    content:"";
+    position:absolute;
+    top: 9px; left: 9px; right: 9px;
+    height: 1px;
+    background: var(--hairline);
+  }
+  .pathway-line{
+    position:absolute;
+    top:9px; left:9px;
+    height:1px;
+    background: linear-gradient(90deg, var(--brass-dim), var(--brass-hi));
+    width: 100%;
+    transform-origin: left center;
+    animation: pathway-fill 6s ease-in-out infinite;
+  }
+  .p-node{
+    position:relative;
+    z-index:1;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:10px;
+    width: 25%;
+    text-align:center;
+  }
+  .p-dot{
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--surface-3);
+    border: 1.5px solid var(--hairline);
+    position: relative;
+  }
+  .p-dot::after{
+    content:"";
+    position:absolute; inset:-6px;
+    border-radius: 50%;
+    opacity:0;
+  }
+  .p-node.lit .p-dot{
+    background: var(--brass-hi);
+    border-color: var(--brass-hi);
+    box-shadow: 0 0 0 4px #c9a24d1f;
+  }
+  .p-node.lit .p-dot::after{
+    background: radial-gradient(circle, #c9a24d55, transparent 70%);
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+  .p-node.sealed .p-dot{
+    background: var(--act-convert);
+    border-color: var(--act-convert);
+    box-shadow: 0 0 0 4px #3fd69420;
+  }
+  .p-label{
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text-mid);
+  }
+  .p-node.lit .p-label,
+  .p-node.sealed .p-label{ color: var(--text-hi); }
+  .p-sub{
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    color: var(--text-low);
+  }
+
+  @keyframes pathway-fill{
+    0%   { width: 4%; }
+    20%  { width: 30%; }
+    45%  { width: 55%; }
+    70%  { width: 80%; }
+    88%, 100% { width: 100%; }
+  }
+  @keyframes pulse-glow{
+    0%,100%{ opacity: 0.5; transform: scale(0.9); }
+    50%{ opacity: 1; transform: scale(1.15); }
+  }
+  @media (prefers-reduced-motion: reduce){
+    .pathway-line{ animation: none; width: 100%; }
+    .p-node.lit .p-dot::after{ animation: none; opacity: 0.7; }
+  }
+
+  /* ============================================================
+     PRIMARY RECOMMENDATION CARD
+     Badge and headline are driven from ONE `action` value so they
+     can never contradict each other (fixes the badge/headline bug).
+     ============================================================ */
+  .rec-card{
+    background: linear-gradient(155deg, var(--surface-2), var(--surface));
+    border: 1px solid var(--hairline);
+    border-radius: var(--radius-lg);
+    padding: 30px 30px 26px;
+    margin-bottom: 20px;
+    position: relative;
+  }
+  .rec-top{
+    display:flex;
+    justify-content: space-between;
+    align-items:flex-start;
+    gap: 20px;
+    margin-bottom: 18px;
+  }
+  .badge{
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+    padding: 6px 12px;
+    border-radius: 100px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    background: var(--act-convert-bg);
+    color: var(--act-convert);
+    border: 1px solid #3fd69433;
+  }
+  .badge-dot{
+    width:6px;height:6px;border-radius:50%;
+    background: currentColor;
+  }
+  .live-tag{
+    display:flex; align-items:center; gap:6px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-low);
+  }
+  .live-dot{
+    width:6px;height:6px;border-radius:50%;
+    background: var(--act-convert);
+    box-shadow: 0 0 0 3px #3fd69422;
+  }
+
+  .rec-headline{
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: clamp(22px, 3vw, 29px);
+    line-height:1.25;
+    margin: 0 0 6px;
+    max-width: 620px;
+  }
+  .rec-headline em{
+    font-style: normal;
+    color: var(--brass-hi);
+  }
+  .rec-sub{
+    color: var(--text-mid);
+    font-size: 14.5px;
+    margin: 0 0 24px;
+    max-width: 560px;
+  }
+
+  .rec-meta-grid{
+    display:grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
+    padding: 20px 0 22px;
+    border-top: 1px solid var(--hairline-soft);
+    border-bottom: 1px solid var(--hairline-soft);
+    margin-bottom: 22px;
+  }
+  .meta-block .meta-label{
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-low);
+    margin-bottom: 8px;
+  }
+  .meta-value{
+    font-family: var(--font-mono);
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text-hi);
+  }
+  .meta-value.brass{ color: var(--brass-hi); }
+  .meta-value-sub{
+    font-size: 12px;
+    color: var(--text-low);
+    margin-top: 3px;
+  }
+
+  .conf-bar-track{
+    height: 6px;
+    border-radius: 4px;
+    background: var(--surface-3);
+    overflow:hidden;
+    margin-top: 10px;
+  }
+  .conf-bar-fill{
+    height: 100%;
+    border-radius: 4px;
+    background: var(--conf-high);
+    width: 82%;
+  }
+  .conf-label{
+    display:flex; justify-content:space-between;
+    font-size: 11px;
+    color: var(--text-low);
+    margin-top: 6px;
+    font-family: var(--font-mono);
+  }
+  .conf-label b{ color: var(--conf-high); font-weight:600; }
+
+  .dq-row{
+    display:flex; align-items:center; gap:8px;
+    font-size: 12.5px;
+    color: var(--text-mid);
+  }
+  .dq-icon{
+    width:16px;height:16px;
+    border-radius:50%;
+    background: var(--act-convert-bg);
+    color: var(--act-convert);
+    display:flex; align-items:center; justify-content:center;
+    font-size: 10px;
+    font-weight:700;
+    flex-shrink:0;
+  }
+
+  .rec-actions{
+    display:flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .btn{
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: 700;
+    padding: 13px 22px;
+    border-radius: var(--radius-md);
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: transform 0.12s ease, filter 0.12s ease;
+  }
+  .btn:hover{ filter: brightness(1.08); }
+  .btn:active{ transform: translateY(1px); }
+  .btn-primary{
+    background: linear-gradient(155deg, var(--brass-hi), var(--brass));
+    color: #201705;
+  }
+  .btn-secondary{
+    background: transparent;
+    border-color: var(--hairline);
+    color: var(--text-hi);
+  }
+
+  /* ---------------- secondary row ---------------- */
+  .secondary-row{
+    display:grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: 20px;
+  }
+  @media (max-width: 820px){
+    .secondary-row{ grid-template-columns: 1fr; }
+    .rec-meta-grid{ grid-template-columns: 1fr; gap: 16px; }
+  }
+
+  .panel{
+    background: var(--surface);
+    border: 1px solid var(--hairline-soft);
+    border-radius: var(--radius-lg);
+    padding: 22px 22px 8px;
+  }
+  .panel-head{
+    display:flex; justify-content:space-between; align-items:baseline;
+    margin-bottom: 14px;
+  }
+  .panel-title{
+    font-family: var(--font-display);
+    font-size: 16.5px;
+    font-weight: 500;
+  }
+  .panel-count{
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    color: var(--text-low);
+  }
+
+  /* open settlements queue */
+  .settle-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding: 13px 0;
+    border-top: 1px solid var(--hairline-soft);
+    gap: 12px;
+  }
+  .settle-row:first-of-type{ border-top:none; }
+  .settle-id{
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-low);
+  }
+  .settle-amt{
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--text-hi);
+  }
+  .settle-due{
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    color: var(--text-low);
+    white-space:nowrap;
+  }
+  .settle-due.soon{ color: var(--act-wait); }
+  .settle-tag{
+    font-family: var(--font-mono);
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 100px;
+    white-space: nowrap;
+  }
+  .settle-tag.convert{ background: var(--act-convert-bg); color: var(--act-convert); }
+  .settle-tag.wait{ background: var(--act-wait-bg); color: var(--act-wait); }
+  .settle-tag.hedge{ background: var(--act-hedge-bg); color: var(--act-hedge); }
+
+  /* underlying signals — deliberately calmer / desaturated,
+     this is subordinate content, not competing with the rec card */
+  .signals-panel{
+    filter: saturate(0.75);
+  }
+  .signal-row{
+    padding: 13px 0;
+    border-top: 1px solid var(--hairline-soft);
+  }
+  .signal-row:first-of-type{ border-top:none; }
+  .signal-top{
+    display:flex; justify-content:space-between;
+    font-size: 12.5px;
+    color: var(--text-mid);
+    margin-bottom: 7px;
+  }
+  .signal-top b{ color: var(--text-hi); font-family: var(--font-mono); font-weight:600; }
+  .signal-track{
+    height: 4px;
+    background: var(--surface-3);
+    border-radius: 3px;
+    overflow:hidden;
+  }
+  .signal-fill{ height:100%; border-radius:3px; background: var(--text-low); }
+
+  .panel-footnote{
+    font-size: 11.5px;
+    color: var(--text-low);
+    padding: 14px 0 16px;
+    border-top: 1px solid var(--hairline-soft);
+    margin-top: 4px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="logo">
+      <div class="logo-mark">FX</div>
+      FXGuard
+    </div>
+    <nav>
+      <span class="active">Dashboard</span>
+      <span>Invoices</span>
+      <span>Settlements</span>
+      <span>History</span>
+    </nav>
+    <div class="avatar">MO</div>
+  </header>
+
+  <div class="context-line">Invoice <b>#INV-2291</b> · Trinity Textiles Ltd · due in 3 days</div>
+  <h1 class="page-title">Here's what to do with this invoice</h1>
+
+  <!-- SETTLEMENT PATHWAY — signature element -->
+  <section class="pathway" aria-label="How this recommendation was reached">
+    <div class="pathway-label">Settlement Pathway — how this decision was reached</div>
+    <div class="pathway-track">
+      <div class="pathway-line"></div>
+      <div class="p-node sealed">
+        <div class="p-dot"></div>
+        <div class="p-label">Invoice issued</div>
+        <div class="p-sub">14 Jul</div>
+      </div>
+      <div class="p-node sealed">
+        <div class="p-dot"></div>
+        <div class="p-label">Market signal read</div>
+        <div class="p-sub">GBP/NGN</div>
+      </div>
+      <div class="p-node sealed">
+        <div class="p-dot"></div>
+        <div class="p-label">Risk checked</div>
+        <div class="p-sub">Volatility: low</div>
+      </div>
+      <div class="p-node lit sealed">
+        <div class="p-dot"></div>
+        <div class="p-label">Decision sealed</div>
+        <div class="p-sub">Just now</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRIMARY RECOMMENDATION CARD -->
+  <section class="rec-card" aria-label="Recommendation">
+    <div class="rec-top">
+      <span class="badge"><span class="badge-dot"></span>CONVERT NOW</span>
+      <span class="live-tag"><span class="live-dot"></span>Live rate · updated 40s ago</span>
+    </div>
+
+    <h2 class="rec-headline">Convert your <em>£4,200</em> invoice today</h2>
+    <p class="rec-sub">GBP/NGN is at a 12-day high and our model expects it to soften over the next week. Waiting is unlikely to improve your rate.</p>
+
+    <div class="rec-meta-grid">
+      <div class="meta-block">
+        <div class="meta-label">Current rate</div>
+        <div class="meta-value">2,148.30</div>
+        <div class="meta-value-sub">GBP → NGN</div>
+      </div>
+      <div class="meta-block">
+        <div class="meta-label">Estimated saving vs. waiting</div>
+        <div class="meta-value brass">₦38,600</div>
+        <div class="meta-value-sub">vs. converting in 5 days</div>
+      </div>
+      <div class="meta-block">
+        <div class="meta-label">Confidence</div>
+        <div class="conf-bar-track"><div class="conf-bar-fill"></div></div>
+        <div class="conf-label">Based on 30-day volatility &amp; trend<b>High</b></div>
+      </div>
+    </div>
+
+    <div class="dq-row" style="margin-bottom:22px;">
+      <span class="dq-icon">✓</span>
+      Rate is live from two independent feeds — no synthetic or estimated data used in this recommendation.
+    </div>
+
+    <div class="rec-actions">
+      <button class="btn btn-primary">Convert now</button>
+      <button class="btn btn-secondary">See why</button>
+    </div>
+  </section>
+
+  <!-- SECONDARY ROW -->
+  <div class="secondary-row">
+
+    <div class="panel" aria-label="Open settlements">
+      <div class="panel-head">
+        <div class="panel-title">Open settlements</div>
+        <div class="panel-count">4 pending</div>
+      </div>
+
+      <div class="settle-row">
+        <div>
+          <div class="settle-id">INV-2291</div>
+          <div class="settle-amt">£4,200.00</div>
+        </div>
+        <span class="settle-tag convert">Convert</span>
+        <div class="settle-due soon">Due in 3 days</div>
+      </div>
+      <div class="settle-row">
+        <div>
+          <div class="settle-id">INV-2287</div>
+          <div class="settle-amt">$1,860.00</div>
+        </div>
+        <span class="settle-tag wait">Wait</span>
+        <div class="settle-due">Due in 11 days</div>
+      </div>
+      <div class="settle-row">
+        <div>
+          <div class="settle-id">INV-2279</div>
+          <div class="settle-amt">€2,050.00</div>
+        </div>
+        <span class="settle-tag hedge">Hedge</span>
+        <div class="settle-due">Due in 19 days</div>
+      </div>
+      <div class="settle-row">
+        <div>
+          <div class="settle-id">INV-2275</div>
+          <div class="settle-amt">£980.00</div>
+        </div>
+        <span class="settle-tag convert">Convert</span>
+        <div class="settle-due">Due in 27 days</div>
+      </div>
+      <div class="panel-footnote">Each row reflects that invoice's own settlement window — not a shared portfolio view.</div>
+    </div>
+
+    <div class="panel signals-panel" aria-label="Underlying signals">
+      <div class="panel-head">
+        <div class="panel-title">Underlying signals</div>
+        <div class="panel-count">GBP/NGN</div>
+      </div>
+
+      <div class="signal-row">
+        <div class="signal-top"><span>RSI (14-day)</span><b>58</b></div>
+        <div class="signal-track"><div class="signal-fill" style="width:58%"></div></div>
+      </div>
+      <div class="signal-row">
+        <div class="signal-top"><span>Volatility (30-day)</span><b>Low</b></div>
+        <div class="signal-track"><div class="signal-fill" style="width:24%"></div></div>
+      </div>
+      <div class="signal-row">
+        <div class="signal-top"><span>SMA trend</span><b>Upward</b></div>
+        <div class="signal-track"><div class="signal-fill" style="width:70%"></div></div>
+      </div>
+      <div class="panel-footnote">Supporting detail for the recommendation above — not a trading signal on its own.</div>
+    </div>
+
+  </div>
+
+</div>
+</body>
+</html>

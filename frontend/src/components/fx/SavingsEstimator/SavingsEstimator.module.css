@@ -7,7 +7,7 @@
 .title {
   font-size: var(--font-size-base);
   font-weight: var(--font-weight-semibold);
-  color: var(--color-neutral-800);
+  color: var(--text-hi);
   margin: 0;
 }
 
@@ -22,13 +22,13 @@
 }
 
 .messageBox.positive {
-  background-color: var(--color-success-light);
-  color: var(--color-success);
+  background-color: var(--act-convert-bg);
+  color: var(--act-convert);
 }
 
 .messageBox.negative {
-  background-color: var(--color-warning-light);
-  color: var(--color-warning);
+  background-color: var(--act-wait-bg);
+  color: var(--act-wait);
 }
 
 .messageIcon {
@@ -43,12 +43,12 @@
 }
 
 .positive .messageIcon {
-  background-color: var(--color-success);
+  background-color: var(--act-convert);
   color: white;
 }
 
 .negative .messageIcon {
-  background-color: var(--color-warning);
+  background-color: var(--act-wait);
   color: white;
 }
 
@@ -71,22 +71,22 @@
 
 .detailLabel {
   font-size: var(--font-size-sm);
-  color: var(--color-neutral-600);
+  color: var(--text-mid);
 }
 
 .detailValue {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
-  color: var(--color-neutral-900);
+  color: var(--text-hi);
   font-family: var(--font-family-mono);
 }
 
 .positiveValue {
-  color: var(--color-success);
+  color: var(--act-convert);
 }
 
 .negativeValue {
-  color: var(--color-warning);
+  color: var(--act-wait);
 }
 
 .percentage {
@@ -97,6 +97,6 @@
 
 .divider {
   height: 1px;
-  background-color: var(--color-neutral-200);
+  background-color: var(--hairline-soft);
   margin: var(--spacing-2) 0;
 }

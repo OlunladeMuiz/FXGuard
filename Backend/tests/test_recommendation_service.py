@@ -1,4 +1,5 @@
 import asyncio
+import json
 import sys
 import unittest
 from pathlib import Path
@@ -257,7 +258,13 @@ class AIRecommendationFallbackTests(unittest.TestCase):
         mock_client.__aexit__.return_value = None
         mock_client.post.side_effect = http_error
 
-        with patch("app.services.recommendation.ANTHROPIC_API_KEY", "test-key"), patch(
+        with patch("app.services.recommendation.RECOMMENDATION_AI_PROVIDER", "anthropic"), patch(
+            "app.services.recommendation.ANTHROPIC_API_KEY",
+            "test-key",
+        ), patch(
+            "app.services.recommendation._DISABLED_PROVIDER_REASONS",
+            {},
+        ), patch(
             "app.services.recommendation.httpx.AsyncClient",
             return_value=mock_client,
         ):
@@ -302,9 +309,12 @@ class AIRecommendationFallbackTests(unittest.TestCase):
         mock_client.__aexit__.return_value = None
         mock_client.post.side_effect = http_error
 
-        with patch("app.services.recommendation.ANTHROPIC_API_KEY", "test-key"), patch(
-            "app.services.recommendation._ANTHROPIC_DISABLED_REASON",
-            None,
+        with patch("app.services.recommendation.RECOMMENDATION_AI_PROVIDER", "anthropic"), patch(
+            "app.services.recommendation.ANTHROPIC_API_KEY",
+            "test-key",
+        ), patch(
+            "app.services.recommendation._DISABLED_PROVIDER_REASONS",
+            {},
         ), patch(
             "app.services.recommendation.httpx.AsyncClient",
             return_value=mock_client,
@@ -339,6 +349,89 @@ class AIRecommendationFallbackTests(unittest.TestCase):
         self.assertEqual(mock_client.post.await_count, 1)
         self.assertIn(first_result["action"], {"convert_now", "wait", "hedge", "split_conversion"})
         self.assertIn(second_result["action"], {"convert_now", "wait", "hedge", "split_conversion"})
+
+    def test_get_ai_recommendation_uses_gemini_when_configured(self) -> None:
+        indicators = calculate_indicators(
+            build_points([1.1 + index * 0.01 for index in range(20)]),
+            history_quality="full",
+        )
+        mock_response = Mock()
+        mock_response.raise_for_status = Mock()
+        mock_response.json.return_value = {
+            "candidates": [
+                {
+                    "content": {
+                        "parts": [
+                            {
+                                "text": json.dumps(
+                                    {
+                                        "action": "wait",
+                                        "confidence": 0.81,
+                                        "risk_score": 0.33,
+                                        "explanation": "The pair is stretched higher in the short term. Waiting may offer a better conversion window if momentum cools.",
+                                        "factors": [
+                                            {
+                                                "name": "Momentum",
+                                                "impact": "negative",
+                                                "description": "Short-term price action is extended.",
+                                            },
+                                            {
+                                                "name": "Trend",
+                                                "impact": "positive",
+                                                "description": "The broader trend is still constructive.",
+                                            },
+                                            {
+                                                "name": "Volatility",
+                                                "impact": "neutral",
+                                                "description": "Volatility remains manageable.",
+                                            },
+                                        ],
+                                        "optimal_window": "wait 2-4 days",
+                                    }
+                                )
+                            }
+                        ]
+                    }
+                }
+            ]
+        }
+
+        mock_client = AsyncMock()
+        mock_client.__aenter__.return_value = mock_client
+        mock_client.__aexit__.return_value = None
+        mock_client.post.return_value = mock_response
+
+        with patch("app.services.recommendation.RECOMMENDATION_AI_PROVIDER", "gemini"), patch(
+            "app.services.recommendation.GEMINI_API_KEY",
+            "test-key",
+        ), patch(
+            "app.services.recommendation.GEMINI_MODEL",
+            "gemini-2.5-flash-lite",
+        ), patch(
+            "app.services.recommendation._DISABLED_PROVIDER_REASONS",
+            {},
+        ), patch(
+            "app.services.recommendation.httpx.AsyncClient",
+            return_value=mock_client,
+        ):
+            result = asyncio.run(
+                get_ai_recommendation(
+                    "USD",
+                    "NGN",
+                    10000,
+                    indicators,
+                    status="ready",
+                    history_quality="full",
+                    data_points=20,
+                    real_data_points=20,
+                    synthetic_data_points=0,
+                )
+            )
+
+        self.assertEqual(result["action"], "wait")
+        self.assertEqual(result["confidence"], 0.81)
+        self.assertEqual(mock_client.post.await_count, 1)
+        self.assertIn("generativelanguage.googleapis.com", mock_client.post.await_args.args[0])
 
 
 if __name__ == "__main__":

@@ -6,13 +6,15 @@ from app.db.database import get_db
 from app.schemas.auth import (
     RegisterRequest, RegisterResponse,
     VerifyOtpRequest, ResendOtpRequest,
-    LoginRequest, LoginResponse, MessageResponse, User, ProfileUpdateRequest
+    LoginRequest, LoginResponse, MessageResponse, User, ProfileUpdateRequest,
+    RefreshRequest, RefreshResponse
 )
 from app.services.auth import (
     register_user as create_user,
     verify_otp as verify_user_otp,
     resend_otp as resend_user_otp,
     login_user,
+    refresh_user_token,
     update_user_profile,
     get_current_user,
 )
@@ -48,6 +50,12 @@ def resend_otp(request: Request, payload: ResendOtpRequest, db: Session = Depend
 @limiter.limit("10/minute")
 def login(request: Request, payload: LoginRequest, db: Session = Depends(get_db)):
     return login_user(db=db, payload=payload)
+
+
+@router.post("/refresh", response_model=RefreshResponse)
+@limiter.limit("10/minute")
+def refresh(request: Request, payload: RefreshRequest, db: Session = Depends(get_db)):
+    return refresh_user_token(db=db, payload=payload)
 
 
 @router.get("/profile", response_model=User)

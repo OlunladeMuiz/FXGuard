@@ -71,7 +71,7 @@ export const SettingsNotificationSchema = z.object({
 
 export type SettingsNotification = z.infer<typeof SettingsNotificationSchema>;
 
-export const IntegrationProviderSchema = z.enum(['paystack', 'flutterwave', 'interswitch']);
+export const IntegrationProviderSchema = z.enum(['paystack', 'stripe', 'paypal', 'interswitch']);
 export type IntegrationProvider = z.infer<typeof IntegrationProviderSchema>;
 
 export const IntegrationStatusSchema = z.enum(['connected', 'not_connected']);
@@ -83,6 +83,7 @@ export const IntegrationRecordSchema = z.object({
   description: z.string(),
   status: IntegrationStatusSchema,
   connectedAt: z.string().datetime().nullable(),
+  credentialHint: z.string().nullable().optional(),
 });
 
 export type IntegrationRecord = z.infer<typeof IntegrationRecordSchema>;

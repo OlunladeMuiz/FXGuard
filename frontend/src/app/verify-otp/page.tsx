@@ -28,7 +28,7 @@ function VerifyOtpCard() {
             <path d="m3 7 9 6 9-6" />
           </svg>
         </div>
-        <h1>Verify your email</h1>
+        <h1 className={styles.cardTitle}>Verify your email</h1>
         <p className={styles.subtitle}>
           We&apos;ve sent a 6-digit verification code to your email address. Enter the code below to verify your account.
         </p>
@@ -108,7 +108,7 @@ function VerifyOtpContent() {
             <path d="m3 7 9 6 9-6" />
           </svg>
         </div>
-        <h1>Verify your email</h1>
+        <h1 className={styles.cardTitle}>Verify your email</h1>
         <p className={styles.subtitle}>
           We&apos;ve sent a 6-digit verification code to your email address. Enter the code below to verify your account.
         </p>
@@ -117,9 +117,10 @@ function VerifyOtpContent() {
           {error && <div className={styles.error}>{error}</div>}
           {success && <div className={styles.success}>{success}</div>}
 
-          <label>Email address</label>
+          <label className={styles.formLabel}>Email address</label>
           <div className={styles.inputRow}>
             <input
+              className={`${styles.formInput} ${styles.formInputEmail}`}
               type="email"
               placeholder="Enter your email"
               value={email}
@@ -128,9 +129,10 @@ function VerifyOtpContent() {
             />
           </div>
 
-          <label>Verification Code</label>
+          <label className={styles.formLabel}>Verification Code</label>
           <div className={styles.inputRow}>
             <input
+              className={styles.formInput}
               type="text"
               placeholder="Enter 6-digit code"
               value={otp}
@@ -157,7 +159,7 @@ function VerifyOtpContent() {
           </div>
 
           <p className={styles.footerText}>
-            <Link href="/login">Back to login</Link>
+            <Link href="/login" className={styles.footerLink}>Back to login</Link>
           </p>
         </form>
       </div>

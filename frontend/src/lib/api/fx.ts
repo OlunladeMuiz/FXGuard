@@ -249,34 +249,25 @@ const generateMockFXHistory = (
 };
 
 export const fetchFXRates = async (params: FetchRatesParams) => {
-  if (USE_MOCK) {
-    return getMockFXRates(params.base, params.quotes);
-  }
+  const response = await client.get('/fx/rates', {
+    params: {
+      base: params.base,
+      quotes: params.quotes?.join(','),
+    },
+  });
 
-  try {
-    const response = await client.get('/fx/rates', {
-      params: {
-        base: params.base,
-        quotes: params.quotes?.join(','),
-      },
-    });
+  const raw = RawFXRatesResponseSchema.parse(response.data);
+  const normalized = {
+    data: raw.data.map((item) => ({
+      base: item.base as CurrencyCode,
+      quote: item.quote as CurrencyCode,
+      rate: item.rate,
+      timestamp: item.timestamp,
+    })),
+    timestamp: raw.timestamp,
+  };
 
-    const raw = RawFXRatesResponseSchema.parse(response.data);
-    const normalized = {
-      data: raw.data.map((item) => ({
-        base: item.base as CurrencyCode,
-        quote: item.quote as CurrencyCode,
-        rate: item.rate,
-        timestamp: item.timestamp,
-      })),
-      timestamp: raw.timestamp,
-    };
-
-    return FXRateResponseSchema.parse(normalized).data;
-  } catch (error) {
-    console.warn('[API] FX rates fetch failed, using mock data', error);
-    return getMockFXRates(params.base, params.quotes);
-  }
+  return FXRateResponseSchema.parse(normalized).data;
 };
 
 export const getConversionRate = async (
@@ -332,8 +323,7 @@ export const fetchFXHistory = async (
     const raw = RawFXHistoryResponseSchema.parse(response.data);
     return mapHistoryResponse(raw);
   } catch (error) {
-    console.warn('[API] FX history fetch failed, using mock data', error);
-    return generateMockFXHistory(base, quote, period);
+    throw error;
   }
 };
 

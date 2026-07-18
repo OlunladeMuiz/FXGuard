@@ -5,7 +5,7 @@
 .loading {
   padding: var(--spacing-6);
   text-align: center;
-  color: var(--color-neutral-500);
+  color: var(--text-mid);
 }
 
 .rateHeader {
@@ -14,7 +14,7 @@
   align-items: center;
   margin-bottom: var(--spacing-4);
   padding-bottom: var(--spacing-3);
-  border-bottom: 1px solid var(--color-neutral-200);
+  border-bottom: 1px solid var(--hairline-soft);
 }
 
 .currencyPair {
@@ -27,11 +27,11 @@
 .quoteCurrency {
   font-size: var(--font-size-base);
   font-weight: var(--font-weight-semibold);
-  color: var(--color-neutral-800);
+  color: var(--text-hi);
 }
 
 .arrow {
-  color: var(--color-neutral-400);
+  color: var(--text-low);
 }
 
 .rateSymbols {
@@ -43,8 +43,8 @@
 .quoteSymbol {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-bold);
-  color: var(--color-primary);
-  background-color: var(--color-primary-light);
+  color: var(--brass);
+  background-color: var(--surface-3);
   padding: var(--spacing-1) var(--spacing-2);
   border-radius: var(--radius-sm);
 }
@@ -57,7 +57,7 @@
 
 .rateLabel {
   font-size: var(--font-size-xs);
-  color: var(--color-neutral-500);
+  color: var(--text-mid);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin: 0;
@@ -73,33 +73,33 @@
 }
 
 .rate {
-  color: var(--color-neutral-900);
+  color: var(--text-hi);
 }
 
 .equals {
-  color: var(--color-neutral-400);
+  color: var(--text-low);
 }
 
 .rate--up .rate {
-  color: var(--color-success);
+  color: var(--act-convert);
 }
 
 .rate--down .rate {
-  color: var(--color-error);
+  color: var(--conf-low);
 }
 
 .rate--neutral .rate {
-  color: var(--color-neutral-700);
+  color: var(--text-hi);
 }
 
 .rateFooter {
   margin-top: var(--spacing-3);
   padding-top: var(--spacing-3);
-  border-top: 1px solid var(--color-neutral-100);
+  border-top: 1px solid var(--surface);
 }
 
 .timestamp {
   font-size: var(--font-size-xs);
-  color: var(--color-neutral-500);
+  color: var(--text-mid);
   margin: 0;
 }

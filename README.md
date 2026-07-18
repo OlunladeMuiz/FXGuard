@@ -76,7 +76,7 @@ PostgreSQL / SQLAlchemy models
   |
   +--> ExchangeRate API (daily FX snapshots/history)
   +--> Twelve Data (intraday candles fallback)
-  +--> Anthropic (AI interpretation layer)
+  +--> Gemini / Anthropic (AI interpretation layer)
   +--> Interswitch (payment links + BVN verification)
   +--> SMTP / Gmail (transactional email)
 ```
@@ -225,7 +225,7 @@ FXGuard’s recommendation engine is not a static tip generator. It combines mar
    - `limited_data`
    - `insufficient_data`
    - `provisional_data`
-5. It sends a structured prompt to Anthropic to convert those indicators into business-language guidance.
+5. It sends a structured prompt to the configured AI provider to convert those indicators into business-language guidance.
 
 ### Why this is better than static insights
 
@@ -475,6 +475,9 @@ INTERSWITCH_MERCHANT_CODE=replace_with_merchant_code
 INTERSWITCH_PAYABLE_CODE=replace_with_payable_code
 FRONTEND_BASE_URL=http://localhost:3000
 
+RECOMMENDATION_AI_PROVIDER=gemini
+GEMINI_API_KEY=replace_with_gemini_api_key
+GEMINI_MODEL=gemini-2.5-flash-lite
 ANTHROPIC_API_KEY=replace_with_anthropic_api_key
 ANTHROPIC_MODEL=claude-3-5-sonnet-latest
 ```

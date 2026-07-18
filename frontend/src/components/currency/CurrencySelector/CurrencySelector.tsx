@@ -30,6 +30,7 @@ export const CurrencySelector: React.FC<CurrencySelectorProps> = ({
         value={selected}
         onChange={(e) => onChange(e.target.value as CurrencyCode)}
         disabled={disabled}
+        data-no-select-arrow="true"
         className={styles.select}
       >
         {availableCurrencies.map((code) => {

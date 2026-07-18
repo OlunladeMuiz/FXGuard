@@ -9,11 +9,11 @@
 }
 
 .currencyCard--highlight {
-  border-left-color: var(--color-primary);
+  border-left-color: var(--brass);
   background: linear-gradient(
     135deg,
     white 0%,
-    var(--color-primary-light) 100%
+    var(--surface-3) 100%
   );
 }
 
@@ -23,7 +23,7 @@
   align-items: flex-start;
   margin-bottom: var(--spacing-6);
   padding-bottom: var(--spacing-4);
-  border-bottom: 1px solid var(--color-neutral-200);
+  border-bottom: 1px solid var(--hairline-soft);
 }
 
 .currencyInfo {
@@ -35,20 +35,20 @@
 .currencyCode {
   font-size: var(--font-size-xl);
   font-weight: var(--font-weight-bold);
-  color: var(--color-neutral-900);
+  color: var(--text-hi);
   margin: 0;
 }
 
 .currencyName {
   font-size: var(--font-size-sm);
-  color: var(--color-neutral-500);
+  color: var(--text-mid);
   margin: 0;
 }
 
 .currencySymbol {
   font-size: var(--font-size-3xl);
   font-weight: var(--font-weight-bold);
-  color: var(--color-primary);
+  color: var(--brass);
   opacity: 0.2;
 }
 
@@ -70,7 +70,7 @@
 .lockedLabel,
 .availableLabel {
   font-size: var(--font-size-sm);
-  color: var(--color-neutral-600);
+  color: var(--text-mid);
   font-weight: var(--font-weight-medium);
   margin: 0;
   text-transform: uppercase;
@@ -82,21 +82,21 @@
 .availableAmount {
   font-size: var(--font-size-2xl);
   font-weight: var(--font-weight-bold);
-  color: var(--color-neutral-900);
+  color: var(--text-hi);
   margin: 0;
 }
 
 .lockedAmount {
-  color: var(--color-warning);
+  color: var(--act-wait);
 }
 
 .availableAmount {
-  color: var(--color-success);
+  color: var(--act-convert);
 }
 
 .currencyCardFooter {
   padding-top: var(--spacing-4);
-  border-top: 1px solid var(--color-neutral-200);
+  border-top: 1px solid var(--hairline-soft);
   display: flex;
   justify-content: space-between;
   align-items: center;

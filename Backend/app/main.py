@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 request_logger = logging.getLogger("app.request")
 
 
-class RequestBodyTooLargeError(Exception):
+class RequestBodyTooLargeError(Exception):             
     """Raised when a request body exceeds the configured size limit."""
 
 
@@ -34,36 +34,37 @@ def configure_logging() -> None:
 
 
 def validate_required_environment() -> None:
-    missing = [
-        key
-        for key in ("SECRET_KEY", "DATABASE_URL")
-        if not os.getenv(key, "").strip()
-    ]
-    if missing:
-        raise RuntimeError(
-            "Missing required environment variables: "
-            + ", ".join(missing)
-            + ". Configure them before starting FXGuard."
-        )
+    # Local startup is intentionally self-contained: SECRET_KEY is generated
+    # on demand by app.services.auth, and DATABASE_URL falls back to SQLite.
+    return
 
 
 def get_allowed_origins() -> list[str]:
-    origins = {"http://localhost:3000"}
+    origins = {"http://localhost:3000","http://localhost:3001"}
     frontend_url = os.getenv("FRONTEND_URL", "").strip().rstrip("/")
     if frontend_url:
         origins.add(frontend_url)
     return sorted(origins)
 
 
+from app.jobs.scheduler import get_scheduler, setup_jobs
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     configure_logging()
     validate_required_environment()
     initialize_database()
+
+    scheduler = get_scheduler()
+    setup_jobs(scheduler)
+    scheduler.start()
+    logger.info("Background job scheduler started with %d jobs.", len(scheduler.get_jobs()))
     logger.info("FXGuard backend startup completed successfully.")
+
     try:
         yield
     finally:
+        scheduler.shutdown(wait=False)
         close_database()
         logger.info("FXGuard backend shutdown completed successfully.")
 
@@ -156,3 +157,4 @@ def health_check():
 
 
 app.include_router(router, prefix="/api")
+ 

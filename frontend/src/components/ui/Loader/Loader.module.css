@@ -45,8 +45,8 @@
 
 .spinnerInner {
   position: absolute;
-  border: 3px solid var(--color-neutral-200);
-  border-top-color: var(--color-primary);
+  border: 3px solid var(--hairline-soft);
+  border-top-color: var(--brass);
   border-radius: 50%;
   width: 100%;
   height: 100%;
@@ -61,6 +61,6 @@
 
 .message {
   font-size: var(--font-size-base);
-  color: var(--color-neutral-600);
+  color: var(--text-mid);
   margin: 0;
 }

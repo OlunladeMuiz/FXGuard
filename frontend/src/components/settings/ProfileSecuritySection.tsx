@@ -81,8 +81,8 @@ export function ProfileSecuritySection({
         <div className={styles.sectionHeader}>
           <div>
             <span className={styles.sectionEyebrow}>Profile & Security</span>
-            <h3>Operator profile</h3>
-            <p>Keep your operator identity and default settlement preferences current.</p>
+            <h3 className={styles.sectionTitle}>Operator profile</h3>
+            <p className={styles.sectionDescription}>Keep your operator identity and default settlement preferences current.</p>
           </div>
         </div>
 
@@ -190,8 +190,8 @@ export function ProfileSecuritySection({
         <div className={styles.sectionHeader}>
           <div>
             <span className={styles.sectionEyebrow}>Security</span>
-            <h3>Access controls</h3>
-            <p>Protect the operators who can adjust FX settings, payouts, and payment execution rails.</p>
+            <h3 className={styles.sectionTitle}>Access controls</h3>
+            <p className={styles.sectionDescription}>Protect the operators who can adjust FX settings, payouts, and payment execution rails.</p>
           </div>
         </div>
 
@@ -200,8 +200,8 @@ export function ProfileSecuritySection({
             <div className={styles.securityMeta}>
               <span className={styles.securityIcon}>{shieldIcon}</span>
               <div>
-                <strong>Two-Factor Authentication</strong>
-                <p>Authentication app protection is enabled for finance operations.</p>
+                <strong className={styles.securityTitle}>Two-Factor Authentication</strong>
+                <p className={styles.securityDescription}>Authentication app protection is enabled for finance operations.</p>
               </div>
             </div>
             <span className={styles.statusSuccess}>Enabled</span>
@@ -211,8 +211,8 @@ export function ProfileSecuritySection({
             <div className={styles.securityMeta}>
               <span className={styles.securityIcon}>{desktopIcon}</span>
               <div>
-                <strong>Desktop Session</strong>
-                <p>Current session on secure browser access.</p>
+                <strong className={styles.securityTitle}>Desktop Session</strong>
+                <p className={styles.securityDescription}>Current session on secure browser access.</p>
               </div>
             </div>
             <span className={styles.statusNeutral}>Current</span>
@@ -222,8 +222,8 @@ export function ProfileSecuritySection({
             <div className={styles.securityMeta}>
               <span className={styles.securityIcon}>{mobileIcon}</span>
               <div>
-                <strong>Mobile Review Session</strong>
-                <p>Last verified 2 hours ago for approval visibility.</p>
+                <strong className={styles.securityTitle}>Mobile Review Session</strong>
+                <p className={styles.securityDescription}>Last verified 2 hours ago for approval visibility.</p>
               </div>
             </div>
             <button type="button" className={styles.inlineButton}>Revoke</button>
@@ -233,8 +233,8 @@ export function ProfileSecuritySection({
             <div className={styles.securityMeta}>
               <span className={styles.securityIcon}>{logoutIcon}</span>
               <div>
-                <strong>Logout</strong>
-                <p>Sign out of this browser and return to the login screen.</p>
+                <strong className={styles.securityTitle}>Logout</strong>
+                <p className={styles.securityDescription}>Sign out of this browser and return to the login screen.</p>
               </div>
             </div>
             <button

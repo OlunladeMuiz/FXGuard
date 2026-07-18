@@ -16,6 +16,13 @@ interface IntegrationsSectionProps {
   connect: (payload: { provider: IntegrationProvider; credential: string }) => Promise<void>;
 }
 
+const PROVIDER_KEY_LINKS: Partial<Record<IntegrationProvider, string>> = {
+  paystack: 'https://support.paystack.com/en/articles/2123458',
+  stripe: 'https://dashboard.stripe.com/apikeys',
+  paypal: 'https://developer.paypal.com/dashboard/applications/live',
+  interswitch: 'https://business.quickteller.com/dashboard',
+};
+
 export function IntegrationsSection({
   integrations,
   loading,
@@ -28,7 +35,8 @@ export function IntegrationsSection({
   const [expandedProvider, setExpandedProvider] = useState<IntegrationProvider | null>(null);
   const [credentials, setCredentials] = useState<Record<IntegrationProvider, string>>({
     paystack: '',
-    flutterwave: '',
+    stripe: '',
+    paypal: '',
     interswitch: '',
   });
 
@@ -45,8 +53,8 @@ export function IntegrationsSection({
       <div className={styles.sectionHeader}>
         <div>
           <span className={styles.sectionEyebrow}>Integrations</span>
-          <h3>Payment execution rails</h3>
-          <p>FXGuard relies on external providers to generate payment links, process transactions, and settle funds.</p>
+          <h3 className={styles.sectionTitle}>Payment execution rails</h3>
+          <p className={styles.sectionDescription}>FXGuard relies on external providers to generate payment links, process transactions, and settle funds.</p>
         </div>
       </div>
 
@@ -72,7 +80,7 @@ export function IntegrationsSection({
                 <div className={styles.integrationHeader}>
                   <div>
                     <span className={styles.integrationProvider}>{integration.name}</span>
-                    <p>{integration.description}</p>
+                    <p className={styles.integrationDescription}>{integration.description}</p>
                   </div>
                   <span
                     className={
@@ -95,6 +103,16 @@ export function IntegrationsSection({
                         })}`
                       : 'No live connection yet'}
                   </span>
+                  {PROVIDER_KEY_LINKS[integration.provider] && (
+                    <a
+                      className={styles.linkButton}
+                      href={PROVIDER_KEY_LINKS[integration.provider]}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Get API key
+                    </a>
+                  )}
                 </div>
 
                 {integration.status === 'connected' ? (

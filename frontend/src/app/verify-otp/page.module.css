@@ -4,7 +4,7 @@
   flex-direction: column;
   align-items: center;
   padding: var(--spacing-12) var(--spacing-4) var(--spacing-8);
-  background: var(--page-bg);
+  background: var(--bg);
   gap: var(--spacing-6);
 }
 
@@ -18,7 +18,7 @@
   width: 36px;
   height: 36px;
   border-radius: 10px;
-  background: linear-gradient(135deg, var(--color-primary), #4f8cff);
+  background: linear-gradient(135deg, var(--brass), #4f8cff);
   color: white;
   display: inline-flex;
   align-items: center;
@@ -32,7 +32,7 @@
 
 .card {
   background: white;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--hairline-soft);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-md);
   padding: var(--spacing-8);
@@ -41,12 +41,16 @@
   text-align: center;
 }
 
+.cardTitle {
+  color: var(--text-hi);
+}
+
 .iconWrapper {
   width: 80px;
   height: 80px;
   border-radius: 50%;
   background: linear-gradient(135deg, #e0e7ff, #c7d2fe);
-  color: var(--color-primary);
+  color: var(--brass);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -54,7 +58,7 @@
 }
 
 .subtitle {
-  color: var(--text-secondary);
+  color: var(--text-mid);
   margin-bottom: var(--spacing-6);
   font-size: var(--font-size-sm);
   line-height: 1.6;
@@ -67,7 +71,7 @@
   text-align: left;
 }
 
-.form label {
+.formLabel {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
 }
@@ -96,24 +100,24 @@
   position: relative;
 }
 
-.inputRow input {
+.formInput {
   width: 100%;
   padding: 0.75rem 1rem;
   border-radius: 10px;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--hairline-soft);
   background: white;
   font-size: var(--font-size-base);
   text-align: center;
   letter-spacing: 0.5em;
 }
 
-.inputRow input[type="email"] {
+.formInputEmail {
   text-align: left;
   letter-spacing: normal;
 }
 
 .primary {
-  background: var(--color-primary);
+  background: var(--brass);
   color: white;
   padding: 0.8rem;
   border-radius: 10px;
@@ -133,13 +137,13 @@
   justify-content: center;
   gap: var(--spacing-2);
   font-size: var(--font-size-sm);
-  color: var(--text-secondary);
+  color: var(--text-mid);
 }
 
 .resendBtn {
   background: none;
   border: none;
-  color: var(--color-primary);
+  color: var(--brass);
   font-weight: var(--font-weight-semibold);
   cursor: pointer;
   padding: 0;
@@ -152,11 +156,11 @@
 
 .footerText {
   text-align: center;
-  color: var(--text-secondary);
+  color: var(--text-mid);
   font-size: var(--font-size-sm);
 }
 
-.footerText a {
-  color: var(--color-primary);
+.footerLink {
+  color: var(--brass);
   font-weight: var(--font-weight-semibold);
 }

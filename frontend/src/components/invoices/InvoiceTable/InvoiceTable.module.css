@@ -8,19 +8,19 @@
   justify-content: space-between;
   align-items: center;
   padding: var(--spacing-4) var(--spacing-6);
-  border-bottom: 1px solid var(--color-neutral-200);
+  border-bottom: 1px solid var(--hairline-soft);
 }
 
 .tableTitle {
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-semibold);
-  color: var(--color-neutral-900);
+  color: var(--text-hi);
   margin: 0;
 }
 
 .tableCount {
   font-size: var(--font-size-sm);
-  color: var(--color-neutral-500);
+  color: var(--text-mid);
 }
 
 .tableWrapper {
@@ -34,19 +34,19 @@
 }
 
 .table th {
-  background-color: var(--color-neutral-50);
+  background-color: var(--bg);
   padding: var(--spacing-3) var(--spacing-4);
   text-align: left;
   font-weight: var(--font-weight-semibold);
-  color: var(--color-neutral-700);
-  border-bottom: 1px solid var(--color-neutral-200);
+  color: var(--text-hi);
+  border-bottom: 1px solid var(--hairline-soft);
   white-space: nowrap;
 }
 
 .table td {
   padding: var(--spacing-3) var(--spacing-4);
-  border-bottom: 1px solid var(--color-neutral-100);
-  color: var(--color-neutral-800);
+  border-bottom: 1px solid var(--surface);
+  color: var(--text-hi);
 }
 
 .tableRow {
@@ -55,21 +55,21 @@
 }
 
 .tableRow:hover {
-  background-color: var(--color-neutral-50);
+  background-color: var(--bg);
 }
 
 .selectedRow {
-  background-color: var(--color-primary-light);
+  background-color: var(--surface-3);
 }
 
 .selectedRow:hover {
-  background-color: var(--color-primary-light);
+  background-color: var(--surface-3);
 }
 
 .idCell {
   font-family: var(--font-family-mono);
   font-size: var(--font-size-xs);
-  color: var(--color-neutral-500);
+  color: var(--text-mid);
 }
 
 .clientCell {
@@ -88,11 +88,11 @@
 
 .currencyCell {
   font-weight: var(--font-weight-medium);
-  color: var(--color-neutral-600);
+  color: var(--text-mid);
 }
 
 .dateCell {
-  color: var(--color-neutral-500);
+  color: var(--text-mid);
   white-space: nowrap;
 }
 
@@ -106,23 +106,23 @@
 }
 
 .statusPending {
-  background-color: var(--color-warning-light);
-  color: var(--color-warning);
+  background-color: var(--act-wait-bg);
+  color: var(--act-wait);
 }
 
 .statusPaid {
-  background-color: var(--color-success-light);
-  color: var(--color-success);
+  background-color: var(--act-convert-bg);
+  color: var(--act-convert);
 }
 
 .statusOverdue {
-  background-color: var(--color-error-light);
-  color: var(--color-error);
+  background-color: var(--conf-low);
+  color: var(--conf-low);
 }
 
 .statusCancelled {
-  background-color: var(--color-neutral-200);
-  color: var(--color-neutral-600);
+  background-color: var(--hairline-soft);
+  color: var(--text-mid);
 }
 
 .emptyState,
@@ -135,17 +135,17 @@
 .errorState h3 {
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-semibold);
-  color: var(--color-neutral-700);
+  color: var(--text-hi);
   margin-bottom: var(--spacing-2);
 }
 
 .emptyState p,
 .errorState p {
   font-size: var(--font-size-sm);
-  color: var(--color-neutral-500);
+  color: var(--text-mid);
   margin: 0;
 }
 
 .errorState h3 {
-  color: var(--color-error);
+  color: var(--conf-low);
 }

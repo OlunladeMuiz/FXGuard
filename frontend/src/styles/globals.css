@@ -1,9 +1,27 @@
-﻿/* ===================================
+/* ===================================
    Global Styles & Design Tokens
    =================================== */
 
 :root {
-  /* Brand */
+  /* ============================================================
+     DEFAULT LIGHT THEME VARIABLES (used app-wide by default)
+     ============================================================ */
+  --bg:            #ffffff;
+  --surface:       #ffffff;
+  --surface-2:     #f8fafc;
+  --surface-3:     #f1f5f9;
+  --hairline:      #e2e8f0;
+  --hairline-soft: #f1f5f9;
+
+  --text-hi:       #0f172a;
+  --text-mid:      #475569;
+  --text-low:      #64748b;
+
+  --brass:         #2563eb;
+  --brass-hi:      #1d4ed8;
+  --brass-dim:     #3b82f6;
+
+  /* legacy variables for original pages */
   --color-primary: #2563eb;
   --color-primary-dark: #1d4ed8;
   --color-primary-light: #e8f0ff;
@@ -30,7 +48,7 @@
   --color-neutral-900: #0f172a;
 
   --text-primary: var(--color-neutral-900);
-  --text-secondary: var(--color-neutral-900);
+  --text-secondary: var(--color-neutral-500);
   --border-color: var(--color-neutral-200);
   --card-bg: #ffffff;
   --page-bg: #f6f8fb;
@@ -92,6 +110,51 @@
   --z-dropdown: 1000;
   --z-sticky: 1100;
   --z-modal: 1400;
+}
+
+/* ============================================================
+   SCOPED DARK THEME FOR DASHBOARD & HEALTH PORTS
+   ============================================================ */
+body.theme-dark {
+  --bg:            #12141d;
+  --bg-grain:      #14172294;
+  --surface:       #1a1d2b;
+  --surface-2:     #212439;
+  --surface-3:     #282c46;
+  --hairline:      #2e3250;
+  --hairline-soft: #23263b;
+
+  --text-hi:       #f3efe6;
+  --text-mid:      #b7bad0;
+  --text-low:      #7a7e99;
+
+  --brass:         #c9a24d;
+  --brass-hi:      #e4c274;
+  --brass-dim:     #8a7038;
+
+  /* functional action-state colors */
+  --act-convert:   #3fd694;
+  --act-convert-bg:#173328;
+  --act-wait:      #f2a93c;
+  --act-wait-bg:   #332812;
+  --act-hedge:     #5b9df0;
+  --act-hedge-bg:  #16273f;
+  --act-split:     #b18cf0;
+  --act-split-bg:  #241c3d;
+
+  /* confidence */
+  --conf-high:     #3fd694;
+  --conf-med:      #f2a93c;
+  --conf-low:      #e8654a;
+
+  /* Apply dark theme background & color directly to body when active */
+  color: var(--text-hi);
+  background:
+    radial-gradient(1200px 600px at 15% -10%, #1e2236 0%, transparent 60%),
+    radial-gradient(900px 500px at 100% 0%, #1c2233 0%, transparent 55%),
+    var(--bg);
+  background-color: var(--bg);
+  background-attachment: fixed;
 }
 
 * {

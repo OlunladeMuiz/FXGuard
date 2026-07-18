@@ -19,6 +19,11 @@
   gap: var(--spacing-6);
 }
 
+.headerContent {
+  display: grid;
+  gap: var(--spacing-3);
+}
+
 .headerEyebrow {
   display: inline-flex;
   margin-bottom: var(--spacing-2);
@@ -29,16 +34,15 @@
   color: #1d4ed8;
 }
 
-.header h1 {
+.headerTitle {
   font-size: clamp(2rem, 3vw, 3rem);
   line-height: 1.05;
   letter-spacing: -0.04em;
   color: #0f172a;
 }
 
-.header p {
+.headerDescription {
   max-width: 760px;
-  margin-top: var(--spacing-3);
   color: #475569;
   font-size: var(--font-size-md);
   line-height: 1.7;
@@ -70,14 +74,14 @@
   color: #64748b;
 }
 
-.overviewCard strong {
+.overviewValue {
   display: block;
   font-size: 1.7rem;
   font-weight: var(--font-weight-bold);
   color: #0f172a;
 }
 
-.overviewCard p {
+.overviewDescription {
   margin-top: var(--spacing-2);
   color: #475569;
   line-height: 1.6;
@@ -109,7 +113,7 @@
   gap: 4px;
 }
 
-.sidebarHeader strong {
+.sidebarTitle {
   font-size: 1.2rem;
   color: white;
 }
@@ -143,7 +147,7 @@
   color: #93c5fd;
 }
 
-.sidebarFooter p {
+.sidebarFooterDescription {
   color: #cbd5e1;
   font-size: var(--font-size-sm);
   line-height: 1.7;
@@ -217,12 +221,12 @@
   margin-bottom: var(--spacing-5);
 }
 
-.sectionHeader h3 {
+.sectionTitle {
   font-size: 1.35rem;
   color: #0f172a;
 }
 
-.sectionHeader p {
+.sectionDescription {
   margin-top: var(--spacing-2);
   color: #475569;
   line-height: 1.7;
@@ -438,12 +442,12 @@
   gap: var(--spacing-3);
 }
 
-.securityMeta strong {
+.securityTitle {
   display: block;
   color: #0f172a;
 }
 
-.securityMeta p {
+.securityDescription {
   margin-top: 4px;
   color: #64748b;
   font-size: var(--font-size-sm);
@@ -517,9 +521,13 @@
   font-size: 1.5rem;
 }
 
-.identityHero p {
+.identityHeroDescription {
   margin-top: var(--spacing-2);
   color: rgba(226, 232, 240, 0.92);
+}
+
+.identityHeroTitle {
+  font-size: 1.5rem;
 }
 
 .identityChips {
@@ -562,7 +570,7 @@
   border: 1px solid rgba(148, 163, 184, 0.18);
 }
 
-.identityField span {
+.identityFieldLabel {
   display: block;
   margin-bottom: var(--spacing-2);
   font-size: var(--font-size-xs);
@@ -572,7 +580,7 @@
   color: #64748b;
 }
 
-.identityField strong {
+.identityFieldValue {
   color: #0f172a;
   line-height: 1.5;
 }
@@ -589,7 +597,7 @@
   border: 1px solid rgba(14, 165, 233, 0.14);
 }
 
-.contextBanner strong {
+.contextBannerTitle {
   display: block;
   margin-bottom: var(--spacing-2);
 }
@@ -612,10 +620,21 @@
   gap: var(--spacing-3);
 }
 
+.feedActions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  flex-wrap: wrap;
+}
+
 .feedItem {
   padding: var(--spacing-4);
   border-radius: 20px;
   border: 1px solid transparent;
+}
+
+.feedRead {
+  opacity: 0.74;
 }
 
 .feedInfo {
@@ -640,6 +659,13 @@
   margin-bottom: var(--spacing-2);
 }
 
+.feedMeta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--spacing-2);
+}
+
 .feedSource {
   display: inline-flex;
   margin-bottom: var(--spacing-1);
@@ -660,9 +686,33 @@
   white-space: nowrap;
 }
 
-.feedItem p {
+.feedMessage {
   color: #475569;
   line-height: 1.7;
+}
+
+.feedTitle {
+  color: #0f172a;
+}
+
+.readPill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 0.8rem;
+  border-radius: 999px;
+  background: #ecfdf5;
+  color: #166534;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+.readButton {
+  border: none;
+  background: transparent;
+  color: #0f766e;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
 }
 
 .integrationGrid {
@@ -695,7 +745,7 @@
   color: #0f172a;
 }
 
-.integrationHeader p,
+.integrationDescription,
 .integrationMeta {
   color: #475569;
   font-size: var(--font-size-sm);

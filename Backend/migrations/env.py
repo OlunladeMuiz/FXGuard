@@ -22,6 +22,8 @@ config.set_main_option("sqlalchemy.url", database_url.replace("%", "%%"))
 
 from app.models.auth import User  # noqa: F401
 from app.models.invoice import Invoice, InvoiceItem  # noqa: F401
+from app.models.team import Team, TeamMember  # noqa: F401
+from app.models.integration_connection import IntegrationConnection  # noqa: F401
 from app.db.database import Base
 target_metadata = Base.metadata
 

@@ -30,34 +30,33 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "baseUrl": ".",
     "paths": {
       "@/*": [
-        "src/*"
+        "./src/*"
       ],
       "@/components/*": [
-        "src/components/*"
+        "./src/components/*"
       ],
       "@/lib/*": [
-        "src/lib/*"
+        "./src/lib/*"
       ],
       "@/types/*": [
-        "src/lib/types/*"
+        "./src/lib/types/*"
       ],
       "@/api/*": [
-        "src/lib/api/*"
+        "./src/lib/api/*"
       ],
       "@/utils/*": [
-        "src/lib/utils/*"
+        "./src/lib/utils/*"
       ],
       "@/constants/*": [
-        "src/lib/constants/*"
+        "./src/lib/constants/*"
       ],
       "@/hooks/*": [
-        "src/hooks/*"
+        "./src/hooks/*"
       ],
       "@/styles/*": [
-        "src/styles/*"
+        "./src/styles/*"
       ]
     },
     "incremental": true,

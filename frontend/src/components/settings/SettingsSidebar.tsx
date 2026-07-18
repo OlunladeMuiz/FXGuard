@@ -13,7 +13,7 @@ export function SettingsSidebar({ activeSection, onSelect }: SettingsSidebarProp
     <aside className={styles.sidebar} aria-label="Settings menu">
       <div className={styles.sidebarHeader}>
         <span className={styles.sidebarEyebrow}>Financial Control Center</span>
-        <strong>Settings</strong>
+        <strong className={styles.sidebarTitle}>Settings</strong>
       </div>
       <div className={styles.sidebarNav}>
         {SETTINGS_NAV_ITEMS.map((item) => (
@@ -35,7 +35,7 @@ export function SettingsSidebar({ activeSection, onSelect }: SettingsSidebarProp
       </div>
       <div className={styles.sidebarFooter}>
         <span className={styles.sidebarFooterLabel}>Why it matters</span>
-        <p>
+        <p className={styles.sidebarFooterDescription}>
           Business identity, payout rails, live FX alerts, and provider connections
           all shape how FXGuard executes cross-border settlement.
         </p>

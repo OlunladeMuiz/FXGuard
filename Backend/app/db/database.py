@@ -79,6 +79,15 @@ def _load_models() -> None:
     from app.models import fx_candle as _fx_candle  # noqa: F401
     from app.models import fx_rate as _fx_rate  # noqa: F401
     from app.models import invoice as _invoice  # noqa: F401
+    from app.models import fx_rate_snapshot as _fx_rate_snapshot        # noqa: F401
+    from app.models import brent_crude as _brent_crude                  # noqa: F401
+    from app.models import cbn_reserves as _cbn_reserves                # noqa: F401
+    from app.models import news_headline as _news_headline              # noqa: F401
+    from app.models import spread_snapshot as _spread_snapshot          # noqa: F401
+    from app.models import rate_alert as _rate_alert                    # noqa: F401
+    from app.models import conversion_log as _conversion_log            # noqa: F401
+    from app.models import team as _team                                # noqa: F401
+    from app.models import integration_connection as _integration        # noqa: F401
 
 
 def _ensure_database_connection() -> None:

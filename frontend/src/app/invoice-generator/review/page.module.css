@@ -1,5 +1,5 @@
 .page {
-  background: var(--page-bg);
+  background: var(--bg);
   padding: var(--spacing-10) 0;
 }
 
@@ -14,20 +14,20 @@
   align-items: center;
   flex-wrap: wrap;
   gap: var(--spacing-2);
-  color: var(--text-secondary);
+  color: var(--text-mid);
   font-size: var(--font-size-sm);
   margin-bottom: var(--spacing-3);
 }
 
 .breadcrumbLink {
-  color: var(--color-primary);
+  color: var(--brass);
   background: none;
   padding: 10px 10px;
   border-radius: 10px;
 }
 
 .header p {
-  color: var(--text-secondary);
+  color: var(--text-mid);
 }
 
 .message {
@@ -37,16 +37,22 @@
   font-size: var(--font-size-sm);
 }
 
+.pageStack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-6);
+}
+
 .successMessage {
-  background: var(--color-success-light);
-  color: var(--color-success);
-  border: 1px solid color-mix(in srgb, var(--color-success) 18%, white);
+  background: var(--act-convert-bg);
+  color: var(--act-convert);
+  border: 1px solid color-mix(in srgb, var(--act-convert) 18%, white);
 }
 
 .errorMessage {
-  background: color-mix(in srgb, var(--color-error) 10%, white);
-  color: var(--color-error);
-  border: 1px solid color-mix(in srgb, var(--color-error) 18%, white);
+  background: color-mix(in srgb, var(--conf-low) 10%, white);
+  color: var(--conf-low);
+  border: 1px solid color-mix(in srgb, var(--conf-low) 18%, white);
 }
 
 .layout {
@@ -67,7 +73,7 @@
 
 .card {
   background: white;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--hairline-soft);
   border-radius: var(--radius-xl);
   padding: var(--spacing-6);
   box-shadow: var(--shadow-xs);
@@ -92,16 +98,16 @@
 }
 
 .linkButton {
-  color: var(--color-primary);
+  color: var(--brass);
   background: white;
-  border: 1px solid var(--color-primary);
+  border: 1px solid var(--brass);
   border-radius: 8px;
   padding: 0.45rem 0.8rem;
   max-width: 100%;
 }
 
 .preview {
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--hairline-soft);
   border-radius: var(--radius-lg);
   padding: var(--spacing-5);
   margin-top: var(--spacing-4);
@@ -113,14 +119,14 @@
   justify-content: space-between;
   gap: var(--spacing-4);
   padding-bottom: var(--spacing-4);
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--hairline-soft);
 }
 
 .previewHeader p,
 .previewBody p,
 .previewNote p {
   margin: 0;
-  color: var(--text-secondary);
+  color: var(--text-mid);
   line-height: 1.5;
   overflow-wrap: anywhere;
 }
@@ -148,13 +154,13 @@
 }
 
 .badgeSent {
-  background: var(--color-success-light);
-  color: var(--color-success);
+  background: var(--act-convert-bg);
+  color: var(--act-convert);
 }
 
 .badgeDraft {
-  background: color-mix(in srgb, var(--color-warning) 14%, white);
-  color: var(--color-warning);
+  background: color-mix(in srgb, var(--act-wait) 14%, white);
+  color: var(--act-wait);
 }
 
 .previewBody {
@@ -175,8 +181,8 @@
   gap: var(--spacing-4);
   margin-top: var(--spacing-4);
   padding: var(--spacing-4) 0;
-  border-top: 1px solid var(--border-color);
-  border-bottom: 1px solid var(--border-color);
+  border-top: 1px solid var(--hairline-soft);
+  border-bottom: 1px solid var(--hairline-soft);
 }
 
 .metaGrid > div {
@@ -190,7 +196,7 @@
 .summaryList span,
 .audit span,
 .helperText {
-  color: var(--text-secondary);
+  color: var(--text-mid);
   font-size: var(--font-size-sm);
   overflow-wrap: anywhere;
 }
@@ -211,13 +217,13 @@
 }
 
 .previewTableHead {
-  color: var(--text-secondary);
+  color: var(--text-mid);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
   text-transform: uppercase;
   letter-spacing: 0.04em;
   padding-bottom: var(--spacing-2);
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--hairline-soft);
 }
 
 .previewRow {
@@ -226,7 +232,7 @@
 
 .previewRow span {
   padding: var(--spacing-2) 0;
-  border-bottom: 1px solid var(--color-neutral-100);
+  border-bottom: 1px solid var(--surface);
   overflow-wrap: anywhere;
 }
 
@@ -246,7 +252,7 @@
 
 .recommendationBox {
   margin-top: var(--spacing-4);
-  border-top: 1px solid var(--border-color);
+  border-top: 1px solid var(--hairline-soft);
   padding-top: var(--spacing-4);
 }
 
@@ -260,14 +266,14 @@
 .recommendationEyebrow {
   margin: 0 0 var(--spacing-1);
   font-size: var(--font-size-xs);
-  color: var(--text-secondary);
+  color: var(--text-mid);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
 
 .recommendationBadge {
-  background: color-mix(in srgb, var(--color-primary) 12%, white);
-  color: var(--color-primary);
+  background: color-mix(in srgb, var(--brass) 12%, white);
+  color: var(--brass);
   border-radius: 999px;
   padding: 0.35rem 0.7rem;
   font-size: var(--font-size-xs);
@@ -278,7 +284,7 @@
 .recommendationText,
 .recommendationMuted {
   margin: var(--spacing-3) 0 0;
-  color: var(--text-secondary);
+  color: var(--text-mid);
   line-height: 1.6;
 }
 
@@ -296,7 +302,7 @@
 
 .recommendationFactor p {
   margin: var(--spacing-1) 0 0;
-  color: var(--text-secondary);
+  color: var(--text-mid);
   font-size: var(--font-size-sm);
 }
 
@@ -309,26 +315,26 @@
 }
 
 .recommendationPositive {
-  background: var(--color-success);
+  background: var(--act-convert);
 }
 
 .recommendationNegative {
-  background: var(--color-warning);
+  background: var(--act-wait);
 }
 
 .recommendationNeutral {
-  background: var(--color-primary);
+  background: var(--brass);
 }
 
 .total {
-  border-top: 1px solid var(--border-color);
+  border-top: 1px solid var(--hairline-soft);
   padding-top: var(--spacing-3);
 }
 
 .previewNote {
   margin-top: var(--spacing-5);
   padding-top: var(--spacing-4);
-  border-top: 1px solid var(--border-color);
+  border-top: 1px solid var(--hairline-soft);
 }
 
 .fxDetails {
@@ -348,7 +354,7 @@
   display: flex;
   justify-content: space-between;
   gap: var(--spacing-4);
-  border-bottom: 1px solid var(--color-neutral-100);
+  border-bottom: 1px solid var(--surface);
   padding-bottom: var(--spacing-3);
 }
 
@@ -370,7 +376,7 @@
   min-width: 0;
   padding: 0.7rem 0.8rem;
   border-radius: 10px;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--hairline-soft);
   background: white;
   box-sizing: border-box;
 }
@@ -408,14 +414,14 @@
 }
 
 .primary {
-  background: var(--color-primary);
+  background: var(--brass);
   color: white;
 }
 
 .secondary,
 .tertiary {
   background: white;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--hairline-soft);
 }
 
 .primary:disabled,
@@ -426,11 +432,11 @@
 }
 
 .green {
-  color: var(--color-success);
+  color: var(--act-convert);
 }
 
 .red {
-  color: var(--color-error);
+  color: var(--conf-low);
 }
 
 @media (max-width: 1080px) {
@@ -492,7 +498,7 @@
     grid-template-columns: 1fr;
     gap: var(--spacing-1);
     padding: var(--spacing-3) 0;
-    border-bottom: 1px solid var(--color-neutral-100);
+    border-bottom: 1px solid var(--surface);
   }
 
   .cardActions {

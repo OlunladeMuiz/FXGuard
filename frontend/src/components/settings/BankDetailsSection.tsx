@@ -46,8 +46,8 @@ export function BankDetailsSection({
       <div className={styles.sectionHeader}>
         <div>
           <span className={styles.sectionEyebrow}>Bank Details</span>
-          <h3>Payout configuration</h3>
-          <p>Converted funds and payment-link settlements route to the payout account configured here.</p>
+          <h3 className={styles.sectionTitle}>Payout configuration</h3>
+          <p className={styles.sectionDescription}>Converted funds and payment-link settlements route to the payout account configured here.</p>
         </div>
         <div className={styles.metaPill}>Last updated: {formatUpdatedAt(lastSavedRecord?.updatedAt)}</div>
       </div>
@@ -109,7 +109,7 @@ export function BankDetailsSection({
           </div>
 
           <div className={styles.contextBanner}>
-            <strong>Settlement note</strong>
+            <strong className={styles.contextBannerTitle}>Settlement note</strong>
             <p>
               FXGuard recommendations optimize conversion timing. This payout account determines where
               completed collections and converted funds are finally settled.

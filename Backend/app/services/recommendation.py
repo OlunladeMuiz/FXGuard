@@ -2,8 +2,8 @@
 FX recommendation engine backed by stored market history.
 
 The service reads the last 30 days of locally stored FX data, calculates
-technical indicators, then asks Claude to interpret those indicators in plain
-English. If AI or sufficient history is unavailable, deterministic fallback
+technical indicators, then asks a configured AI provider to interpret those
+indicators in plain English. If AI or sufficient history is unavailable, deterministic fallback
 logic is used instead.
 """
 
@@ -23,17 +23,21 @@ from app.services.fx import FXProviderError, ensure_history_window, get_fx_candl
 
 logger = logging.getLogger(__name__)
 
+RECOMMENDATION_AI_PROVIDER = os.getenv("RECOMMENDATION_AI_PROVIDER", "").strip().lower()
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite")
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-3-5-sonnet-latest")
-ANTHROPIC_HARD_FAILURE_STATUSES = {400, 401, 403, 404}
+AI_HARD_FAILURE_STATUSES = {400, 401, 403, 404}
 CANDLE_FALLBACK_RANGE = "7d"
 CANDLE_FALLBACK_INTERVAL = "4h"
-_ANTHROPIC_DISABLED_REASON: str | None = None
+_DISABLED_PROVIDER_REASONS: dict[str, str] = {}
 
 RecommendationStatus = Literal["ready", "limited_data", "insufficient_data", "provisional_data"]
 HistoryQuality = Literal["full", "mixed", "seeded", "same_currency", "candle_fallback"]
 IndicatorDataSource = Literal["stored_history", "same_currency", "candle_history"]
 AnalyticsMode = Literal["insufficient", "limited", "full", "provisional"]
+AIProvider = Literal["anthropic", "gemini"]
 
 
 class AIRecommendationPayload(BaseModel):
@@ -45,6 +49,44 @@ class AIRecommendationPayload(BaseModel):
     optimal_window: str
 
 
+GEMINI_RECOMMENDATION_RESPONSE_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "action": {
+            "type": "string",
+            "enum": ["convert_now", "wait", "hedge", "split_conversion"],
+        },
+        "confidence": {"type": "number"},
+        "risk_score": {"type": "number"},
+        "explanation": {"type": "string"},
+        "factors": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "impact": {
+                        "type": "string",
+                        "enum": ["positive", "negative", "neutral"],
+                    },
+                    "description": {"type": "string"},
+                },
+                "required": ["name", "impact", "description"],
+            },
+        },
+        "optimal_window": {"type": "string"},
+    },
+    "required": [
+        "action",
+        "confidence",
+        "risk_score",
+        "explanation",
+        "factors",
+        "optimal_window",
+    ],
+}
+
+
 def _strip_json_wrapping(raw_content: str) -> str:
     content = raw_content.strip()
     if content.startswith("```"):
@@ -53,7 +95,7 @@ def _strip_json_wrapping(raw_content: str) -> str:
     return content
 
 
-def _extract_anthropic_error_detail(exc: httpx.HTTPError) -> str:
+def _extract_http_error_detail(exc: httpx.HTTPError) -> str:
     if not isinstance(exc, httpx.HTTPStatusError):
         return str(exc)
 
@@ -77,6 +119,189 @@ def _extract_anthropic_error_detail(exc: httpx.HTTPError) -> str:
             return f"{error_type or f'http-{status_code}'}: {message or exc}"
 
     return str(exc)
+
+
+def _resolve_ai_provider() -> AIProvider | None:
+    if RECOMMENDATION_AI_PROVIDER == "gemini":
+        return "gemini"
+    if RECOMMENDATION_AI_PROVIDER == "anthropic":
+        return "anthropic"
+    if RECOMMENDATION_AI_PROVIDER:
+        logger.warning(
+            "Unsupported RECOMMENDATION_AI_PROVIDER %r; falling back to available provider.",
+            RECOMMENDATION_AI_PROVIDER,
+        )
+
+    if GEMINI_API_KEY:
+        return "gemini"
+    if ANTHROPIC_API_KEY:
+        return "anthropic"
+    return None
+
+
+def _provider_label(provider: AIProvider) -> str:
+    return "Gemini" if provider == "gemini" else "Claude"
+
+
+def _provider_api_key(provider: AIProvider) -> str | None:
+    return GEMINI_API_KEY if provider == "gemini" else ANTHROPIC_API_KEY
+
+
+def _provider_model(provider: AIProvider) -> str:
+    return GEMINI_MODEL if provider == "gemini" else ANTHROPIC_MODEL
+
+
+def _build_recommendation_prompt(
+    *,
+    base: str,
+    quote: str,
+    invoice_amount: float,
+    indicators: dict[str, Any],
+    status: RecommendationStatus,
+    history_quality: HistoryQuality,
+    data_points: int,
+    real_data_points: int,
+    synthetic_data_points: int,
+    fallback_candle_points: int,
+) -> str:
+    analysis_basis = (
+        f"Provisional signal from {fallback_candle_points} stored 4-hour candles because fewer than 7 stored daily closes are available."
+        if history_quality == "candle_fallback"
+        else "Primary signal from stored daily FX history."
+    )
+
+    return f"""
+You are an FX analyst for a cross-border invoicing platform used by African SMEs.
+
+A user has an invoice worth {invoice_amount:.2f} {base} that will be settled in {quote}.
+
+This recommendation must be grounded in the platform's own stored FX history, not generic advice.
+
+Data quality:
+- Status: {status}
+- History quality: {history_quality}
+- Total stored points: {data_points}
+- Real points: {real_data_points}
+- Seeded points: {synthetic_data_points}
+- Analysis basis: {analysis_basis}
+
+Calculated market indicators:
+{json.dumps(indicators, indent=2)}
+
+Instructions:
+- If the data is limited or seeded, say so plainly and lower confidence.
+- If the signal is using intraday candles as a fallback, state that clearly and keep confidence conservative.
+- Prefer clear, practical language for a small-business owner.
+- Do not overstate certainty.
+
+Return a JSON object with exactly these keys:
+- action: one of "convert_now", "wait", "hedge", "split_conversion"
+- confidence: number from 0.0 to 1.0
+- risk_score: number from 0.0 to 1.0
+- explanation: 2 to 3 plain-English sentences
+- factors: array of exactly 3 objects, each with name, impact ("positive", "negative", or "neutral"), and description
+- optimal_window: short phrase such as "next 24-48 hours"
+
+Do not include markdown or any text outside the JSON object.
+""".strip()
+
+
+async def _request_anthropic_recommendation(prompt: str) -> dict[str, Any]:
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        response = await client.post(
+            "https://api.anthropic.com/v1/messages",
+            headers={
+                "x-api-key": ANTHROPIC_API_KEY,
+                "anthropic-version": "2023-06-01",
+                "content-type": "application/json",
+            },
+            json={
+                "model": ANTHROPIC_MODEL,
+                "max_tokens": 1024,
+                "messages": [{"role": "user", "content": prompt}],
+            },
+        )
+        response.raise_for_status()
+        return response.json()
+
+
+async def _request_gemini_recommendation(prompt: str) -> dict[str, Any]:
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        response = await client.post(
+            f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent",
+            headers={
+                "x-goog-api-key": GEMINI_API_KEY,
+                "content-type": "application/json",
+            },
+            json={
+                "contents": [
+                    {
+                        "role": "user",
+                        "parts": [{"text": prompt}],
+                    }
+                ],
+                "generationConfig": {
+                    "responseMimeType": "application/json",
+                    "responseJsonSchema": GEMINI_RECOMMENDATION_RESPONSE_SCHEMA,
+                    "temperature": 0.2,
+                },
+            },
+        )
+        response.raise_for_status()
+        return response.json()
+
+
+def _extract_anthropic_content(payload: dict[str, Any]) -> str:
+    return "".join(
+        block.get("text", "")
+        for block in payload.get("content", [])
+        if block.get("type") == "text"
+    )
+
+
+def _extract_gemini_content(payload: dict[str, Any]) -> str:
+    for candidate in payload.get("candidates", []):
+        content = candidate.get("content")
+        if not isinstance(content, dict):
+            continue
+
+        parts = content.get("parts", [])
+        if not isinstance(parts, list):
+            continue
+
+        text = "".join(
+            str(part.get("text", ""))
+            for part in parts
+            if isinstance(part, dict) and part.get("text")
+        )
+        if text:
+            return text
+
+    return ""
+
+
+def _apply_confidence_caps(
+    result: dict[str, Any],
+    *,
+    status: RecommendationStatus,
+    history_quality: HistoryQuality,
+) -> dict[str, Any]:
+    adjusted = dict(result)
+    adjusted["confidence"] = float(adjusted["confidence"])
+
+    if status == "limited_data":
+        adjusted["confidence"] = min(adjusted["confidence"], 0.62)
+    elif status == "provisional_data":
+        adjusted["confidence"] = min(adjusted["confidence"], 0.5)
+
+    if history_quality == "mixed":
+        adjusted["confidence"] = min(adjusted["confidence"], 0.68)
+    elif history_quality == "seeded":
+        adjusted["confidence"] = min(adjusted["confidence"], 0.55)
+    elif history_quality == "candle_fallback":
+        adjusted["confidence"] = min(adjusted["confidence"], 0.5)
+
+    return adjusted
 
 
 async def _load_candle_fallback_points(
@@ -382,143 +607,74 @@ async def get_ai_recommendation(
     synthetic_data_points: int,
     fallback_candle_points: int = 0,
 ) -> dict[str, Any]:
-    global _ANTHROPIC_DISABLED_REASON
-
-    if not ANTHROPIC_API_KEY or history_quality == "same_currency" or status == "insufficient_data":
-        return _rule_based_recommendation(
-            indicators,
-            status=status,
-            history_quality=history_quality,
-            data_points=data_points,
-            real_data_points=real_data_points,
-            synthetic_data_points=synthetic_data_points,
-            fallback_candle_points=fallback_candle_points,
-        )
-
-    if _ANTHROPIC_DISABLED_REASON:
-        return _rule_based_recommendation(
-            indicators,
-            status=status,
-            history_quality=history_quality,
-            data_points=data_points,
-            real_data_points=real_data_points,
-            synthetic_data_points=synthetic_data_points,
-            fallback_candle_points=fallback_candle_points,
-        )
-
-    analysis_basis = (
-        f"Provisional signal from {fallback_candle_points} stored 4-hour candles because fewer than 7 stored daily closes are available."
-        if history_quality == "candle_fallback"
-        else "Primary signal from stored daily FX history."
+    fallback = _rule_based_recommendation(
+        indicators,
+        status=status,
+        history_quality=history_quality,
+        data_points=data_points,
+        real_data_points=real_data_points,
+        synthetic_data_points=synthetic_data_points,
+        fallback_candle_points=fallback_candle_points,
     )
 
-    prompt = f"""
-You are an FX analyst for a cross-border invoicing platform used by African SMEs.
+    provider = _resolve_ai_provider()
 
-A user has an invoice worth {invoice_amount:.2f} {base} that will be settled in {quote}.
+    if provider is None or history_quality == "same_currency" or status == "insufficient_data":
+        return fallback
 
-This recommendation must be grounded in the platform's own stored FX history, not generic advice.
+    if not _provider_api_key(provider):
+        return fallback
 
-Data quality:
-- Status: {status}
-- History quality: {history_quality}
-- Total stored points: {data_points}
-- Real points: {real_data_points}
-- Seeded points: {synthetic_data_points}
-- Analysis basis: {analysis_basis}
+    if provider in _DISABLED_PROVIDER_REASONS:
+        return fallback
 
-Calculated market indicators:
-{json.dumps(indicators, indent=2)}
-
-Instructions:
-- If the data is limited or seeded, say so plainly and lower confidence.
-- If the signal is using intraday candles as a fallback, state that clearly and keep confidence conservative.
-- Prefer clear, practical language for a small-business owner.
-- Do not overstate certainty.
-
-Return a JSON object with exactly these keys:
-- action: one of "convert_now", "wait", "hedge", "split_conversion"
-- confidence: number from 0.0 to 1.0
-- risk_score: number from 0.0 to 1.0
-- explanation: 2 to 3 plain-English sentences
-- factors: array of exactly 3 objects, each with name, impact ("positive", "negative", or "neutral"), and description
-- optimal_window: short phrase such as "next 24-48 hours"
-
-Do not include markdown or any text outside the JSON object.
-""".strip()
+    prompt = _build_recommendation_prompt(
+        base=base,
+        quote=quote,
+        invoice_amount=invoice_amount,
+        indicators=indicators,
+        status=status,
+        history_quality=history_quality,
+        data_points=data_points,
+        real_data_points=real_data_points,
+        synthetic_data_points=synthetic_data_points,
+        fallback_candle_points=fallback_candle_points,
+    )
 
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(
-                "https://api.anthropic.com/v1/messages",
-                headers={
-                    "x-api-key": ANTHROPIC_API_KEY,
-                    "anthropic-version": "2023-06-01",
-                    "content-type": "application/json",
-                },
-                json={
-                    "model": ANTHROPIC_MODEL,
-                    "max_tokens": 1024,
-                    "messages": [{"role": "user", "content": prompt}],
-                },
-            )
-            response.raise_for_status()
-            payload = response.json()
+        if provider == "gemini":
+            payload = await _request_gemini_recommendation(prompt)
+            content = _extract_gemini_content(payload)
+        else:
+            payload = await _request_anthropic_recommendation(prompt)
+            content = _extract_anthropic_content(payload)
     except httpx.HTTPError as exc:
-        detail = _extract_anthropic_error_detail(exc)
+        detail = _extract_http_error_detail(exc)
         status_code = exc.response.status_code if isinstance(exc, httpx.HTTPStatusError) else None
 
-        if status_code in ANTHROPIC_HARD_FAILURE_STATUSES:
-            _ANTHROPIC_DISABLED_REASON = detail
+        if status_code in AI_HARD_FAILURE_STATUSES:
+            _DISABLED_PROVIDER_REASONS[provider] = detail
             logger.warning(
-                "Disabling Claude recommendation requests for this process after hard failure on model %s: %s",
-                ANTHROPIC_MODEL,
+                "Disabling %s recommendation requests for this process after hard failure on model %s: %s",
+                _provider_label(provider),
+                _provider_model(provider),
                 detail,
             )
         else:
-            logger.warning("Claude request failed, using fallback recommendation: %s", detail)
-        return _rule_based_recommendation(
-            indicators,
-            status=status,
-            history_quality=history_quality,
-            data_points=data_points,
-            real_data_points=real_data_points,
-            synthetic_data_points=synthetic_data_points,
-            fallback_candle_points=fallback_candle_points,
-        )
-
-    content = "".join(
-        block.get("text", "")
-        for block in payload.get("content", [])
-        if block.get("type") == "text"
-    )
+            logger.warning("%s request failed, using fallback recommendation: %s", _provider_label(provider), detail)
+        return fallback
 
     try:
         parsed = json.loads(_strip_json_wrapping(content))
         validated = AIRecommendationPayload.model_validate(parsed)
-        result = validated.model_dump()
-        if status == "limited_data":
-            result["confidence"] = min(result["confidence"], 0.62)
-        elif status == "provisional_data":
-            result["confidence"] = min(result["confidence"], 0.5)
-        if history_quality == "mixed":
-            result["confidence"] = min(result["confidence"], 0.68)
-        elif history_quality == "seeded":
-            result["confidence"] = min(result["confidence"], 0.55)
-        elif history_quality == "candle_fallback":
-            result["confidence"] = min(result["confidence"], 0.5)
-        return result
-    except (json.JSONDecodeError, ValidationError) as exc:
-        logger.warning("Claude returned invalid JSON recommendation, using fallback: %s", exc)
-        return _rule_based_recommendation(
-            indicators,
+        return _apply_confidence_caps(
+            validated.model_dump(),
             status=status,
             history_quality=history_quality,
-            data_points=data_points,
-            real_data_points=real_data_points,
-            synthetic_data_points=synthetic_data_points,
-            fallback_candle_points=fallback_candle_points,
         )
+    except (json.JSONDecodeError, ValidationError) as exc:
+        logger.warning("%s returned invalid JSON recommendation, using fallback: %s", _provider_label(provider), exc)
+        return fallback
 
 
 async def generate_recommendation(

@@ -3,11 +3,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import styles from './page.module.css';
+import RecommendationPanel from '@/components/fx/RecommendationPanel';
 import { fetchRealFXRate, fetchRealFXRateOnDate } from '@/lib/api/fx';
 import { fetchRecommendation } from '@/lib/api/recommendation';
 import { getPreferredCurrency, getUser, User } from '@/lib/api/auth';
 import { extractInvoiceIdFromApiError, formatApiError } from '@/lib/api/errors';
-import { Recommendation, getActionDisplayText } from '@/lib/types/recommendation';
+import { getActionDisplayText, Recommendation } from '@/lib/types/recommendation';
 import {
   InvoiceEditorState,
   buildInvoicePrintHtml,
@@ -380,7 +381,17 @@ export default function InvoiceGeneratorPage() {
             <p>Loading invoice editor...</p>
           </section>
         ) : (
-          <div className={styles.layout}>
+          <div className={styles.pageStack}>
+            <RecommendationPanel
+              recommendation={recommendation}
+              loading={recommendationLoading}
+              error={recommendationError ? new Error(recommendationError) : null}
+              compact
+              secondaryActionHref={`/invoice-generator/review${draft.persistedInvoiceId ? `?id=${draft.persistedInvoiceId}` : ''}`}
+              secondaryActionLabel="Open review screen →"
+            />
+
+            <div className={styles.layout}>
             <div className={styles.formColumn}>
               <section className={styles.card}>
                 <h3>Client Details</h3>
@@ -783,7 +794,7 @@ export default function InvoiceGeneratorPage() {
 
               <section className={styles.card}>
                 <div className={styles.fxHeader}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" strokeWidth="2">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--brass)" strokeWidth="2">
                     <path d="M3 3v18h18" />
                     <path d="m19 9-5 5-4-4-3 3" />
                   </svg>
@@ -853,6 +864,7 @@ export default function InvoiceGeneratorPage() {
                 </div>
               </section>
             </aside>
+          </div>
           </div>
         )}
       </div>

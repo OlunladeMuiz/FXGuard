@@ -48,7 +48,7 @@ export default function LoginPage() {
       </header>
 
       <div className={styles.card}>
-        <h1>Welcome back</h1>
+        <h1 className={styles.cardTitle}>Welcome back</h1>
         <p className={styles.subtitle}>Sign in to your FXFlow account</p>
 
         <form className={styles.form} onSubmit={handleSubmit}>
@@ -63,7 +63,7 @@ export default function LoginPage() {
             </div>
           )}
           
-          <label>Email address</label>
+          <label className={styles.formLabel}>Email address</label>
           <div className={styles.inputRow}>
             <span className={styles.icon}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -72,6 +72,7 @@ export default function LoginPage() {
               </svg>
             </span>
             <input 
+              className={styles.formInput}
               type="email"
               placeholder="Enter your email" 
               value={email}
@@ -80,7 +81,7 @@ export default function LoginPage() {
             />
           </div>
 
-          <label>Password</label>
+          <label className={styles.formLabel}>Password</label>
           <div className={styles.inputRow}>
             <span className={styles.icon}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -89,6 +90,7 @@ export default function LoginPage() {
               </svg>
             </span>
             <input 
+              className={styles.formInput}
               type={showPassword ? 'text' : 'password'} 
               placeholder="Enter your password" 
               value={password}
@@ -130,7 +132,7 @@ export default function LoginPage() {
           </div>
 
           <p className={styles.footerText}>
-            Don&apos;t have an account? <Link href="/signup">Create account</Link>
+            Don&apos;t have an account? <Link href="/signup" className={styles.footerLink}>Create account</Link>
           </p>
         </form>
       </div>
@@ -141,12 +143,12 @@ export default function LoginPage() {
             <path d="M12 2l7 4v6c0 5-3.5 9-7 10-3.5-1-7-5-7-10V6l7-4z" />
           </svg>
         </div>
-        <div>
-          <strong>Your data is secure</strong>
-          <p>We use bank-grade 256-bit SSL encryption and are SOC 2 compliant.</p>
+        <div className={styles.trustContent}>
+          <strong className={styles.trustTitle}>Your data is secure</strong>
+          <p className={styles.trustDescription}>We use bank-grade 256-bit SSL encryption and are SOC 2 compliant.</p>
           <div className={styles.badges}>
-            <span>FCA Regulated</span>
-            <span>GDPR Compliant</span>
+            <span className={styles.badgeLabel}>FCA Regulated</span>
+            <span className={styles.badgeLabel}>GDPR Compliant</span>
           </div>
         </div>
       </div>

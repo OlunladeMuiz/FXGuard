@@ -1,20 +1,17 @@
 ﻿'use client';
 
+import Link from 'next/link';
 import { useState, useEffect, useCallback } from 'react';
 import styles from './page.module.css';
 import { AUTH_USER_UPDATED_EVENT, getPreferredCurrency, getUser } from '@/lib/api/auth';
-import { fetchRealFXCandles, fetchRealFXSnapshot } from '@/lib/api/fx';
+import { fetchRealFXCandles } from '@/lib/api/fx';
 import { fetchRecommendation } from '@/lib/api/recommendation';
 import { formatApiError } from '@/lib/api/errors';
-import { fetchAllInvoiceRecords } from '@/lib/invoices/editor';
+import { useMonthlySavingsReport, useMultiCurrencyExposure, useRateAlerts } from '@/hooks/useEngine';
 import { CurrencyCode, CurrencyCodeSchema } from '@/types/currency';
 import { FXHistoryPoint } from '@/lib/types/fx';
 import { Recommendation, getActionDisplayText } from '@/lib/types/recommendation';
-
-const alerts = [
-  { title: 'USD/EUR Rate', subtitle: 'Target: 0.9180', color: 'yellow' },
-  { title: 'Volatility Spike', subtitle: 'Threshold: >2%', color: 'blue' },
-];
+import { API_CONFIG } from '@/constants/config';
 
 const CURRENCY_PAIRS = [
   { label: 'USD/NGN', base: 'USD', quote: 'NGN' },
@@ -30,7 +27,6 @@ type CurrencyPair = { label: string; base: string; quote: string };
 
 const DEFAULT_PAIR: CurrencyPair = { label: 'USD/EUR', base: 'USD', quote: 'EUR' };
 const ANALYTICS_RECOMMENDATION_AMOUNT = 10000;
-const OPEN_EXPOSURE_STATUSES = new Set(['draft', 'sent', 'overdue']);
 const DONUT_RADIUS = 40;
 const DONUT_CIRCUMFERENCE = 2 * Math.PI * DONUT_RADIUS;
 const CURRENCY_DISTRIBUTION_COLORS: Record<CurrencyCode, string> = {
@@ -109,91 +105,56 @@ function formatObservedDate(value: string | null): string | null {
 
 async function buildCurrencyDistribution(
   reportingCurrency: CurrencyCode,
+  exposure: {
+    as_of: string;
+    reporting_currency: string;
+    total_open_in_reporting: number;
+    currencies: {
+      currency: string;
+      open_amount: number;
+      rate_to_reporting: number | null;
+      open_amount_in_reporting: number | null;
+    }[];
+  } | null,
 ): Promise<CurrencyDistributionSummary> {
-  const invoices = await fetchAllInvoiceRecords();
-  const activeInvoices = invoices.filter((invoice) =>
-    OPEN_EXPOSURE_STATUSES.has(invoice.status.toLowerCase()),
-  );
-  const totalsByCurrency = new Map<CurrencyCode, number>();
-  const unsupportedCurrencies = new Set<string>();
-
-  for (const invoice of activeInvoices) {
-    if (!Number.isFinite(invoice.amount) || invoice.amount <= 0) {
-      continue;
-    }
-
-    const currency = parseCurrencyCode(invoice.currency);
-    if (!currency) {
-      unsupportedCurrencies.add(invoice.currency.trim().toUpperCase() || invoice.currency);
-      continue;
-    }
-
-    totalsByCurrency.set(currency, (totalsByCurrency.get(currency) ?? 0) + invoice.amount);
-  }
-
-  if (unsupportedCurrencies.size > 0) {
-    throw new Error(
-      `Currency distribution cannot be calculated for unsupported invoice currencies: ${Array.from(unsupportedCurrencies).sort().join(', ')}.`,
-    );
-  }
-
-  if (totalsByCurrency.size === 0) {
+  if (!exposure || exposure.currencies.length === 0) {
     return {
       ...EMPTY_CURRENCY_DISTRIBUTION_SUMMARY,
       reportingCurrency,
-      activeInvoiceCount: activeInvoices.length,
+      activeInvoiceCount: 0,
     };
   }
 
-  const quoteCurrencies = Array.from(totalsByCurrency.keys()).filter(
-    (currency) => currency !== reportingCurrency,
-  );
-  const snapshot = quoteCurrencies.length > 0
-    ? await fetchRealFXSnapshot(reportingCurrency, quoteCurrencies)
-    : { date: new Date().toISOString().slice(0, 10), rates: {} as Record<string, number> };
+  const normalizedReporting = parseCurrencyCode(exposure.reporting_currency) ?? reportingCurrency;
+  const totalNormalizedAmount = exposure.total_open_in_reporting ?? 0;
 
-  const preliminaryItems = Array.from(totalsByCurrency.entries())
-    .map(([currency, rawAmount]) => {
-      const rate = currency === reportingCurrency ? 1 : snapshot.rates[currency];
-      if (!rate || rate <= 0) {
-        throw new Error(`Missing FX rate required to value ${currency} exposure in ${reportingCurrency}.`);
+  const items: CurrencyDistributionItem[] = exposure.currencies
+    .map((item) => {
+      const currency = parseCurrencyCode(item.currency);
+      if (!currency) {
+        return null;
       }
-
-      const normalizedAmount = currency === reportingCurrency ? rawAmount : rawAmount / rate;
-
+      const normalizedAmount = item.open_amount_in_reporting ?? 0;
+      const share = totalNormalizedAmount > 0 ? normalizedAmount / totalNormalizedAmount : 0;
       return {
         currency,
-        rawAmount,
-        normalizedAmount,
+        share,
+        percent: Number((share * 100).toFixed(1)),
+        amount: formatCurrencyAmount(item.open_amount, currency),
+        rawAmount: Number(item.open_amount.toFixed(2)),
+        normalizedAmount: Number(normalizedAmount.toFixed(2)),
         color: CURRENCY_DISTRIBUTION_COLORS[currency],
       };
     })
-    .sort((left, right) => right.normalizedAmount - left.normalizedAmount);
-
-  const totalNormalizedAmount = preliminaryItems.reduce(
-    (sum, item) => sum + item.normalizedAmount,
-    0,
-  );
-
-  const items: CurrencyDistributionItem[] = preliminaryItems.map((item) => {
-    const share = totalNormalizedAmount > 0 ? item.normalizedAmount / totalNormalizedAmount : 0;
-    return {
-      currency: item.currency,
-      share,
-      percent: Number((share * 100).toFixed(1)),
-      amount: formatCurrencyAmount(item.rawAmount, item.currency),
-      rawAmount: Number(item.rawAmount.toFixed(2)),
-      normalizedAmount: Number(item.normalizedAmount.toFixed(2)),
-      color: item.color,
-    };
-  });
+    .filter(Boolean)
+    .sort((left, right) => (right?.normalizedAmount ?? 0) - (left?.normalizedAmount ?? 0)) as CurrencyDistributionItem[];
 
   return {
     items,
-    reportingCurrency,
+    reportingCurrency: normalizedReporting,
     totalNormalizedAmount: Number(totalNormalizedAmount.toFixed(2)),
-    activeInvoiceCount: activeInvoices.length,
-    valuationDate: snapshot.date ?? null,
+    activeInvoiceCount: exposure.currencies.length,
+    valuationDate: exposure.as_of ?? null,
   };
 }
 
@@ -348,6 +309,22 @@ export default function FxAnalyticsHub() {
   const [distributionLoading, setDistributionLoading] = useState(true);
   const [distributionError, setDistributionError] = useState<string | null>(null);
   const [viewportWidth, setViewportWidth] = useState<number | null>(null);
+  const {
+    data: exposure,
+    loading: exposureLoading,
+    error: exposureError,
+  } = useMultiCurrencyExposure(reportingCurrency);
+  const {
+    report: monthlySavings,
+    loading: monthlySavingsLoading,
+    error: monthlySavingsError,
+  } = useMonthlySavingsReport();
+  const {
+    alerts,
+    loading: alertsLoading,
+    error: alertsError,
+    remove: removeAlert,
+  } = useRateAlerts();
 
   useEffect(() => {
     const syncViewportWidth = () => {
@@ -499,7 +476,7 @@ export default function FxAnalyticsHub() {
       setDistributionError(null);
 
       try {
-        const nextSummary = await buildCurrencyDistribution(reportingCurrency);
+        const nextSummary = await buildCurrencyDistribution(reportingCurrency, exposure ?? null);
         if (!cancelled) {
           setDistributionSummary(nextSummary);
         }
@@ -526,7 +503,18 @@ export default function FxAnalyticsHub() {
     return () => {
       cancelled = true;
     };
-  }, [reportingCurrency]);
+  }, [reportingCurrency, exposure]);
+
+  useEffect(() => {
+    if (exposureLoading) {
+      setDistributionLoading(true);
+    } else {
+      setDistributionLoading(false);
+    }
+    if (exposureError) {
+      setDistributionError(exposureError);
+    }
+  }, [exposureLoading, exposureError]);
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -822,7 +810,7 @@ export default function FxAnalyticsHub() {
                             </div>
                           );
                         }) : (
-                          <div style={{ color: 'var(--text-secondary)', padding: '2rem' }}>
+                          <div style={{ color: 'var(--text-mid)', padding: '2rem' }}>
                             Loading volatility data...
                           </div>
                         )}
@@ -906,7 +894,7 @@ export default function FxAnalyticsHub() {
                         )}
                       </strong>
                       <span className={styles.donutCenterMeta}>
-                        {distributionSummary.activeInvoiceCount} open invoice
+                        {distributionSummary.activeInvoiceCount} currency bucket
                         {distributionSummary.activeInvoiceCount === 1 ? '' : 's'}
                         {distributionAsOfLabel ? ` · As of ${distributionAsOfLabel}` : ''}
                       </span>
@@ -1022,7 +1010,7 @@ export default function FxAnalyticsHub() {
                 <h3>AI Insights</h3>
               </div>
               {recommendationLoading ? (
-                <div style={{ padding: 'var(--spacing-4)', color: 'var(--text-secondary)' }}>
+                <div style={{ padding: 'var(--spacing-4)', color: 'var(--text-mid)' }}>
                   Analysing live market data...
                 </div>
               ) : recommendation ? (
@@ -1040,13 +1028,13 @@ export default function FxAnalyticsHub() {
                       </div>
                     </div>
                     <p className={styles.insightText}>{recommendation.explanation}</p>
-                    <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-secondary)' }}>
+                    <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-mid)' }}>
                       Optimal window: {recommendation.optimalWindow}
                     </p>
-                    <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-secondary)' }}>
+                    <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-mid)' }}>
                       {getHistorySupportText(recommendation)}
                     </p>
-                    <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-secondary)' }}>
+                    <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-mid)' }}>
                       Based on a {recommendation.base} {ANALYTICS_RECOMMENDATION_AMOUNT.toLocaleString('en-US')} invoice.
                     </p>
                   </div>
@@ -1070,7 +1058,7 @@ export default function FxAnalyticsHub() {
                   ))}
                 </div>
               ) : (
-                <div style={{ padding: 'var(--spacing-4)', color: 'var(--text-secondary)' }}>
+                <div style={{ padding: 'var(--spacing-4)', color: 'var(--text-mid)' }}>
                   {recommendationError ?? 'No recommendation available.'}
                 </div>
               )}
@@ -1080,36 +1068,77 @@ export default function FxAnalyticsHub() {
             <div className={styles.card}>
               <h3>Active Alerts</h3>
               <div className={styles.alertList}>
-                {alerts.map((alert) => (
-                  <div key={alert.title} className={`${styles.alertItem} ${styles[alert.color]}`}>
-                    <div className={styles.alertIcon}>
-                      {alert.color === 'yellow' ? (
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="#eab308">
-                          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-                          <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-                        </svg>
-                      ) : (
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2">
-                          <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
-                          <polyline points="17 6 23 6 23 12"></polyline>
-                        </svg>
-                      )}
-                    </div>
+                {alertsLoading ? (
+                  <div className={`${styles.alertItem} ${styles.blue}`}>
                     <div className={styles.alertContent}>
-                      <strong>{alert.title}</strong>
-                      <span>{alert.subtitle}</span>
+                      <strong>Loading alerts...</strong>
+                      <span>Fetching live engine alerts for this account.</span>
                     </div>
-                    <button className={styles.alertClose}>×</button>
                   </div>
-                ))}
-                <button className={styles.addAlert}>+ Add New Alert</button>
+                ) : alerts.length > 0 ? (
+                  alerts.slice(0, 4).map((alert) => (
+                    <div
+                      key={alert.id}
+                      className={`${styles.alertItem} ${styles[alert.is_triggered ? 'blue' : 'yellow']}`}
+                    >
+                      <div className={styles.alertIcon}>
+                        {alert.is_triggered ? (
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2">
+                            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                            <polyline points="17 6 23 6 23 12"></polyline>
+                          </svg>
+                        ) : (
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="#eab308">
+                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                          </svg>
+                        )}
+                      </div>
+                      <div className={styles.alertContent}>
+                        <strong>
+                          {alert.pair.replace('_', '/')} {alert.direction} {alert.target_rate.toLocaleString()}
+                        </strong>
+                        <span>
+                          {alert.is_triggered
+                            ? `Triggered at ${alert.triggered_rate?.toLocaleString() ?? 'unknown'}`
+                            : `${alert.is_active ? 'Active' : 'Inactive'} via ${alert.rate_source}`}
+                        </span>
+                      </div>
+                      <button
+                        className={styles.alertClose}
+                        onClick={() => {
+                          void removeAlert(alert.id).catch(() => undefined);
+                        }}
+                        aria-label={`Delete alert for ${alert.pair}`}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))
+                ) : (
+                  <div className={`${styles.alertItem} ${styles.blue}`}>
+                    <div className={styles.alertContent}>
+                      <strong>No active alerts</strong>
+                      <span>Create a live threshold and it will appear here automatically.</span>
+                    </div>
+                  </div>
+                )}
+                {alertsError && (
+                  <div className={`${styles.alertItem} ${styles.yellow}`}>
+                    <div className={styles.alertContent}>
+                      <strong>Alert feed unavailable</strong>
+                      <span>{alertsError}</span>
+                    </div>
+                  </div>
+                )}
+                <Link href="/fx-analytics/deep" className={styles.addAlert}>+ Add New Alert</Link>
               </div>
             </div>
 
             {/* Quick Actions */}
             <div className={styles.card}>
               <h3>Quick Actions</h3>
-              <div className={styles.quickActions}>
+            <div className={styles.quickActions}>
                 <button className={styles.primaryAction}>
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <polyline points="17 1 21 5 17 9"></polyline>
@@ -1134,6 +1163,40 @@ export default function FxAnalyticsHub() {
                   Export Report
                 </button>
               </div>
+            </div>
+
+            <div className={styles.card}>
+              <h3>Monthly Savings</h3>
+              {monthlySavingsLoading ? (
+                <div style={{ padding: 'var(--spacing-4)', color: 'var(--text-mid)' }}>
+                  Calculating savings report...
+                </div>
+              ) : monthlySavings ? (
+                <div className={styles.hedgingRows}>
+                  <div className={styles.hedgingRow}>
+                    <span>Total converted</span>
+                    <strong>{monthlySavings.total_base_converted.toLocaleString()}</strong>
+                  </div>
+                  <div className={styles.hedgingRow}>
+                    <span>Lost to timing</span>
+                    <strong>{monthlySavings.total_lost_to_timing.toLocaleString()}</strong>
+                  </div>
+                  <div className={styles.hedgingRow}>
+                    <span>Saved vs worst</span>
+                    <strong>{monthlySavings.total_saved_vs_worst.toLocaleString()}</strong>
+                  </div>
+                  <a
+                    className={styles.primaryAction}
+                    href={`${API_CONFIG.BASE_URL}/engine/reports/monthly-savings/pdf`}
+                  >
+                    Download PDF
+                  </a>
+                </div>
+              ) : (
+                <div style={{ padding: 'var(--spacing-4)', color: 'var(--text-mid)' }}>
+                  {monthlySavingsError ?? 'No savings report available yet.'}
+                </div>
+              )}
             </div>
           </aside>
         </div>

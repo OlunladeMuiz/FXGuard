@@ -1,5 +1,5 @@
 ﻿.page {
-  background: var(--page-bg);
+  background: var(--bg);
   padding: var(--spacing-8) 0;
   min-height: 100vh;
 }
@@ -21,7 +21,7 @@
 }
 
 .header p {
-  color: var(--text-secondary);
+  color: var(--text-mid);
   font-size: var(--font-size-md);
 }
 
@@ -56,7 +56,7 @@
 
 .card {
   background: white;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--hairline-soft);
   border-radius: var(--radius-xl);
   padding: var(--spacing-5);
   box-shadow: var(--shadow-sm);
@@ -93,7 +93,7 @@
 .select {
   padding: 0.5rem 1rem;
   border-radius: 8px;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--hairline-soft);
   font-size: var(--font-size-sm);
   background: white;
   cursor: pointer;
@@ -103,7 +103,7 @@
 
 .segment {
   display: flex;
-  background: var(--color-neutral-100);
+  background: var(--surface);
   padding: 0.25rem;
   border-radius: 999px;
   flex-wrap: wrap;
@@ -115,7 +115,7 @@
   border-radius: 999px;
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
-  color: var(--text-secondary);
+  color: var(--text-mid);
   background: transparent;
   border: none;
   cursor: pointer;
@@ -124,13 +124,13 @@
 
 .segmentBtn.active {
   background: white;
-  color: var(--color-primary);
+  color: var(--brass);
   box-shadow: var(--shadow-sm);
 }
 
 /* Chart Card */
 .chartCard {
-  background: var(--color-neutral-50);
+  background: var(--bg);
   border-radius: var(--radius-lg);
   padding: var(--spacing-4);
   min-width: 0;
@@ -154,7 +154,7 @@
 
 .chartLabel {
   font-weight: var(--font-weight-semibold);
-  color: var(--text-primary);
+  color: var(--text-hi);
 }
 
 .chartValue {
@@ -182,18 +182,18 @@
   align-items: center;
   gap: var(--spacing-2);
   padding: 0.4rem 0.75rem;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--hairline-soft);
   border-radius: 8px;
   background: white;
   font-size: var(--font-size-sm);
   cursor: pointer;
   transition: all 0.2s ease;
-  color: var(--text-secondary);
+  color: var(--text-mid);
   white-space: nowrap;
 }
 
 .chartBtn:hover {
-  background: var(--color-neutral-50);
+  background: var(--bg);
 }
 
 .chartBtn svg {
@@ -215,7 +215,7 @@
   justify-content: space-between;
   padding-right: var(--spacing-3);
   font-size: var(--font-size-xs);
-  color: var(--text-secondary);
+  color: var(--text-mid);
   min-width: 55px;
   text-align: right;
 }
@@ -232,7 +232,7 @@
   flex: 1;
   background: linear-gradient(180deg, rgba(59, 130, 246, 0.3) 0%, rgba(59, 130, 246, 0.05) 100%);
   border-radius: var(--radius-md);
-  border-top: 2px solid var(--color-primary);
+  border-top: 2px solid var(--brass);
 }
 
 .chartXAxis {
@@ -241,7 +241,7 @@
   gap: var(--spacing-2);
   padding-top: var(--spacing-2);
   font-size: var(--font-size-xs);
-  color: var(--text-secondary);
+  color: var(--text-mid);
 }
 
 .chartXAxis span {
@@ -256,7 +256,7 @@
 .chartHint {
   margin-top: var(--spacing-2);
   font-size: var(--font-size-xs);
-  color: var(--text-secondary);
+  color: var(--text-mid);
   text-align: center;
 }
 
@@ -274,7 +274,7 @@
 
 .volatilityTitle {
   font-size: var(--font-size-sm);
-  color: var(--text-secondary);
+  color: var(--text-mid);
   text-align: center;
   margin-bottom: var(--spacing-3);
 }
@@ -291,7 +291,7 @@
   justify-content: space-between;
   padding-right: var(--spacing-2);
   font-size: var(--font-size-xs);
-  color: var(--text-secondary);
+  color: var(--text-mid);
   min-width: 30px;
 }
 
@@ -308,7 +308,7 @@
   align-items: flex-end;
   justify-content: space-between;
   gap: var(--spacing-2);
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--hairline-soft);
 }
 
 .barWrapper {
@@ -329,13 +329,13 @@
 
 .barLabel {
   font-size: var(--font-size-xs);
-  color: var(--text-secondary);
+  color: var(--text-mid);
   margin-top: var(--spacing-2);
 }
 
 /* Volatility Summary - Right Side */
 .volatilitySummary {
-  background: var(--color-neutral-50);
+  background: var(--bg);
   border-radius: var(--radius-lg);
   padding: var(--spacing-4);
   display: flex;
@@ -394,7 +394,7 @@
 
 .movementLabel {
   font-size: var(--font-size-sm);
-  color: var(--text-secondary);
+  color: var(--text-mid);
 }
 
 .volatilityValues {
@@ -403,7 +403,7 @@
   gap: var(--spacing-2);
   align-items: stretch;
   font-size: var(--font-size-sm);
-  color: var(--text-secondary);
+  color: var(--text-mid);
   margin-top: var(--spacing-2);
 }
 
@@ -414,11 +414,11 @@
 }
 
 .volStatRow span {
-  color: var(--text-secondary);
+  color: var(--text-mid);
 }
 
 .volStatRow strong {
-  color: var(--text-primary);
+  color: var(--text-hi);
   font-weight: var(--font-weight-semibold);
 }
 
@@ -502,19 +502,19 @@
   font-weight: var(--font-weight-semibold);
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--text-secondary);
+  color: var(--text-mid);
 }
 
 .donutCenterValue {
   font-size: 1.25rem;
   font-weight: var(--font-weight-bold);
-  color: var(--text-primary);
+  color: var(--text-hi);
   line-height: 1.2;
 }
 
 .donutCenterMeta {
   font-size: var(--font-size-xs);
-  color: var(--text-secondary);
+  color: var(--text-mid);
   line-height: 1.4;
 }
 
@@ -525,7 +525,7 @@
   justify-content: center;
   padding: var(--spacing-6);
   text-align: center;
-  color: var(--text-secondary);
+  color: var(--text-mid);
   line-height: 1.6;
 }
 
@@ -561,7 +561,7 @@
 
 .pnlCard {
   background: white;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--hairline-soft);
   border-radius: var(--radius-xl);
   padding: var(--spacing-4);
   display: flex;
@@ -579,7 +579,7 @@
 
 .hedgingCard {
   background: white;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--hairline-soft);
   border-radius: var(--radius-xl);
   padding: var(--spacing-4);
 }
@@ -612,7 +612,7 @@
 
 .currencyAmountCard {
   background: white;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--hairline-soft);
   border-radius: var(--radius-lg);
   padding: var(--spacing-4);
   display: flex;
@@ -638,7 +638,7 @@
 
 .amountPercent {
   font-size: var(--font-size-sm);
-  color: var(--text-secondary);
+  color: var(--text-mid);
 }
 
 /* Scenario Buttons */
@@ -654,20 +654,20 @@
   justify-content: center;
   gap: var(--spacing-2);
   padding: var(--spacing-4);
-  border: 2px dashed var(--border-color);
+  border: 2px dashed var(--hairline-soft);
   border-radius: var(--radius-lg);
   background: white;
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   cursor: pointer;
   transition: all 0.2s ease;
-  color: var(--text-secondary);
+  color: var(--text-mid);
   text-align: center;
 }
 
 .scenarioBtn:hover {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
+  border-color: var(--brass);
+  color: var(--brass);
 }
 
 .scenarioBtn svg {
@@ -676,8 +676,8 @@
 }
 
 .scenarioBtnHighlight {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
+  border-color: var(--brass);
+  color: var(--brass);
 }
 
 /* Sidebar */
@@ -698,7 +698,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--color-primary);
+  background: var(--brass);
   border-radius: 8px;
 }
 
@@ -788,7 +788,7 @@
 
 .insightText {
   font-size: var(--font-size-sm);
-  color: var(--text-secondary);
+  color: var(--text-mid);
   line-height: 1.5;
   margin-bottom: var(--spacing-2);
 }
@@ -818,7 +818,7 @@
 .setAlertBtn {
   margin-top: var(--spacing-2);
   padding: 0.5rem 1rem;
-  background: var(--color-primary);
+  background: var(--brass);
   color: white;
   border: none;
   border-radius: 8px;
@@ -872,7 +872,7 @@
 
 .alertContent span {
   font-size: var(--font-size-xs);
-  color: var(--text-secondary);
+  color: var(--text-mid);
 }
 
 .alertClose {
@@ -884,7 +884,7 @@
   background: transparent;
   border: none;
   font-size: 1.25rem;
-  color: var(--text-secondary);
+  color: var(--text-mid);
   cursor: pointer;
   border-radius: 4px;
 }
@@ -895,18 +895,18 @@
 
 .addAlert {
   padding: var(--spacing-3);
-  border: 2px dashed var(--border-color);
+  border: 2px dashed var(--hairline-soft);
   border-radius: var(--radius-lg);
   background: white;
-  color: var(--text-secondary);
+  color: var(--text-mid);
   font-size: var(--font-size-sm);
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .addAlert:hover {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
+  border-color: var(--brass);
+  color: var(--brass);
 }
 
 /* Quick Actions */
@@ -922,7 +922,7 @@
   justify-content: center;
   gap: var(--spacing-2);
   padding: var(--spacing-3);
-  background: var(--color-primary);
+  background: var(--brass);
   color: white;
   border: none;
   border-radius: var(--radius-lg);
@@ -948,7 +948,7 @@
   gap: var(--spacing-2);
   padding: var(--spacing-3);
   background: white;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--hairline-soft);
   border-radius: var(--radius-lg);
   font-weight: var(--font-weight-medium);
   cursor: pointer;
@@ -957,7 +957,7 @@
 }
 
 .secondaryAction:hover {
-  background: var(--color-neutral-50);
+  background: var(--bg);
 }
 
 .secondaryAction svg {
@@ -1229,11 +1229,11 @@
   align-items: center;
   margin-bottom: var(--spacing-3);
   font-size: var(--font-size-sm);
-  color: var(--text-secondary);
+  color: var(--text-mid);
 }
 
 .chartTrendSummary strong {
-  color: var(--text-primary);
+  color: var(--text-hi);
   font-weight: var(--font-weight-semibold);
 }
 
@@ -1245,14 +1245,14 @@
   justify-content: center;
   height: 300px;
   gap: var(--spacing-3);
-  color: var(--text-secondary);
+  color: var(--text-mid);
 }
 
 .spinner {
   width: 40px;
   height: 40px;
-  border: 3px solid var(--color-neutral-200);
-  border-top-color: var(--color-primary);
+  border: 3px solid var(--hairline-soft);
+  border-top-color: var(--brass);
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }

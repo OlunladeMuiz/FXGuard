@@ -1,5 +1,5 @@
 ﻿.page {
-  background: var(--page-bg);
+  background: var(--bg);
   padding: var(--spacing-12) 0;
 }
 
@@ -14,13 +14,21 @@
   margin-bottom: var(--spacing-6);
 }
 
+.headerTitle {
+  color: var(--text-hi);
+}
+
 .brand {
   font-weight: var(--font-weight-bold);
   margin-bottom: var(--spacing-3);
 }
 
-.header p {
-  color: var(--text-secondary);
+.headerDescription {
+  color: var(--text-mid);
+}
+
+.sectionTitle {
+  color: var(--text-hi);
 }
 
 .stepper {
@@ -36,7 +44,7 @@
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: var(--color-primary);
+  background: var(--brass);
   color: white;
   display: inline-flex;
   align-items: center;
@@ -46,12 +54,12 @@
 .stepLine {
   width: 60px;
   height: 2px;
-  background: var(--color-primary);
+  background: var(--brass);
 }
 
 .card {
   background: white;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--hairline-soft);
   border-radius: var(--radius-xl);
   padding: var(--spacing-8);
   box-shadow: var(--shadow-sm);
@@ -69,13 +77,52 @@
   width: 100%;
   padding: 0.65rem 0.75rem;
   border-radius: 10px;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--hairline-soft);
   margin-top: var(--spacing-2);
 }
 
 .helper {
   font-size: var(--font-size-xs);
-  color: var(--text-secondary);
+  color: var(--text-mid);
+  margin-top: var(--spacing-2);
+}
+
+.verificationStatus {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  padding: var(--spacing-3);
+  background: var(--act-convert-bg);
+  border: 1px solid var(--act-convert);
+  border-radius: 10px;
+  color: var(--act-convert);
+  font-weight: var(--font-weight-semibold);
+  margin-top: var(--spacing-2);
+}
+
+.verificationStatusText {
+  color: inherit;
+}
+
+.verificationRow {
+  display: flex;
+  gap: var(--spacing-2);
+  margin-top: var(--spacing-2);
+}
+
+.verificationInput {
+  flex: 1;
+}
+
+.verificationError {
+  color: var(--conf-low);
+  font-size: var(--font-size-xs);
+  margin-top: var(--spacing-2);
+}
+
+.verificationNote {
+  color: var(--text-mid);
+  font-size: var(--font-size-xs);
   margin-top: var(--spacing-2);
 }
 
@@ -87,12 +134,21 @@
 }
 
 .currencyTile {
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--hairline-soft);
   border-radius: 10px;
   padding: var(--spacing-3);
   display: grid;
   gap: var(--spacing-1);
   font-size: var(--font-size-sm);
+}
+
+.currencyTileCode {
+  color: var(--text-hi);
+  font-weight: var(--font-weight-semibold);
+}
+
+.currencyTileMeta {
+  color: var(--text-mid);
 }
 
 .gridTwo {
@@ -106,13 +162,26 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: var(--color-neutral-50);
+  background: var(--bg);
   border-radius: var(--radius-lg);
   padding: var(--spacing-4);
 }
 
+.integrationContent {
+  display: grid;
+  gap: var(--spacing-2);
+}
+
+.integrationTitle {
+  color: var(--text-hi);
+}
+
+.integrationDescription {
+  color: var(--text-mid);
+}
+
 .primary {
-  background: var(--color-primary);
+  background: var(--brass);
   color: white;
   padding: 0.6rem 1.2rem;
   border-radius: 10px;

@@ -16,7 +16,7 @@
 }
 
 .header p {
-  color: var(--text-secondary);
+  color: var(--text-mid);
 }
 
 .filters {
@@ -27,7 +27,7 @@
 
 .filterSelect {
   padding: 0.75rem 1rem;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--hairline-soft);
   border-radius: 8px;
   background: var(--background-color);
   color: var(--text-color);
@@ -89,7 +89,7 @@
 
 .txDate {
   font-size: 0.75rem;
-  color: var(--text-secondary);
+  color: var(--text-mid);
 }
 
 .txRight {
@@ -131,9 +131,9 @@
   justify-content: space-between;
   padding-top: 0.75rem;
   margin-top: 0.75rem;
-  border-top: 1px solid var(--border-color);
+  border-top: 1px solid var(--hairline-soft);
   font-size: 0.875rem;
-  color: var(--text-secondary);
+  color: var(--text-mid);
 }
 
 .rate {
@@ -143,7 +143,7 @@
 .empty {
   text-align: center;
   padding: 3rem;
-  color: var(--text-secondary);
+  color: var(--text-mid);
 }
 
 .error {

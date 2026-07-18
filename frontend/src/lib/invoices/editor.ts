@@ -68,6 +68,7 @@ export interface BackendInvoiceRecord {
   payment_completed_at: string | null;
   created_at: string;
   updated_at: string;
+  is_seeded?: boolean;
   items: BackendInvoiceItem[];
 }
 
@@ -107,6 +108,7 @@ export interface InvoiceRecord {
   paymentCompletedAt: string;
   createdAt: string;
   updatedAt: string;
+  isSeeded?: boolean;
   items: InvoiceRecordItem[];
 }
 
@@ -319,6 +321,7 @@ export function mapBackendInvoice(record: BackendInvoiceRecord): InvoiceRecord {
     paymentCompletedAt: record.payment_completed_at ?? '',
     createdAt: record.created_at,
     updatedAt: record.updated_at,
+    isSeeded: record.is_seeded ?? false,
     items: record.items.map((item) => ({
       id: item.id,
       invoiceId: item.invoice_id,

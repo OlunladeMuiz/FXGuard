@@ -21,7 +21,7 @@
 .title {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
-  color: var(--color-neutral-700);
+  color: var(--text-hi);
 }
 
 .container--sm .title {
@@ -79,7 +79,7 @@
   top: 50%;
   width: 4px;
   height: 20px;
-  background-color: var(--color-neutral-900);
+  background-color: var(--text-hi);
   border: 2px solid white;
   border-radius: var(--radius-sm);
   transform: translate(-50%, -50%);
@@ -105,7 +105,7 @@
 
 .meterLabel {
   font-size: var(--font-size-xs);
-  color: var(--color-neutral-500);
+  color: var(--text-mid);
 }
 
 .container--sm .meterLabel {
@@ -122,7 +122,7 @@
 .valueNumber {
   font-size: var(--font-size-xl);
   font-weight: var(--font-weight-bold);
-  color: var(--color-neutral-900);
+  color: var(--text-hi);
 }
 
 .container--sm .valueNumber {
@@ -135,5 +135,5 @@
 
 .valueLabel {
   font-size: var(--font-size-xs);
-  color: var(--color-neutral-500);
+  color: var(--text-mid);
 }

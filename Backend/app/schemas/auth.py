@@ -29,6 +29,7 @@ class User(BaseModel):
     preferred_currency: str | None = "NGN"
     created_at: datetime | None = None
     updated_at: datetime | None = None
+    is_admin: bool = False
 
     class Config:
         from_attributes = True
@@ -84,3 +85,9 @@ class BVNVerifyRequest(BaseModel):
             raise ValueError("BVN must be exactly 11 digits")
         return self
 
+class RefreshRequest(BaseModel):
+    refresh_token: str
+
+class RefreshResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"

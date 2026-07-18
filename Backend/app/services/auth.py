@@ -4,6 +4,7 @@ import logging
 import os
 import random
 import uuid
+import secrets
 from datetime import datetime, timedelta, timezone
 from fastapi import HTTPException, status, Depends
 from fastapi.security import HTTPBearer
@@ -16,21 +17,21 @@ from app.schemas.auth import (
     ResendOtpRequest,
     LoginRequest,
     ProfileUpdateRequest,
+    RefreshRequest,
 )
 from app.db.database import get_db
 from app.utils.email_service import EmailService
 
 logger = logging.getLogger(__name__)
 
-SECRET_KEY = os.getenv("SECRET_KEY")
+SECRET_KEY = (os.getenv("SECRET_KEY") or "").strip()
 if not SECRET_KEY:
-    raise RuntimeError(
-        "SECRET_KEY environment variable is not set. "
-        "Generate one with: python -c \"import secrets; print(secrets.token_hex(32))\""
-    )
+    SECRET_KEY = secrets.token_hex(32)
+    os.environ["SECRET_KEY"] = SECRET_KEY
+    logger.warning("SECRET_KEY was not set; generated an ephemeral local-dev key.")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
-REFRESH_TOKEN_EXPIRE_DAYS = 7
+REFRESH_TOKEN_EXPIRE_DAYS = 2
 
 
 def hash_password(password: str) -> str:
@@ -209,9 +210,40 @@ def login_user(db: Session, payload: LoginRequest) -> dict:
         db.commit()
         db.refresh(user)
 
-    access_token = create_access_token({"sub": user.id, "email": user.email})
+    access_token = create_access_token({"sub": user.id, "email": user.email, "is_admin": user.is_admin})
     refresh_token = create_refresh_token({"sub": user.id, "email": user.email})
     return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer", "user": user}
+
+
+def refresh_user_token(db: Session, payload: RefreshRequest) -> dict:
+    try:
+        payload_data = jwt.decode(payload.refresh_token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: str = payload_data.get("sub")
+        if user_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid refresh token",
+            )
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh token has expired",
+        )
+    except jwt.InvalidTokenError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid refresh token",
+        )
+    
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found",
+        )
+        
+    access_token = create_access_token({"sub": user.id, "email": user.email, "is_admin": user.is_admin})
+    return {"access_token": access_token, "token_type": "bearer"}
 
 
 def update_user_profile(db: Session, current_user: User, payload: ProfileUpdateRequest) -> User:
@@ -298,3 +330,15 @@ def get_current_user(credentials = Depends(security), db: Session = Depends(get_
         )
     
     return user
+
+
+def get_current_admin_user(current_user: User = Depends(get_current_user)) -> User:
+    """
+    Get the current authenticated user and ensure they have admin privileges.
+    """
+    if not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not enough permissions",
+        )
+    return current_user

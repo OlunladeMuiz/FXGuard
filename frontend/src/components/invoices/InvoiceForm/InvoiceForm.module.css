@@ -6,7 +6,7 @@
 .formTitle {
   font-size: var(--font-size-xl);
   font-weight: var(--font-weight-semibold);
-  color: var(--color-neutral-900);
+  color: var(--text-hi);
   margin-bottom: var(--spacing-6);
 }
 
@@ -38,46 +38,46 @@
 .label {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
-  color: var(--color-neutral-700);
+  color: var(--text-hi);
   margin-bottom: var(--spacing-1);
 }
 
 .select {
   padding: var(--spacing-2) var(--spacing-3);
-  border: 1px solid var(--color-neutral-300);
+  border: 1px solid var(--hairline);
   border-radius: var(--radius-md);
   font-size: var(--font-size-base);
   background-color: white;
-  color: var(--color-neutral-900);
+  color: var(--text-hi);
   cursor: pointer;
   transition: border-color var(--transition-fast);
 }
 
 .select:hover {
-  border-color: var(--color-neutral-400);
+  border-color: var(--text-low);
 }
 
 .select:focus {
   outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 2px var(--color-primary-light);
+  border-color: var(--brass);
+  box-shadow: 0 0 0 2px var(--surface-3);
 }
 
 .select:disabled {
-  background-color: var(--color-neutral-100);
+  background-color: var(--surface);
   cursor: not-allowed;
-  color: var(--color-neutral-500);
+  color: var(--text-mid);
 }
 
 .helperText {
   font-size: var(--font-size-xs);
-  color: var(--color-neutral-500);
+  color: var(--text-mid);
   margin-top: var(--spacing-1);
 }
 
 .errorText {
   font-size: var(--font-size-xs);
-  color: var(--color-error);
+  color: var(--conf-low);
   margin-top: var(--spacing-1);
 }
 
@@ -87,12 +87,12 @@
   gap: var(--spacing-3);
   margin-top: var(--spacing-4);
   padding-top: var(--spacing-4);
-  border-top: 1px solid var(--color-neutral-200);
+  border-top: 1px solid var(--hairline-soft);
 }
 
 .successMessage {
-  background-color: var(--color-success-light);
-  color: var(--color-success);
+  background-color: var(--act-convert-bg);
+  color: var(--act-convert);
   padding: var(--spacing-3) var(--spacing-4);
   border-radius: var(--radius-md);
   font-size: var(--font-size-sm);
@@ -101,8 +101,8 @@
 }
 
 .errorMessage {
-  background-color: var(--color-error-light);
-  color: var(--color-error);
+  background-color: var(--conf-low);
+  color: var(--conf-low);
   padding: var(--spacing-3) var(--spacing-4);
   border-radius: var(--radius-md);
   font-size: var(--font-size-sm);

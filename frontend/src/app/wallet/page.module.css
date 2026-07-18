@@ -11,13 +11,13 @@
 .title {
   font-size: var(--font-size-3xl);
   font-weight: var(--font-weight-bold);
-  color: var(--color-neutral-900);
+  color: var(--text-hi);
   margin: 0 0 var(--spacing-2);
 }
 
 .subtitle {
   font-size: var(--font-size-sm);
-  color: var(--color-neutral-500);
+  color: var(--text-mid);
   margin: 0;
   font-family: var(--font-family-mono);
 }
@@ -29,7 +29,7 @@
 .sectionTitle {
   font-size: var(--font-size-xl);
   font-weight: var(--font-weight-semibold);
-  color: var(--color-neutral-800);
+  color: var(--text-hi);
   margin: 0 0 var(--spacing-6);
 }
 
@@ -63,7 +63,7 @@
 .convertField label {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
-  color: var(--color-neutral-700);
+  color: var(--text-hi);
 }
 
 /* Transactions List */
@@ -90,28 +90,28 @@
   text-transform: uppercase;
   padding: var(--spacing-1) var(--spacing-2);
   border-radius: var(--radius-sm);
-  background-color: var(--color-neutral-100);
-  color: var(--color-neutral-700);
+  background-color: var(--surface);
+  color: var(--text-hi);
 }
 
 .type--conversion {
-  background-color: var(--color-primary-light);
-  color: var(--color-primary);
+  background-color: var(--surface-3);
+  color: var(--brass);
 }
 
 .type--deposit {
-  background-color: var(--color-success-light);
-  color: var(--color-success);
+  background-color: var(--act-convert-bg);
+  color: var(--act-convert);
 }
 
 .type--transfer {
-  background-color: var(--color-warning-light);
-  color: var(--color-warning);
+  background-color: var(--act-wait-bg);
+  color: var(--act-wait);
 }
 
 .type--withdrawal {
-  background-color: var(--color-error-light);
-  color: var(--color-error);
+  background-color: var(--conf-low);
+  color: var(--conf-low);
 }
 
 .transactionStatus {
@@ -122,19 +122,19 @@
 }
 
 .status--completed {
-  background-color: var(--color-success-light);
-  color: var(--color-success);
+  background-color: var(--act-convert-bg);
+  color: var(--act-convert);
 }
 
 .status--pending {
-  background-color: var(--color-warning-light);
-  color: var(--color-warning);
+  background-color: var(--act-wait-bg);
+  color: var(--act-wait);
 }
 
 .status--failed,
 .status--cancelled {
-  background-color: var(--color-error-light);
-  color: var(--color-error);
+  background-color: var(--conf-low);
+  color: var(--conf-low);
 }
 
 .transactionBody {
@@ -144,24 +144,24 @@
 .transactionAmount {
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-bold);
-  color: var(--color-neutral-900);
+  color: var(--text-hi);
   margin: 0 0 var(--spacing-1);
 }
 
 .transactionDescription {
   font-size: var(--font-size-sm);
-  color: var(--color-neutral-600);
+  color: var(--text-mid);
   margin: 0;
 }
 
 .transactionFooter {
   padding-top: var(--spacing-2);
-  border-top: 1px solid var(--color-neutral-100);
+  border-top: 1px solid var(--surface);
 }
 
 .transactionDate {
   font-size: var(--font-size-xs);
-  color: var(--color-neutral-500);
+  color: var(--text-mid);
   margin: 0;
 }
 
@@ -175,12 +175,12 @@
 
 .error h2 {
   font-size: var(--font-size-xl);
-  color: var(--color-error);
+  color: var(--conf-low);
   margin-bottom: var(--spacing-3);
 }
 
 .error p {
-  color: var(--color-neutral-600);
+  color: var(--text-mid);
   margin-bottom: var(--spacing-4);
 }
 

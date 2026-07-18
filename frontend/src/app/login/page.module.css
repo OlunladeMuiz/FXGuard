@@ -4,7 +4,7 @@
   flex-direction: column;
   align-items: center;
   padding: var(--spacing-12) var(--spacing-4) var(--spacing-8);
-  background: var(--page-bg);
+  background: var(--bg);
   gap: var(--spacing-6);
 }
 
@@ -18,7 +18,7 @@
   width: 36px;
   height: 36px;
   border-radius: 10px;
-  background: linear-gradient(135deg, var(--color-primary), #4f8cff);
+  background: linear-gradient(135deg, var(--brass), #4f8cff);
   color: white;
   display: inline-flex;
   align-items: center;
@@ -32,7 +32,7 @@
 
 .card {
   background: white;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--hairline-soft);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-md);
   padding: var(--spacing-8);
@@ -41,8 +41,12 @@
   text-align: center;
 }
 
+.cardTitle {
+  color: var(--text-hi);
+}
+
 .subtitle {
-  color: var(--text-secondary);
+  color: var(--text-mid);
   margin-bottom: var(--spacing-6);
 }
 
@@ -66,12 +70,12 @@
 .verifyLink {
   display: block;
   margin-top: 0.5rem;
-  color: var(--color-primary);
+  color: var(--brass);
   font-weight: var(--font-weight-semibold);
   text-decoration: underline;
 }
 
-.form label {
+.formLabel {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
 }
@@ -80,11 +84,11 @@
   position: relative;
 }
 
-.inputRow input {
+.formInput {
   width: 100%;
   padding: 0.75rem 0.9rem 0.75rem 2.5rem;
   border-radius: 10px;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--hairline-soft);
   background: white;
 }
 
@@ -93,7 +97,7 @@
   left: 0.75rem;
   top: 50%;
   transform: translateY(-50%);
-  color: var(--color-neutral-400);
+  color: var(--text-low);
 }
 
 .iconRight {
@@ -101,7 +105,7 @@
   right: 0.75rem;
   top: 50%;
   transform: translateY(-50%);
-  color: var(--color-neutral-400);
+  color: var(--text-low);
 }
 
 .row {
@@ -118,11 +122,11 @@
 }
 
 .link {
-  color: var(--color-primary);
+  color: var(--brass);
 }
 
 .primary {
-  background: var(--color-primary);
+  background: var(--brass);
   color: white;
   padding: 0.8rem;
   border-radius: 10px;
@@ -140,7 +144,7 @@
   display: flex;
   align-items: center;
   gap: var(--spacing-3);
-  color: var(--text-secondary);
+  color: var(--text-mid);
   font-size: var(--font-size-xs);
 }
 
@@ -149,7 +153,7 @@
   content: '';
   flex: 1;
   height: 1px;
-  background: var(--border-color);
+  background: var(--hairline-soft);
 }
 
 .socials {
@@ -159,7 +163,7 @@
 }
 
 .socialBtn {
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--hairline-soft);
   padding: 0.7rem;
   border-radius: 10px;
   background: white;
@@ -168,13 +172,18 @@
 
 .footerText {
   text-align: center;
-  color: var(--text-secondary);
+  color: var(--text-mid);
   font-size: var(--font-size-sm);
+}
+
+.footerLink {
+  color: var(--brass);
+  font-weight: var(--font-weight-semibold);
 }
 
 .trustCard {
   background: white;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--hairline-soft);
   border-radius: var(--radius-xl);
   padding: var(--spacing-4);
   display: flex;
@@ -183,29 +192,47 @@
   box-shadow: var(--shadow-sm);
 }
 
+.trustContent {
+  display: grid;
+  gap: var(--spacing-2);
+}
+
+.trustTitle {
+  color: var(--text-hi);
+}
+
+.trustDescription {
+  color: var(--text-mid);
+  font-size: var(--font-size-sm);
+}
+
 .trustIcon {
   width: 36px;
   height: 36px;
   border-radius: 10px;
-  background: var(--color-success-light);
-  color: var(--color-success);
+  background: var(--act-convert-bg);
+  color: var(--act-convert);
   display: inline-flex;
   align-items: center;
   justify-content: center;
+}
+
+.badgeLabel {
+  color: inherit;
 }
 
 .badges {
   display: flex;
   gap: var(--spacing-3);
   margin-top: var(--spacing-2);
-  color: var(--text-secondary);
+  color: var(--text-mid);
   font-size: var(--font-size-xs);
 }
 
 .legal {
   max-width: 540px;
   text-align: center;
-  color: var(--text-secondary);
+  color: var(--text-mid);
   font-size: var(--font-size-xs);
 }
 

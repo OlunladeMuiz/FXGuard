@@ -92,6 +92,7 @@ class InvoiceResponse(BaseModel):
     payment_link: Optional[str]
     payment_reference: Optional[str]
     payment_completed_at: Optional[datetime]
+    is_seeded: bool = False
     created_at: datetime
     updated_at: datetime
     items: List[InvoiceItemResponse]

@@ -61,8 +61,8 @@ export function BusinessDetailsSection({
         <div className={styles.sectionHeader}>
           <div>
             <span className={styles.sectionEyebrow}>Business Details</span>
-            <h3>Business identity</h3>
-            <p>Loading the verified business profile used for invoicing and cross-border execution.</p>
+            <h3 className={styles.sectionTitle}>Business identity</h3>
+            <p className={styles.sectionDescription}>Loading the verified business profile used for invoicing and cross-border execution.</p>
           </div>
         </div>
         <div className={styles.emptyState}>Loading business identity...</div>
@@ -75,16 +75,16 @@ export function BusinessDetailsSection({
       <div className={styles.sectionHeader}>
         <div>
           <span className={styles.sectionEyebrow}>Business Details</span>
-          <h3>Business identity</h3>
-          <p>Update the legal and operational details FXGuard uses for invoices, settlement defaults, and transaction review.</p>
+          <h3 className={styles.sectionTitle}>Business identity</h3>
+          <p className={styles.sectionDescription}>Update the legal and operational details FXGuard uses for invoices, settlement defaults, and transaction review.</p>
         </div>
       </div>
 
       <div className={styles.identityHero}>
         <div>
           <span className={styles.identityEyebrow}>Editable business profile</span>
-          <h4>{form.businessName.trim() || businessDetails?.businessName || 'Business identity'}</h4>
-          <p>{ownerName || businessDetails?.ownerName || 'Add the owner/operator name used for finance approvals.'}</p>
+          <h4 className={styles.identityHeroTitle}>{form.businessName.trim() || businessDetails?.businessName || 'Business identity'}</h4>
+          <p className={styles.identityHeroDescription}>{ownerName || businessDetails?.ownerName || 'Add the owner/operator name used for finance approvals.'}</p>
         </div>
         <div className={styles.identityChips}>
           <span className={styles.identityChip}>{form.defaultCurrency} default</span>
@@ -191,17 +191,17 @@ export function BusinessDetailsSection({
 
       <div className={styles.identityGrid}>
         <div className={styles.identityField}>
-          <span>Registration Date</span>
-          <strong>{registrationDate}</strong>
+          <span className={styles.identityFieldLabel}>Registration Date</span>
+          <strong className={styles.identityFieldValue}>{registrationDate}</strong>
         </div>
         <div className={styles.identityField}>
-          <span>FX Context</span>
-          <strong>{form.defaultCurrency} settlement baseline for invoice and payout workflows.</strong>
+          <span className={styles.identityFieldLabel}>FX Context</span>
+          <strong className={styles.identityFieldValue}>{form.defaultCurrency} settlement baseline for invoice and payout workflows.</strong>
         </div>
       </div>
 
       <div className={styles.contextBanner}>
-        <strong>Why this matters</strong>
+        <strong className={styles.contextBannerTitle}>Why this matters</strong>
         <p>
           Business identity feeds invoice ownership, payout destination reviews, and the default
           currency lens used by FXGuard recommendations.

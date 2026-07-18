@@ -14,8 +14,8 @@ import { SettingsSidebar } from '@/components/settings/SettingsSidebar';
 import { clearAuthTokens } from '@/lib/api/auth';
 import { useBankDetails } from '@/hooks/useBankDetails';
 import { useBusinessDetails } from '@/hooks/useBusinessDetails';
+import { useEngineNotifications } from '@/hooks/useEngine';
 import { useIntegrations } from '@/hooks/useIntegrations';
-import { useNotifications } from '@/hooks/useNotifications';
 import { useProfileSettings } from '@/hooks/useProfileSettings';
 import { SettingsSection, SettingsSectionSchema } from '@/types/settings';
 
@@ -35,7 +35,7 @@ export default function SettingsPage() {
   const business = useBusinessDetails();
   const bank = useBankDetails();
   const integrations = useIntegrations();
-  const notifications = useNotifications(profile.form.preferredCurrency);
+  const notifications = useEngineNotifications();
 
   const handleSectionChange = (section: SettingsSection) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -93,6 +93,8 @@ export default function SettingsPage() {
             loading={notifications.loading}
             error={notifications.error}
             refresh={notifications.refresh}
+            unreadCount={notifications.unreadCount}
+            markRead={notifications.markRead}
           />
         );
       case 'integrations':
@@ -129,10 +131,10 @@ export default function SettingsPage() {
     <div className={styles.page}>
       <div className={styles.container}>
         <header className={styles.header}>
-          <div>
+          <div className={styles.headerContent}>
             <span className={styles.headerEyebrow}>FXGuard Settings</span>
-            <h1>Financial control center</h1>
-            <p>
+            <h1 className={styles.headerTitle}>Financial control center</h1>
+            <p className={styles.headerDescription}>
               Manage the identity, payout rails, payment providers, and FX intelligence that
               power cross-border execution for your business.
             </p>
@@ -142,23 +144,23 @@ export default function SettingsPage() {
         <section className={styles.overviewGrid}>
           <article className={styles.overviewCard}>
             <span className={styles.overviewLabel}>Active Section</span>
-            <strong>{activeLabel}</strong>
-            <p>Each settings block affects how FXGuard monitors and executes settlement decisions.</p>
+            <strong className={styles.overviewValue}>{activeLabel}</strong>
+            <p className={styles.overviewDescription}>Each settings block affects how FXGuard monitors and executes settlement decisions.</p>
           </article>
           <article className={styles.overviewCard}>
             <span className={styles.overviewLabel}>Default Currency</span>
-            <strong>{profile.form.preferredCurrency}</strong>
-            <p>This currency drives invoice settlement defaults and recommendation context.</p>
+            <strong className={styles.overviewValue}>{profile.form.preferredCurrency}</strong>
+            <p className={styles.overviewDescription}>This currency drives invoice settlement defaults and recommendation context.</p>
           </article>
           <article className={styles.overviewCard}>
             <span className={styles.overviewLabel}>Connected Providers</span>
-            <strong>{connectedProvidersCount}/3</strong>
-            <p>At least one connected provider is required before payment links can be executed.</p>
+            <strong className={styles.overviewValue}>{connectedProvidersCount}/4</strong>
+            <p className={styles.overviewDescription}>At least one connected provider is required before payment links can be executed.</p>
           </article>
           <article className={styles.overviewCard}>
             <span className={styles.overviewLabel}>Live Notifications</span>
-            <strong>{notifications.notifications.length}</strong>
-            <p>FXGuard blends live recommendation signals with system readiness alerts.</p>
+            <strong className={styles.overviewValue}>{notifications.unreadCount} unread</strong>
+            <p className={styles.overviewDescription}>In-app engine alerts and system notices now flow directly from the backend.</p>
           </article>
         </section>
 

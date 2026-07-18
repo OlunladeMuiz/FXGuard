@@ -90,12 +90,16 @@
   font-size: 0.9rem;
   font-weight: 500;
   text-decoration: none;
-  transition: background 0.2s;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
 }
 
 .getStartedBtn:hover {
+  background: #0f172a;
   color: white;
-  transition:  float 2s ease-in-out infinite;
+  transform: translateY(-1px);
 }
 
 /* ===================================

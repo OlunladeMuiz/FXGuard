@@ -10,6 +10,7 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     password = Column(String, nullable=False)
     is_verified = Column(Boolean, default=False, nullable=False)
+    is_admin = Column(Boolean, default=False, server_default="false", nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc)) 
     verification_code = Column(Integer, nullable=True)

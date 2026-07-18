@@ -1,5 +1,5 @@
 ﻿.page {
-  background: var(--page-bg);
+  background: var(--bg);
   padding: var(--spacing-10) 0 var(--spacing-16);
 }
 
@@ -10,7 +10,7 @@
 }
 
 .header p {
-  color: var(--text-secondary);
+  color: var(--text-mid);
 }
 
 .layout {
@@ -40,7 +40,7 @@
 .card,
 .cardSplit {
   background: white;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--hairline-soft);
   border-radius: var(--radius-xl);
   padding: var(--spacing-6);
   box-shadow: var(--shadow-xs);
@@ -60,16 +60,22 @@
   font-size: var(--font-size-sm);
 }
 
+.pageStack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-6);
+}
+
 .successMessage {
-  background: var(--color-success-light);
-  color: var(--color-success);
-  border: 1px solid color-mix(in srgb, var(--color-success) 18%, white);
+  background: var(--act-convert-bg);
+  color: var(--act-convert);
+  border: 1px solid color-mix(in srgb, var(--act-convert) 18%, white);
 }
 
 .errorMessage {
-  background: color-mix(in srgb, var(--color-error) 10%, white);
-  color: var(--color-error);
-  border: 1px solid color-mix(in srgb, var(--color-error) 18%, white);
+  background: color-mix(in srgb, var(--conf-low) 10%, white);
+  color: var(--conf-low);
+  border: 1px solid color-mix(in srgb, var(--conf-low) 18%, white);
 }
 
 .gridTwo {
@@ -100,7 +106,7 @@
   min-width: 0;
   padding: 0.65rem 0.75rem;
   border-radius: 10px;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--hairline-soft);
   background: white;
   box-sizing: border-box;
 }
@@ -117,14 +123,14 @@
 
 .helper {
   font-size: var(--font-size-xs);
-  color: var(--text-secondary);
+  color: var(--text-mid);
   margin-top: var(--spacing-2);
   display: block;
 }
 
 .recommendationBox {
   margin-top: var(--spacing-4);
-  border-top: 1px solid var(--border-color);
+  border-top: 1px solid var(--hairline-soft);
   padding-top: var(--spacing-4);
 }
 
@@ -138,14 +144,14 @@
 .recommendationEyebrow {
   margin: 0 0 var(--spacing-1);
   font-size: var(--font-size-xs);
-  color: var(--text-secondary);
+  color: var(--text-mid);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
 
 .recommendationBadge {
-  background: color-mix(in srgb, var(--color-primary) 12%, white);
-  color: var(--color-primary);
+  background: color-mix(in srgb, var(--brass) 12%, white);
+  color: var(--brass);
   border-radius: 999px;
   padding: 0.35rem 0.7rem;
   font-size: var(--font-size-xs);
@@ -156,7 +162,7 @@
 .recommendationText,
 .recommendationMuted {
   margin: var(--spacing-3) 0 0;
-  color: var(--text-secondary);
+  color: var(--text-mid);
   line-height: 1.6;
 }
 
@@ -174,7 +180,7 @@
 
 .recommendationFactor p {
   margin: var(--spacing-1) 0 0;
-  color: var(--text-secondary);
+  color: var(--text-mid);
   font-size: var(--font-size-sm);
 }
 
@@ -187,15 +193,15 @@
 }
 
 .recommendationPositive {
-  background: var(--color-success);
+  background: var(--act-convert);
 }
 
 .recommendationNegative {
-  background: var(--color-warning);
+  background: var(--act-wait);
 }
 
 .recommendationNeutral {
-  background: var(--color-primary);
+  background: var(--brass);
 }
 
 .sectionHeader {
@@ -207,7 +213,7 @@
 }
 
 .addButton {
-  background: var(--color-primary);
+  background: var(--brass);
   color: white;
   border-radius: 999px;
   padding: 0.4rem 0.8rem;
@@ -219,7 +225,7 @@
   grid-template-columns: minmax(0, 1.5fr) minmax(72px, 0.5fr) minmax(88px, 0.6fr) minmax(88px, 0.6fr) 44px;
   gap: var(--spacing-3);
   font-size: var(--font-size-xs);
-  color: var(--text-secondary);
+  color: var(--text-mid);
   margin-top: var(--spacing-4);
 }
 
@@ -239,7 +245,7 @@
 
 .trash {
   background: none;
-  color: var(--color-error);
+  color: var(--conf-low);
   justify-self: end;
 }
 
@@ -256,14 +262,14 @@
 }
 
 .taxInput span {
-  color: var(--text-secondary);
+  color: var(--text-mid);
 }
 
 .totalBox {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-2);
-  background: var(--color-neutral-50);
+  background: var(--bg);
   border-radius: var(--radius-lg);
   padding: var(--spacing-4);
 }
@@ -275,7 +281,7 @@
 }
 
 .totalRow {
-  border-top: 1px solid var(--border-color);
+  border-top: 1px solid var(--hairline-soft);
   padding-top: var(--spacing-2);
   margin-top: var(--spacing-1);
 }
@@ -310,17 +316,17 @@
 }
 
 .primary {
-  background: var(--color-primary);
+  background: var(--brass);
   color: white;
 }
 
 .secondary {
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--hairline-soft);
   background: white;
 }
 
 .success {
-  background: var(--color-success);
+  background: var(--act-convert);
   color: white;
 }
 
@@ -337,20 +343,20 @@
 }
 
 .link {
-  color: var(--color-primary);
+  color: var(--brass);
   display: inline-flex;
   align-items: center;
   gap: 4px;
   font-size: var(--font-size-sm);
   text-decoration: none;
-  border: 1px solid var(--color-primary);
+  border: 1px solid var(--brass);
   padding: 4px 10px;
   border-radius: 6px;
   background: white;
 }
 
 .previewBox {
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--hairline-soft);
   border-radius: var(--radius-lg);
   padding: var(--spacing-5);
   margin-top: var(--spacing-4);
@@ -366,7 +372,7 @@
   gap: var(--spacing-3);
   margin-bottom: var(--spacing-5);
   padding-bottom: var(--spacing-4);
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--hairline-soft);
 }
 
 .previewBrand {
@@ -381,7 +387,7 @@
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  background: linear-gradient(135deg, var(--color-primary), #4f8cff);
+  background: linear-gradient(135deg, var(--brass), #4f8cff);
   color: white;
   display: inline-flex;
   align-items: center;
@@ -397,11 +403,11 @@
   display: block;
   font-size: 1.25rem;
   font-weight: var(--font-weight-bold);
-  color: var(--text-primary);
+  color: var(--text-hi);
 }
 
 .previewInvoiceLabel span {
-  color: var(--text-secondary);
+  color: var(--text-mid);
   font-size: 11px;
   overflow-wrap: anywhere;
 }
@@ -421,20 +427,20 @@
 }
 
 .previewAddresses strong {
-  color: var(--text-primary);
+  color: var(--text-hi);
   font-size: 11px;
   overflow-wrap: anywhere;
 }
 
 .previewAddresses span {
-  color: var(--text-secondary);
+  color: var(--text-mid);
   font-size: 10px;
   overflow-wrap: anywhere;
 }
 
 .addressLabel {
   font-weight: var(--font-weight-semibold);
-  color: var(--text-secondary) !important;
+  color: var(--text-mid) !important;
   font-size: 9px !important;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -455,7 +461,7 @@
 }
 
 .previewDates span {
-  color: var(--text-secondary);
+  color: var(--text-mid);
   font-size: 9px;
 }
 
@@ -473,8 +479,8 @@
   justify-content: space-between;
   gap: var(--spacing-3);
   padding-bottom: var(--spacing-2);
-  border-bottom: 1px solid var(--border-color);
-  color: var(--text-secondary);
+  border-bottom: 1px solid var(--hairline-soft);
+  color: var(--text-mid);
   font-weight: var(--font-weight-semibold);
   font-size: 10px;
 }
@@ -484,9 +490,9 @@
   justify-content: space-between;
   gap: var(--spacing-3);
   padding: 6px 0;
-  color: var(--text-secondary);
+  color: var(--text-mid);
   font-size: 10px;
-  border-bottom: 1px solid var(--color-neutral-100);
+  border-bottom: 1px solid var(--surface);
 }
 
 .previewTableHeader span,
@@ -505,12 +511,12 @@
   display: flex;
   justify-content: space-between;
   padding: 4px 0;
-  color: var(--text-secondary);
+  color: var(--text-mid);
   font-size: 10px;
 }
 
 .previewTotal {
-  border-top: 1px solid var(--border-color);
+  border-top: 1px solid var(--hairline-soft);
   margin-top: var(--spacing-2);
   padding-top: var(--spacing-2) !important;
   font-weight: var(--font-weight-bold);
@@ -518,14 +524,14 @@
 
 .previewTotal span,
 .previewTotal strong {
-  color: var(--text-primary);
+  color: var(--text-hi);
   font-size: 12px;
 }
 
 .previewPayment {
   margin-top: var(--spacing-4);
   padding-top: var(--spacing-3);
-  border-top: 1px solid var(--border-color);
+  border-top: 1px solid var(--hairline-soft);
 }
 
 .previewPayment strong {
@@ -535,7 +541,7 @@
 }
 
 .previewPayment span {
-  color: var(--text-secondary);
+  color: var(--text-mid);
   font-size: 10px;
   line-height: 1.4;
 }
@@ -564,7 +570,7 @@
 }
 
 .fxInfo span {
-  color: var(--text-secondary);
+  color: var(--text-mid);
   font-size: var(--font-size-sm);
 }
 
@@ -573,11 +579,11 @@
 }
 
 .green {
-  color: var(--color-success);
+  color: var(--act-convert);
 }
 
 .red {
-  color: var(--color-error);
+  color: var(--conf-low);
 }
 
 @media (max-width: 1100px) {
@@ -610,9 +616,9 @@
   .lineRow {
     grid-template-columns: repeat(4, minmax(0, 1fr));
     padding: var(--spacing-4);
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--hairline-soft);
     border-radius: var(--radius-lg);
-    background: var(--color-neutral-50);
+    background: var(--bg);
   }
 
   .lineRow > :first-child {
