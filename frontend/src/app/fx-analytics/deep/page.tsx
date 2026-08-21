@@ -520,14 +520,17 @@ export default function FxDeepAnalysis() {
         <section className={styles.secondaryFrame}>
           <section className={styles.contextStrip}>
             <article className={`${styles.contextCard} ${styles.contextCardSpreadRisk}`}>
-              <span className={styles.contextCardLabel}>Spread risk</span>
+              <span className={styles.contextCardLabel}>
+                Spread risk
+                {spread?.is_synthetic && <span className={styles.badgeEstData}>Est. data</span>}
+              </span>
               <strong
                 className={`${styles.contextCardValue} ${styles.contextCardValuePill} ${styles.contextCardSpreadRiskValue} ${getMacroToneClass(spread?.risk_level)}`}
               >
                 {spread?.risk_level ?? 'Loading'}
               </strong>
               <p className={styles.contextCardMessage}>
-                {spread?.risk_message ?? 'Nigeria spread context will appear once the engine refreshes.'}
+                {spread?.risk_message?.replace(/synthetic points/gi, 'est. fallback points') ?? 'Nigeria spread context will appear once the engine refreshes.'}
               </p>
             </article>
 
@@ -574,7 +577,18 @@ export default function FxDeepAnalysis() {
                   <h2>Stored candle map</h2>
                 </div>
                 <span className={styles.panelMeta}>
-                  {history ? `${history.dataPoints} points in ${history.period}` : 'Loading price map'}
+                  {history ? (
+                    <>
+                      {history.dataPoints} points in {history.period}
+                      {history.containsSynthetic && (
+                        <span className={styles.badgeEstData}>
+                          Est. data
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    'Loading price map'
+                  )}
                 </span>
               </div>
 
@@ -872,7 +886,7 @@ export default function FxDeepAnalysis() {
                           </span>
                           <span>
                             {simResult.real_data_points ?? simResult.data_points ?? 0} real
-                            {simResult.synthetic_data_points ? ` / ${simResult.synthetic_data_points} seeded` : ''}
+                            {simResult.synthetic_data_points ? ` / ${simResult.synthetic_data_points} est. fallback points` : ''}
                           </span>
                         </div>
                         <div className={styles.recommendationMeta}>

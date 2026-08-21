@@ -749,3 +749,16 @@
     grid-template-columns: 1fr;
   }
 }
+
+.badgeEstData {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.45rem;
+  border-radius: 6px;
+  background: #fef3c7;
+  color: #d97706;
+  font-size: 0.72rem;
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.02em;
+  margin-left: 0.5rem;
+}

@@ -19,6 +19,7 @@ export const SpreadResponseSchema = z.object({
   parallel_source: z.string().nullable().optional(),
   bdc_source: z.string().nullable().optional(),
   recorded_at: z.string().nullable(),
+  is_synthetic: z.boolean().default(false),
 });
 export type SpreadResponse = z.infer<typeof SpreadResponseSchema>;
 

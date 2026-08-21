@@ -96,6 +96,6 @@
 
 .insightText {
   font-size: var(--font-size-sm);
-  color: var(--brass-dim);
+  color: var(--brass-hi);
   line-height: var(--line-height-normal);
 }

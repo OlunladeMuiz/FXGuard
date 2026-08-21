@@ -96,9 +96,13 @@ def seed_invoices(db: Session, now: datetime):
         records.append(Invoice(
             id=str(uuid.uuid4()),
             user_id=user_id,
+            invoice_number=f"INV-SYN-{uuid.uuid4().hex[:6].upper()}",
+            client_name=f"Synthetic Client {days_ago}",
+            client_email=f"synthetic{days_ago}@example.com",
             amount=amount,
             currency="USD",
             status="PENDING",
+            issue_date=target_date,
             due_date=due_date,
             created_at=target_date,
             updated_at=target_date,
