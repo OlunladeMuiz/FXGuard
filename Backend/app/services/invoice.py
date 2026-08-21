@@ -370,8 +370,15 @@ class InvoiceService:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Invoice not found"
             )
+            
+        if invoice.status == "paid" or invoice.payment_reference is not None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cannot delete an invoice that has been paid or has an active payment reference."
+            )
         
-        db.delete(invoice)
+        invoice.is_deleted = True
+        invoice.updated_at = datetime.now(timezone.utc)
         db.commit()
 
     @staticmethod
