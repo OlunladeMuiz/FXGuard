@@ -31,7 +31,7 @@
 }
 
 .button:focus-visible {
-  outline: 2px solid rgba(37, 99, 235, 0.35);
+  outline: 2px solid var(--brass-hi);
   outline-offset: 2px;
 }
 
@@ -47,25 +47,29 @@
 
 .button--primary {
   background: linear-gradient(135deg, var(--brass) 0%, var(--brass-dim) 100%);
-  color: white;
-  box-shadow: 0 12px 28px rgba(37, 99, 235, 0.22);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+}
+
+:global([data-theme="light"]) .button--primary {
+  background: linear-gradient(135deg, var(--brass-dim) 0%, var(--brass) 100%);
 }
 
 .button--primary:hover:not(:disabled) {
-  box-shadow: 0 14px 30px rgba(37, 99, 235, 0.28);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
 }
 
 .button--secondary {
-  background: rgba(255, 255, 255, 0.94);
+  background: var(--surface);
   color: var(--text-hi);
-  border-color: rgba(148, 163, 184, 0.22);
+  border-color: var(--hairline);
   box-shadow: var(--shadow-xs);
 }
 
 .button--secondary:hover:not(:disabled) {
-  border-color: rgba(37, 99, 235, 0.26);
-  color: var(--brass-dim);
-  background: rgba(255, 255, 255, 1);
+  border-color: var(--brass-hi);
+  color: var(--brass-hi);
+  background: var(--surface-2);
 }
 
 .button--danger {

@@ -3,24 +3,6 @@
    =================================== */
 
 :root {
-  /* ============================================================
-     DEFAULT LIGHT THEME VARIABLES (used app-wide by default)
-     ============================================================ */
-  --bg:            #ffffff;
-  --surface:       #ffffff;
-  --surface-2:     #f8fafc;
-  --surface-3:     #f1f5f9;
-  --hairline:      #e2e8f0;
-  --hairline-soft: #f1f5f9;
-
-  --text-hi:       #0f172a;
-  --text-mid:      #475569;
-  --text-low:      #64748b;
-
-  --brass:         #2563eb;
-  --brass-hi:      #1d4ed8;
-  --brass-dim:     #3b82f6;
-
   /* legacy variables for original pages */
   --color-primary: #2563eb;
   --color-primary-dark: #1d4ed8;
@@ -96,11 +78,7 @@
   --radius-xl: 1rem;
   --radius-2xl: 1.25rem;
 
-  /* Shadows */
-  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
-  --shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.08);
-  --shadow-md: 0 8px 24px rgba(15, 23, 42, 0.12);
-  --shadow-lg: 0 16px 40px rgba(15, 23, 42, 0.16);
+  /* Shadows moved to theme blocks */
 
   /* Transitions */
   --transition-fast: 120ms ease-in-out;
@@ -113,9 +91,51 @@
 }
 
 /* ============================================================
-   SCOPED DARK THEME FOR DASHBOARD & HEALTH PORTS
+   THEMES
    ============================================================ */
-body.theme-dark {
+
+/* Light Theme (Warm Premium White) */
+[data-theme="light"], :root {
+  --bg: #FCFBF9;
+  --surface: #FFFFFF;
+  --surface-2: #F6F5F2;
+  --surface-3: #EFECE7;
+  --hairline: #E5E3DB;
+  --hairline-soft: #F0EEE9;
+
+  /* Light Shadows */
+  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.08);
+  --shadow-md: 0 8px 24px rgba(15, 23, 42, 0.12);
+  --shadow-lg: 0 16px 40px rgba(15, 23, 42, 0.16);
+
+  --text-hi: #1C1C19;
+  --text1-h1: #ffffff;
+  --text-mid: #6B6A65;
+  --text-low: #8C8A84;
+
+  --brass: #B58A2D;
+  --brass-hi: #8F691D;
+  --brass-dim: #D4A338;
+
+  /* functional action-state colors */
+  --act-convert:   #117f39;
+  --act-convert-bg:#e7f8ee;
+  --act-wait:      #925e06;
+  --act-wait-bg:   #fff7e6;
+  --act-hedge:     #2563eb;
+  --act-hedge-bg:  #e8f0ff;
+  --act-split:     #9333ea;
+  --act-split-bg:  #f3e8ff;
+
+  /* confidence */
+  --conf-high:     #12873d;
+  --conf-med:      #9a6306;
+  --conf-low:      #d43c3c;
+}
+
+/* Dark Theme */
+[data-theme="dark"] {
   --bg:            #12141d;
   --bg-grain:      #14172294;
   --surface:       #1a1d2b;
@@ -147,8 +167,26 @@ body.theme-dark {
   --conf-med:      #f2a93c;
   --conf-low:      #e8654a;
 
-  /* Apply dark theme background & color directly to body when active */
+  /* Dark Shadows */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 12px 32px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 24px 48px rgba(0, 0, 0, 0.5);
+}
+
+/* Base Body Styles applied from theme tokens */
+body {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-normal);
   color: var(--text-hi);
+  background-color: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+[data-theme="dark"] body {
   background:
     radial-gradient(1200px 600px at 15% -10%, #1e2236 0%, transparent 60%),
     radial-gradient(900px 500px at 100% 0%, #1c2233 0%, transparent 55%),
@@ -168,16 +206,8 @@ html {
   font-size: 16px;
 }
 
-body {
-  font-family: var(--font-family-base);
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-medium);
-  line-height: var(--line-height-normal);
-  color: var(--text-primary);
-  background-color: var(--page-bg);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+
+
 
 h1,
 h2,

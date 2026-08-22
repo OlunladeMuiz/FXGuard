@@ -25,16 +25,20 @@ interface RootLayoutProps {
   children: React.ReactNode;
 }
 
+import { ThemeProvider } from '@/components/ThemeProvider';
+
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={`${plusJakarta.className} ${spaceGrotesk.variable}`}>
-        <ErrorBoundary>
-          <ConditionalNavbar />
-          <main className="app-main">
-            <ProtectedRouteGate>{children}</ProtectedRouteGate>
-          </main>
-        </ErrorBoundary>
+        <ThemeProvider>
+          <ErrorBoundary>
+            <ConditionalNavbar />
+            <main className="app-main">
+              <ProtectedRouteGate>{children}</ProtectedRouteGate>
+            </main>
+          </ErrorBoundary>
+        </ThemeProvider>
       </body>
     </html>
   );

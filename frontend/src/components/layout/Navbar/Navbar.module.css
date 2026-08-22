@@ -2,8 +2,7 @@
   position: sticky;
   top: 0;
   z-index: var(--z-sticky);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(247, 250, 255, 0.88));
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
   backdrop-filter: blur(18px);
   border-bottom: 1px solid rgba(148, 163, 184, 0.16);
   box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04);
@@ -117,8 +116,7 @@
   position: absolute;
   top: 72px;
   right: var(--spacing-6);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 250, 255, 0.96));
+  background: color-mix(in srgb, var(--surface) 96%, transparent);
   border: 1px solid rgba(148, 163, 184, 0.16);
   border-radius: var(--radius-lg);
   box-shadow: 0 24px 48px rgba(15, 23, 42, 0.12);
@@ -159,14 +157,13 @@
 
 .tab:hover {
   color: var(--text-hi);
-  background: var(--bg);
   transform: translateY(-1px);
 }
 
 .tabActive {
   background: var(--surface-3);
   border: 1px solid #cfe0ff;
-  color: var(--brass);
+  color: var(--text-hi);
 }
 
 .tabActive:hover {
@@ -190,8 +187,7 @@
   align-items: center;
   gap: var(--spacing-2);
   padding: 0.55rem 0.9rem;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(250, 252, 255, 0.98));
+  background: var(--surface-2);
   border: 1px solid rgba(148, 163, 184, 0.24);
   border-radius: 999px;
   color: var(--text-mid);
@@ -219,8 +215,7 @@
   height: 40px;
   border-radius: 999px;
   border: 1px solid rgba(148, 163, 184, 0.24);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.98));
+  background: var(--surface-2);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -262,8 +257,7 @@
   padding: 0.25rem 0.75rem;
   border-radius: 999px;
   border: 1px solid rgba(148, 163, 184, 0.24);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.98));
+  background: var(--surface-2);
   cursor: pointer;
   transition:
     background var(--transition-base),
@@ -291,6 +285,7 @@
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
   flex-wrap: wrap;
+  color: var(--text-hi);
 }
 
 .userRole {
@@ -355,7 +350,7 @@
   width: 40px;
   height: 40px;
   padding: 10px;
-  background: white;
+  background: var(--surface-2);
   border: 1px solid var(--hairline-soft);
   border-radius: 999px;
   cursor: pointer;
@@ -425,8 +420,7 @@
   top: calc(100% + 8px);
   right: 0;
   min-width: 200px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 250, 255, 0.96));
+  background: color-mix(in srgb, var(--surface) 96%, transparent);
   border: 1px solid rgba(148, 163, 184, 0.16);
   border-radius: var(--radius-lg);
   box-shadow: 0 24px 50px rgba(15, 23, 42, 0.14);
@@ -564,6 +558,16 @@
   background: rgba(18, 20, 29, 0.92);
   border-bottom: 1px solid var(--hairline-soft);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  
+  /* EXPLICITLY ENFORCE DARK THEME VARIABLES */
+  --text-hi: #f3efe6;
+  --text-mid: #b7bad0;
+  --text-low: #7a7e99;
+  --surface: #1a1d2b;
+  --surface-2: #212439;
+  --surface-3: #282c46;
+  --hairline: #2e3250;
+  --hairline-soft: #23263b;
 }
 
 :global(.theme-dark) .mobileMenu,

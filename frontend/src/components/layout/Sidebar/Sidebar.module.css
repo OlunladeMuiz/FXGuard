@@ -148,7 +148,7 @@
 
 .menuLink:hover {
   background-color: var(--surface, #f3f4f6);
-  color: var(--brass, #3b82f6);
+  color: var(--brass-hi, #3b82f6);
   text-decoration: none;
   transform: translateX(1px);
 }
@@ -156,7 +156,8 @@
 /* Active Menu Link */
 .menuLinkActive {
   background-color: rgba(59, 130, 246, 0.1);
-  color: var(--brass, #3b82f6);
+  color: var(--brass-hi, #3b82f6);
+  font-weight: 600;
 }
 
 .menuLinkActive:hover {
