@@ -30,7 +30,7 @@
   align-content: start;
   position: relative;
   z-index: 1;
-  color: white;
+  color: var(--text-hi);
 }
 
 .commandTag,
@@ -67,7 +67,7 @@
 
 .commandNarrative {
   max-width: 66ch;
-  color: rgba(241, 245, 249, 0.92);
+  color: var(--text-mid);
   font-size: 1.02rem;
   line-height: 1.72;
 }
@@ -97,15 +97,15 @@
 }
 
 .primaryAction {
-  color: #0f172a;
-  background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
+  color: var(--bg);
+  background: linear-gradient(180deg, var(--text-hi) 0%, var(--text-mid) 100%);
   box-shadow: 0 12px 28px rgba(15, 23, 42, 0.16);
 }
 
 .secondaryAction {
-  color: white;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: var(--text-hi);
+  background: var(--surface-2);
+  border: 1px solid var(--hairline);
   backdrop-filter: blur(16px);
 }
 
@@ -124,8 +124,8 @@
 .metricCell {
   padding: var(--spacing-4);
   border-radius: 24px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--hairline);
+  background: var(--surface-2);
   display: grid;
   gap: var(--spacing-2);
   backdrop-filter: blur(14px);
@@ -133,7 +133,7 @@
 
 .metricLabel,
 .metricHint {
-  color: rgba(226, 232, 240, 0.78);
+  color: var(--text-mid);
 }
 
 .metricLabel {
@@ -169,7 +169,7 @@
     radial-gradient(circle at top right, rgba(56, 189, 248, 0.12), transparent 30%),
     linear-gradient(180deg, rgba(10, 18, 36, 0.96) 0%, rgba(12, 22, 42, 0.98) 100%);
   border: 1px solid rgba(148, 163, 184, 0.18);
-  color: white;
+  color: var(--text-hi);
   display: grid;
   gap: var(--spacing-4);
 }
@@ -234,7 +234,7 @@
 }
 
 .terminalNarrative {
-  color: rgba(226, 232, 240, 0.86);
+  color: var(--text-mid);
   line-height: 1.68;
 }
 
@@ -307,7 +307,7 @@
 .rateLabel,
 .rateSource,
 .footerLabel {
-  color: rgba(226, 232, 240, 0.8);
+  color: var(--text-mid);
 }
 
 .rateLabel {
@@ -497,7 +497,7 @@
 .briefIdentityCopy p,
 .briefNote,
 .briefSubline {
-  color: rgba(226, 232, 240, 0.86);
+  color: var(--text-mid);
 }
 
 .briefIdentityCopy p {
@@ -518,8 +518,8 @@
 .briefStat {
   padding: var(--spacing-4);
   border-radius: 22px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--hairline);
+  background: var(--surface-2);
   display: grid;
   gap: 0.35rem;
 }
@@ -533,7 +533,7 @@
 }
 
 .briefStatLabel {
-  color: rgba(226, 232, 240, 0.76);
+  color: var(--text-mid);
 }
 
 .briefStatValue {
@@ -624,6 +624,11 @@
   font-weight: var(--font-weight-semibold);
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+:global([data-theme="dark"]) .queueFlag {
+  background: rgba(30, 58, 138, 0.4);
+  color: #93c5fd;
 }
 
 .queueAmount,
@@ -765,6 +770,20 @@
   line-height: 1.6;
 }
 
+:global([data-theme="dark"]) .systemNotice {
+  border: 1px solid rgba(251, 191, 36, 0.15);
+  border-left: 4px solid #d97706;
+  background: linear-gradient(180deg, rgba(69, 26, 3, 0.4) 0%, rgba(69, 26, 3, 0.2) 100%);
+}
+
+:global([data-theme="dark"]) .systemNotice strong {
+  color: #fcd34d;
+}
+
+:global([data-theme="dark"]) .systemNotice p {
+  color: #fde68a;
+}
+
 .commandCard {
   align-items: center;
   justify-content: space-between;
@@ -802,6 +821,13 @@
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
 }
 
+:global([data-theme="dark"]) .commandCardArrow {
+  background: rgba(30, 58, 138, 0.4);
+  border-color: rgba(59, 130, 246, 0.3);
+  color: #93c5fd;
+  box-shadow: none;
+}
+
 .emptyState {
   padding: var(--spacing-5);
   border-radius: 24px;
@@ -810,6 +836,12 @@
     linear-gradient(180deg, rgba(248, 250, 252, 0.98) 0%, rgba(241, 245, 249, 0.95) 100%);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
   line-height: 1.7;
+}
+
+:global([data-theme="dark"]) .emptyState {
+  background: var(--surface-2);
+  border: 1px solid var(--hairline);
+  box-shadow: none;
 }
 
 .low,
@@ -856,6 +888,52 @@
 
 .negative {
   color: #b91c1c;
+}
+
+:global([data-theme="dark"]) .low,
+:global([data-theme="dark"]) .live {
+  color: #86efac;
+  background: rgba(20, 83, 45, 0.6);
+}
+
+:global([data-theme="dark"]) .medium,
+:global([data-theme="dark"]) .neutral {
+  color: #fcd34d;
+  background: rgba(120, 53, 15, 0.6);
+}
+
+:global([data-theme="dark"]) .high,
+:global([data-theme="dark"]) .watch {
+  color: #fdba74;
+  background: rgba(124, 45, 18, 0.6);
+}
+
+:global([data-theme="dark"]) .critical,
+:global([data-theme="dark"]) .blocked,
+:global([data-theme="dark"]) .overdue {
+  color: #fca5a5;
+  background: rgba(127, 29, 29, 0.6);
+}
+
+:global([data-theme="dark"]) .steady {
+  color: #93c5fd;
+  background: rgba(30, 58, 138, 0.6);
+}
+
+:global([data-theme="dark"]) .stale,
+:global([data-theme="dark"]) .pending,
+:global([data-theme="dark"]) .draft,
+:global([data-theme="dark"]) .sent {
+  color: #fcd34d;
+  background: rgba(120, 53, 15, 0.6);
+}
+
+:global([data-theme="dark"]) .positive {
+  color: #86efac;
+}
+
+:global([data-theme="dark"]) .negative {
+  color: #fca5a5;
 }
 
 @media (max-width: 1220px) {
