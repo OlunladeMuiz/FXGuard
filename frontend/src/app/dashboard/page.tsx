@@ -359,8 +359,9 @@ export default function DashboardPage() {
               Review queue
             </Link>
           </div>
+        </div>
 
-          <div className={styles.deskMetrics}>
+        <div className={styles.deskMetrics}>
             <article className={styles.metricCell}>
               <span className={styles.metricLabel}>Open queue</span>
               <strong className={styles.metricValue}>{invoiceLoading ? '...' : invoiceSummary.openCount}</strong>
@@ -397,7 +398,6 @@ export default function DashboardPage() {
               </p>
             </article>
           </div>
-        </div>
       </section>
 
       <section className={styles.workbench}>
@@ -503,7 +503,7 @@ export default function DashboardPage() {
                                   <span className={styles.queueFlag}>Largest</span>
                                 )}
                               </div>
-                              <p>{invoice.invoiceNumber}</p>
+                              <p title={invoice.invoiceNumber}>{invoice.invoiceNumber}</p>
                             </div>
                           </div>
 
