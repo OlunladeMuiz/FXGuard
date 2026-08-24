@@ -554,46 +554,36 @@
 /* ============================================================
    DARK THEME NAVBAR OVERRIDES
    ============================================================ */
-:global(.theme-dark) .navbar {
+:global([data-theme="dark"]) .navbar {
   background: rgba(18, 20, 29, 0.92);
   border-bottom: 1px solid var(--hairline-soft);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-  
-  /* EXPLICITLY ENFORCE DARK THEME VARIABLES */
-  --text-hi: #f3efe6;
-  --text-mid: #b7bad0;
-  --text-low: #7a7e99;
-  --surface: #1a1d2b;
-  --surface-2: #212439;
-  --surface-3: #282c46;
-  --hairline: #2e3250;
-  --hairline-soft: #23263b;
 }
 
-:global(.theme-dark) .mobileMenu,
-:global(.theme-dark) .userMenu {
+:global([data-theme="dark"]) .mobileMenu,
+:global([data-theme="dark"]) .userMenu {
   background: var(--surface-2);
   border: 1px solid var(--hairline-soft);
   box-shadow: 0 24px 50px rgba(0, 0, 0, 0.4);
 }
 
-:global(.theme-dark) .search,
-:global(.theme-dark) .iconButton,
-:global(.theme-dark) .user {
+:global([data-theme="dark"]) .search,
+:global([data-theme="dark"]) .iconButton,
+:global([data-theme="dark"]) .user {
   background: var(--surface-2);
   border-color: var(--hairline-soft);
 }
 
-:global(.theme-dark) .hamburgerBtn {
+:global([data-theme="dark"]) .hamburgerBtn {
   background: var(--surface-2);
   border-color: var(--hairline-soft);
 }
 
-:global(.theme-dark) .menuActionButton:hover:not(:disabled) {
+:global([data-theme="dark"]) .menuActionButton:hover:not(:disabled) {
   background-color: var(--surface-3);
 }
 
-:global(.theme-dark) .menuActionDanger:hover:not(:disabled) {
+:global([data-theme="dark"]) .menuActionDanger:hover:not(:disabled) {
   background-color: #3b181e;
   color: #fca5a5;
 }

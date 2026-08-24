@@ -12,16 +12,7 @@ export function ConditionalNavbar() {
     setMounted(true);
   }, []);
 
-  // Dynamically toggle the dark theme class on document.body
-  useEffect(() => {
-    if (!mounted) return;
-    const isDarkTheme = pathname === '/dashboard' || pathname === '/internal/health';
-    if (isDarkTheme) {
-      document.body.classList.add('theme-dark');
-    } else {
-      document.body.classList.remove('theme-dark');
-    }
-  }, [pathname, mounted]);
+
 
   // Prevent hydration mismatch by not rendering until mounted
   if (!mounted) {
