@@ -162,13 +162,13 @@
 
 .tabActive {
   background: var(--surface-3);
-  border: 1px solid #cfe0ff;
+  border: 1px solid var(--act-hedge-bg);
   color: var(--text-hi);
 }
 
 .tabActive:hover {
   background: var(--surface-3);
-  border-color: #cfe0ff;
+  border-color: var(--act-hedge-bg);
   color: var(--brass-dim);
 }
 
@@ -421,7 +421,7 @@
   right: 0;
   min-width: 200px;
   background: color-mix(in srgb, var(--surface) 96%, transparent);
-  border: 1px solid rgba(148, 163, 184, 0.16);
+  border: 1px solid var(--hairline-soft);
   border-radius: var(--radius-lg);
   box-shadow: 0 24px 50px rgba(15, 23, 42, 0.14);
   backdrop-filter: blur(18px);
