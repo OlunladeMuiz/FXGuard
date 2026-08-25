@@ -9,7 +9,7 @@
 
 .commandHeader {
   display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(340px, 0.92fr);
+  grid-template-columns: minmax(0, 1fr) minmax(480px, 1.1fr);
   gap: var(--spacing-5);
   padding: var(--spacing-6);
   border-radius: 36px;
@@ -118,7 +118,7 @@
 .deskMetrics {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--spacing-3);
+  gap: var(--spacing-2);
   align-self: start;
   align-content: start; 
 }
@@ -152,6 +152,7 @@
   letter-spacing: -0.05em;
   font-variant-numeric: tabular-nums lining-nums;
   overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .metricHint {
@@ -1051,3 +1052,32 @@
     gap: var(--spacing-3);
   }
 }
+
+.metricHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+@container (max-width: 160px) {
+  .metricHeaderRow {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-1);
+  }
+}
+
+.metricIconChip {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.metricIconChipQueue    { background: var(--act-split-bg); color: var(--act-split); }
+.metricIconChipWindow   { background: var(--act-wait-bg); color: var(--act-wait); }
+.metricIconChipExposure { background: var(--act-convert-bg); color: var(--act-convert); }
+.metricIconChipTotal    { background: var(--act-hedge-bg); color: var(--act-hedge); }

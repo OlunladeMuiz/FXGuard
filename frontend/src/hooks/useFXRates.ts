@@ -74,8 +74,13 @@ export const useFXRates = (
 
   const getRate = useCallback(
     (from: CurrencyCode, to: CurrencyCode): number | null => {
-      const rate = state.rates.find((r) => r.base === from && r.quote === to);
-      return rate ? rate.rate : null;
+      const direct = state.rates.find((r) => r.base === from && r.quote === to);
+      if (direct) return direct.rate;
+
+      const inverse = state.rates.find((r) => r.base === to && r.quote === from);
+      if (inverse && inverse.rate !== 0) return 1 / inverse.rate;
+
+      return null;
     },
     [state.rates]
   );

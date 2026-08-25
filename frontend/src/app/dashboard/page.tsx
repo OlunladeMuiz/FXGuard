@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 
 import styles from './page.module.css';
 import RecommendationPanel from '@/components/fx/RecommendationPanel';
@@ -9,6 +9,9 @@ import { AUTH_USER_UPDATED_EVENT, getUser, getUserDisplayName, type User } from 
 import { fetchRecommendation } from '@/lib/api/recommendation';
 import { type Recommendation } from '@/lib/types/recommendation';
 import { fetchAllInvoiceRecords, formatCurrency, type InvoiceRecord } from '@/lib/invoices/editor';
+import { useFXRates } from '@/hooks/useFXRates';
+import { calculateConversion } from '@/lib/utils/calculateConversion';
+import { type CurrencyCode } from '@/types/currency';
 
 type InvoiceSummary = {
   totalCount: number;
@@ -20,6 +23,8 @@ type InvoiceSummary = {
   largestOpenInvoice: InvoiceRecord | null;
   priorityInvoice: InvoiceRecord | null;
   settlementQueue: InvoiceRecord[];
+  totalExposure: number;
+  unresolvedCount: number;
 };
 
 type SettlementTone = 'critical' | 'watch' | 'steady';
@@ -34,17 +39,17 @@ const QUICK_ACTIONS = [
   },
 ];
 
-const EMPTY_INVOICE_SUMMARY: InvoiceSummary = {
-  totalCount: 0,
-  openCount: 0,
-  overdueCount: 0,
-  dueTodayCount: 0,
-  dueSoonCount: 0,
-  currencyCount: 0,
-  largestOpenInvoice: null,
-  priorityInvoice: null,
-  settlementQueue: [],
-};
+
+
+function formatAbbreviatedNumber(value: number): string {
+  if (value >= 1000000) {
+    return (value / 1000000).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + 'M';
+  }
+  if (value >= 1000) {
+    return (value / 1000).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + 'K';
+  }
+  return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
 
 function formatInvoiceDate(value: string): string {
   const date = new Date(value);
@@ -114,7 +119,11 @@ function compareOpenInvoices(left: InvoiceRecord, right: InvoiceRecord): number 
   return right.amount - left.amount;
 }
 
-function getInvoiceSummary(invoices: InvoiceRecord[]): InvoiceSummary {
+function getInvoiceSummary(
+  invoices: InvoiceRecord[],
+  getRate?: (from: CurrencyCode, to: CurrencyCode) => number | null,
+  preferredSettlementCurrency?: string
+): InvoiceSummary {
   const openInvoices = invoices
     .filter((invoice) => OPEN_INVOICE_STATUSES.has(invoice.status.toLowerCase()))
     .sort(compareOpenInvoices);
@@ -132,6 +141,26 @@ function getInvoiceSummary(invoices: InvoiceRecord[]): InvoiceSummary {
     return largest;
   }, null);
 
+  let totalExposure = 0;
+  let unresolvedCount = 0;
+
+  openInvoices.forEach((invoice) => {
+    if (preferredSettlementCurrency && getRate) {
+      if (invoice.currency.toUpperCase() === preferredSettlementCurrency) {
+        totalExposure += invoice.amount;
+      } else {
+        const rate = getRate(invoice.currency as CurrencyCode, preferredSettlementCurrency as CurrencyCode);
+        if (typeof rate === 'number') {
+          totalExposure += calculateConversion(invoice.amount, rate);
+        } else {
+          unresolvedCount++;
+        }
+      }
+    } else {
+      totalExposure += invoice.amount;
+    }
+  });
+
   return {
     totalCount: invoices.length,
     openCount: openInvoices.length,
@@ -145,6 +174,8 @@ function getInvoiceSummary(invoices: InvoiceRecord[]): InvoiceSummary {
     largestOpenInvoice,
     priorityInvoice: openInvoices[0] ?? null,
     settlementQueue: openInvoices.slice(0, 6),
+    totalExposure,
+    unresolvedCount,
   };
 }
 
@@ -224,9 +255,42 @@ function getCommandNarrative(invoiceSummary: InvoiceSummary): string {
   return `${queueSummary}${windowSummary}`;
 }
 
+const FolderIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+  </svg>
+);
+
+const CalendarIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+    <line x1="16" y1="2" x2="16" y2="6" />
+    <line x1="8" y1="2" x2="8" y2="6" />
+    <line x1="3" y1="10" x2="21" y2="10" />
+  </svg>
+);
+
+const TrendingUpIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+    <polyline points="17 6 23 6 23 12" />
+  </svg>
+);
+
+const LayersIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polygon points="12 2 2 7 12 12 22 7 12 2" />
+    <polyline points="2 12 12 17 22 12" />
+    <polyline points="2 17 12 22 22 17" />
+  </svg>
+);
+
 export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null);
-  const [invoiceSummary, setInvoiceSummary] = useState<InvoiceSummary>(EMPTY_INVOICE_SUMMARY);
+  const preferredSettlementCurrency = user?.preferred_currency?.trim().toUpperCase() || 'NGN';
+  const { getRate, loading: ratesLoading } = useFXRates(preferredSettlementCurrency as CurrencyCode);
+
+  const [invoices, setInvoices] = useState<InvoiceRecord[]>([]);
   const [invoiceLoading, setInvoiceLoading] = useState(true);
   const [invoiceError, setInvoiceError] = useState<string | null>(null);
   const [recommendation, setRecommendation] = useState<Recommendation | null>(null);
@@ -258,14 +322,14 @@ export default function DashboardPage() {
       setInvoiceError(null);
 
       try {
-        const invoices = await fetchAllInvoiceRecords();
+        const fetchedInvoices = await fetchAllInvoiceRecords();
         if (!cancelled) {
-          setInvoiceSummary(getInvoiceSummary(invoices));
+          setInvoices(fetchedInvoices);
         }
       } catch (error) {
         if (!cancelled) {
           console.error('Failed to load treasury invoice queue:', error);
-          setInvoiceSummary(EMPTY_INVOICE_SUMMARY);
+          setInvoices([]);
           setInvoiceError('The settlement queue could not be loaded.');
         }
       } finally {
@@ -282,13 +346,17 @@ export default function DashboardPage() {
     };
   }, []);
 
+  const invoiceSummary = useMemo(
+    () => getInvoiceSummary(invoices, getRate, preferredSettlementCurrency),
+    [invoices, getRate, preferredSettlementCurrency]
+  );
+
   const displayName = getUserDisplayName(user);
   const priorityInvoice = invoiceSummary.priorityInvoice;
   const priorityWindow = priorityInvoice
     ? getSettlementWindow(getDaysUntilDue(priorityInvoice.dueDate))
     : null;
   const queueRows = invoiceSummary.settlementQueue.filter((invoice) => invoice.id !== priorityInvoice?.id);
-  const preferredSettlementCurrency = user?.preferred_currency?.trim().toUpperCase() || 'NGN';
   const commandHeadline = getCommandHeadline(invoiceSummary);
   const commandNarrative = getCommandNarrative(invoiceSummary);
 
@@ -363,7 +431,12 @@ export default function DashboardPage() {
 
         <div className={styles.deskMetrics}>
             <article className={styles.metricCell}>
-              <span className={styles.metricLabel}>Open queue</span>
+              <div className={styles.metricHeaderRow}>
+                <span className={styles.metricLabel}>Open queue</span>
+                <span className={`${styles.metricIconChip} ${styles.metricIconChipQueue}`}>
+                  <FolderIcon />
+                </span>
+              </div>
               <strong className={styles.metricValue}>{invoiceLoading ? '...' : invoiceSummary.openCount}</strong>
               <p className={styles.metricHint}>
                 {invoiceLoading
@@ -373,7 +446,12 @@ export default function DashboardPage() {
             </article>
 
             <article className={styles.metricCell}>
-              <span className={styles.metricLabel}>Active window</span>
+              <div className={styles.metricHeaderRow}>
+                <span className={styles.metricLabel}>Active window</span>
+                <span className={`${styles.metricIconChip} ${styles.metricIconChipWindow}`}>
+                  <CalendarIcon />
+                </span>
+              </div>
               <strong className={styles.metricValue}>
                 {invoiceLoading ? '...' : invoiceSummary.dueTodayCount + invoiceSummary.overdueCount}
               </strong>
@@ -385,7 +463,12 @@ export default function DashboardPage() {
             </article>
 
             <article className={styles.metricCell}>
-              <span className={styles.metricLabel}>Largest exposure</span>
+              <div className={styles.metricHeaderRow}>
+                <span className={styles.metricLabel}>Largest exposure</span>
+                <span className={`${styles.metricIconChip} ${styles.metricIconChipExposure}`}>
+                  <TrendingUpIcon />
+                </span>
+              </div>
               <strong className={styles.metricValue}>
                 {invoiceSummary.largestOpenInvoice
                   ? formatCurrency(invoiceSummary.largestOpenInvoice.amount, invoiceSummary.largestOpenInvoice.currency)
@@ -395,6 +478,28 @@ export default function DashboardPage() {
                 {invoiceSummary.largestOpenInvoice
                   ? `${invoiceSummary.largestOpenInvoice.clientName}${invoiceSummary.largestOpenInvoice.isSeeded ? ' [Seeded]' : ''}`
                   : 'No open receivable yet'}
+              </p>
+            </article>
+
+            <article className={styles.metricCell}>
+              <div className={styles.metricHeaderRow}>
+                <span className={styles.metricLabel}>Total exposure</span>
+                <span className={`${styles.metricIconChip} ${styles.metricIconChipTotal}`}>
+                  <LayersIcon />
+                </span>
+              </div>
+              <strong 
+                className={styles.metricValue}
+                title={invoiceLoading || ratesLoading ? undefined : invoiceSummary.totalExposure.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              >
+                {invoiceLoading || ratesLoading
+                  ? '...'
+                  : formatAbbreviatedNumber(invoiceSummary.totalExposure)}
+              </strong>
+              <p className={styles.metricHint}>
+                {invoiceSummary.unresolvedCount > 0 
+                  ? `Across all lanes · ${invoiceSummary.unresolvedCount} unavailable` 
+                  : 'Across all lanes'}
               </p>
             </article>
           </div>
