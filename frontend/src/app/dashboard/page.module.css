@@ -117,7 +117,7 @@
 
 .deskMetrics {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--spacing-3);
   align-self: start;
   align-content: start; 
