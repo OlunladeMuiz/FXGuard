@@ -362,7 +362,7 @@ export default function DashboardPage() {
   const priorityWindow = priorityInvoice
     ? getSettlementWindow(getDaysUntilDue(priorityInvoice.dueDate))
     : null;
-  const queueRows = invoiceSummary.settlementQueue.filter((invoice) => invoice.id !== priorityInvoice?.id);
+  const queueRows = invoiceSummary.settlementQueue;
   const commandHeadline = getCommandHeadline(invoiceSummary);
   const commandNarrative = getCommandNarrative(invoiceSummary);
 

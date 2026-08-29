@@ -18,6 +18,7 @@ import {
   formatCurrency,
   formatDisplayDate,
   loadInvoiceDraft,
+  createEmptyInvoiceDraft,
   mapInvoiceRecordToDraft,
   saveInvoiceDraft,
   updateInvoiceRecord,
@@ -99,7 +100,11 @@ export default function InvoiceGeneratorPage() {
     const user = getUser();
     const preferredCurrency = getPreferredCurrency(user);
     setCurrentUser(user);
-    setDraft(syncSettlementCurrency(loadInvoiceDraft(), preferredCurrency));
+    
+    const savedDraft = loadInvoiceDraft();
+    const isDraftOwner = savedDraft && user && (savedDraft as any).from?.email === user.email;
+    
+    setDraft(syncSettlementCurrency(isDraftOwner ? savedDraft : createEmptyInvoiceDraft(), preferredCurrency));
     setDraftReady(true);
   }, []);
 
