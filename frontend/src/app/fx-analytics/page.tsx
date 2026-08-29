@@ -394,8 +394,12 @@ export default function FxAnalyticsHub() {
       const last7Days = points.slice(-7);
       const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
       
+      const lastPoint = last7Days[last7Days.length - 1];
+      const anchorDate = last7Days.length > 0 && lastPoint?.date
+        ? new Date(lastPoint.date) 
+        : new Date();
+
       const volData = last7Days.map((point, idx) => {
-        const dayIndex = new Date(point.date).getDay();
         // Calculate daily volatility from high-low range or daily change
         let volatility = 0;
         if (point.high && point.low && point.rate > 0) {
@@ -408,6 +412,13 @@ export default function FxAnalyticsHub() {
             volatility = Math.abs((point.rate - prevPoint.rate) / prevPoint.rate) * 100;
           }
         }
+
+        // Enforce rigid sequential days ending on the anchor date to prevent label duplication
+        const daysToSubtract = (last7Days.length - 1) - idx;
+        const d = new Date(anchorDate);
+        d.setDate(d.getDate() - daysToSubtract);
+        const dayIndex = d.getDay();
+
         return {
           day: dayNames[dayIndex] || 'Mon',
           value: Math.round(volatility * 100) / 100,
