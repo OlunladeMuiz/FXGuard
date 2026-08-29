@@ -140,7 +140,7 @@ export const Navbar: React.FC = () => {
     if (pathname.startsWith('/fx-analytics')) return '/fx-analytics';
     if (pathname.startsWith('/invoice-generator')) return '/invoice-generator';
     if (pathname.startsWith('/settings')) return '/settings';
-    if (pathname.startsWith('/internal/health')) return '/internal/health';
+    if (pathname.startsWith('/admin')) return '/admin';
     return '/dashboard';
   }, [pathname]);
 
@@ -242,13 +242,13 @@ export const Navbar: React.FC = () => {
               ))}
               {isAdmin && (
                 <Link
-                  href="/internal/health"
-                  className={`${styles.tab} ${activeTab === '/internal/health' ? styles.tabActive : ''}`}
+                  href="/admin"
+                  className={`${styles.tab} ${activeTab === '/admin' ? styles.tabActive : ''}`}
                 >
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
                   </svg>
-                  System Health
+                  Admin Control
                 </Link>
               )}
             </nav>

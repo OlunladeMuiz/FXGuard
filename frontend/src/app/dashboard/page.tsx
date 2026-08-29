@@ -604,7 +604,7 @@ export default function DashboardPage() {
                       const settlementWindow = getSettlementWindow(getDaysUntilDue(invoice.dueDate));
 
                       return (
-                        <article key={invoice.id} className={styles.queueRow}>
+                        <Link key={invoice.id} href={`/invoices/${invoice.id}`} className={styles.queueRow}>
                           <div className={styles.queueIdentity}>
                             <span className={styles.queueAvatar}>{getClientInitials(invoice.clientName)}</span>
                             <div className={styles.queueCopy}>
@@ -639,7 +639,7 @@ export default function DashboardPage() {
                           <span className={styles.queueChevron}>
                             <ChevronRightIcon />
                           </span>
-                        </article>
+                        </Link>
                       );
                     })
                   )}

@@ -1,0 +1,153 @@
+.container {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: var(--spacing-6) var(--spacing-4);
+}
+
+.breadcrumb {
+  display: inline-block;
+  color: var(--text-mid);
+  text-decoration: none;
+  margin-bottom: var(--spacing-4);
+  font-size: 0.875rem;
+}
+
+.breadcrumb:hover {
+  color: var(--text-hi);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--spacing-6);
+}
+
+.titleGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-4);
+}
+
+.titleGroup h1 {
+  font-size: 2rem;
+  font-weight: 600;
+  color: var(--text-hi);
+  margin: 0;
+}
+
+.badge {
+  padding: var(--spacing-1) var(--spacing-3);
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: var(--surface-3);
+  color: var(--text-hi);
+}
+
+.layoutGrid {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: var(--spacing-6);
+  align-items: start;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-6);
+}
+
+.card {
+  background: var(--surface-2);
+  border: 1px solid var(--surface-3);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-6);
+}
+
+.cardHeader {
+  margin-top: 0;
+  margin-bottom: var(--spacing-4);
+  font-size: 1.125rem;
+  color: var(--text-hi);
+  font-weight: 600;
+}
+
+.metaGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-5);
+}
+
+.metaBlock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+}
+
+.label {
+  color: var(--text-mid);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+.value {
+  color: var(--text-hi);
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: var(--spacing-2);
+}
+
+.table th {
+  text-align: left;
+  padding-bottom: var(--spacing-3);
+  border-bottom: 1px solid var(--surface-3);
+  color: var(--text-mid);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.table td {
+  padding: var(--spacing-3) 0;
+  border-bottom: 1px solid var(--surface-3);
+  color: var(--text-hi);
+  font-size: 0.875rem;
+}
+
+.table th.alignRight,
+.table td.alignRight {
+  text-align: right;
+}
+
+.summaryRow {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--spacing-2) 0;
+  color: var(--text-mid);
+  font-size: 0.875rem;
+}
+
+.summaryRow.total {
+  margin-top: var(--spacing-4);
+  padding-top: var(--spacing-4);
+  border-top: 1px solid var(--surface-3);
+  color: var(--text-hi);
+  align-items: center;
+  font-weight: 600;
+}
+
+.totalAmount {
+  font-family: var(--font-family-display);
+  font-size: 2.5rem;
+  font-weight: 600;
+  color: var(--text-hi);
+}

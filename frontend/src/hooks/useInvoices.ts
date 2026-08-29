@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Invoice } from '@/types/invoice';
 import { fetchInvoices, deleteInvoice } from '@/api/invoices';
+import { mapBackendInvoice } from '@/lib/invoices/editor';
 
 interface UseInvoicesState {
   invoices: Invoice[];
@@ -44,9 +45,14 @@ export const useInvoices = (
     try {
       setState((prev) => ({ ...prev, loading: true, error: null }));
       const response = await fetchInvoices(state.page, state.pageSize);
+      
+      const safelyMappedInvoices = response.data.map(
+        (rawInvoice: any) => mapBackendInvoice(rawInvoice) as unknown as Invoice
+      );
+
       setState((prev) => ({
         ...prev,
-        invoices: response.data,
+        invoices: safelyMappedInvoices,
         total: response.total,
         loading: false,
         error: null,

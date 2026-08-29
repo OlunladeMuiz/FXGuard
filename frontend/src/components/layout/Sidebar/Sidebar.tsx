@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { getUser, AUTH_USER_UPDATED_EVENT, type User } from '@/lib/api/auth';
 import styles from './Sidebar.module.css';
 
 interface SidebarItem {
@@ -71,7 +72,20 @@ const PROTECTED_PREFIXES = [
   '/settings',
   '/transactions',
   '/wallet',
+  '/admin',
 ] as const;
+
+const adminNavItem: SidebarItem = {
+  id: 'admin',
+  label: 'Admin Control',
+  href: '/admin',
+  icon: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+    </svg>
+  ),
+};
 
 /**
  * Sidebar Component - Hamburger Menu Style
@@ -79,8 +93,26 @@ const PROTECTED_PREFIXES = [
  */
 export const Sidebar: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
   const pathname = usePathname();
   const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const syncUser = (event?: Event) => {
+      const updatedUser = event instanceof CustomEvent ? (event.detail as User | null | undefined) : undefined;
+      setUser(updatedUser ?? getUser());
+    };
+
+    syncUser();
+    window.addEventListener(AUTH_USER_UPDATED_EVENT, syncUser);
+    window.addEventListener('storage', syncUser);
+
+    return () => {
+      window.removeEventListener(AUTH_USER_UPDATED_EVENT, syncUser);
+      window.removeEventListener('storage', syncUser);
+    };
+  }, []);
+
   const shouldRender = PROTECTED_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   );
@@ -152,6 +184,18 @@ export const Sidebar: React.FC = () => {
               </li>
             );
           })}
+          {user?.is_admin && (
+            <li key={adminNavItem.id} className={styles.menuItem}>
+              <Link
+                href={adminNavItem.href}
+                className={`${styles.menuLink} ${pathname.startsWith(adminNavItem.href) ? styles.menuLinkActive : ''}`}
+                onClick={() => setIsOpen(false)}
+              >
+                <span className={styles.menuIcon}>{adminNavItem.icon}</span>
+                <span className={styles.menuLabel}>{adminNavItem.label}</span>
+              </Link>
+            </li>
+          )}
         </ul>
       </nav>
     </div>

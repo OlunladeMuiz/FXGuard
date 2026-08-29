@@ -1,4 +1,4 @@
-﻿.page {
+.page {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -31,7 +31,8 @@
 }
 
 .card {
-  background: white;
+  background: var(--surface-2);
+  color: var(--text-hi);
   border: 1px solid var(--hairline-soft);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-md);
@@ -58,8 +59,8 @@
 }
 
 .error {
-  background: #fef2f2;
-  border: 1px solid #fecaca;
+  background: color-mix(in srgb, #dc2626 10%, var(--surface));
+  border: 1px solid color-mix(in srgb, #dc2626 25%, var(--surface));
   color: #dc2626;
   padding: 0.75rem 1rem;
   border-radius: 8px;
@@ -91,7 +92,8 @@
   padding: 0.75rem 2.75rem 0.75rem 2.5rem;
   border-radius: 10px;
   border: 1px solid var(--hairline-soft);
-  background: white;
+  background: var(--surface-3);
+  color: var(--text-hi);
 }
 
 .icon {
@@ -195,7 +197,8 @@
   border: 1px solid var(--hairline-soft);
   padding: 0.7rem;
   border-radius: 10px;
-  background: white;
+  background: var(--surface-3);
+  color: var(--text-hi);
   font-weight: var(--font-weight-semibold);
 }
 
@@ -211,7 +214,8 @@
 }
 
 .trustCard {
-  background: white;
+  background: var(--surface-2);
+  color: var(--text-hi);
   border: 1px solid var(--hairline-soft);
   border-radius: var(--radius-xl);
   padding: var(--spacing-4);

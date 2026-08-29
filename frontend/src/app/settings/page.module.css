@@ -1,8 +1,6 @@
 .page {
   min-height: 100vh;
-  background:
-    radial-gradient(circle at top left, rgba(37, 99, 235, 0.08), transparent 32%),
-    linear-gradient(180deg, #f7fafc 0%, #eef4f8 100%);
+  background: var(--bg);
   padding: var(--spacing-8) 0 var(--spacing-12);
 }
 
@@ -103,9 +101,9 @@
   gap: var(--spacing-5);
   padding: var(--spacing-5);
   border-radius: 26px;
-  background: #0f172a;
-  color: #e2e8f0;
-  box-shadow: 0 28px 60px rgba(15, 23, 42, 0.2);
+  background: var(--surface-2);
+  color: var(--text-main);
+  border: 1px solid var(--surface-3);
 }
 
 .sidebarHeader {
@@ -115,14 +113,14 @@
 
 .sidebarTitle {
   font-size: 1.2rem;
-  color: white;
+  color: var(--text-hi);
 }
 
 .sidebarEyebrow {
   font-size: var(--font-size-xs);
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: rgba(148, 163, 184, 0.92);
+  color: var(--text-mid);
 }
 
 .sidebarNav {
@@ -133,8 +131,8 @@
 .sidebarFooter {
   padding: var(--spacing-4);
   border-radius: 18px;
-  background: rgba(30, 41, 59, 0.92);
-  border: 1px solid rgba(148, 163, 184, 0.14);
+  background: var(--surface-1);
+  border: 1px solid var(--surface-3);
 }
 
 .sidebarFooterLabel {
@@ -144,11 +142,11 @@
   font-weight: var(--font-weight-semibold);
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #93c5fd;
+  color: var(--text-mid);
 }
 
 .sidebarFooterDescription {
-  color: #cbd5e1;
+  color: var(--text-low);
   font-size: var(--font-size-sm);
   line-height: 1.7;
 }
@@ -162,7 +160,7 @@
   border-radius: 16px;
   border: 1px solid transparent;
   background: transparent;
-  color: #cbd5e1;
+  color: var(--text-mid);
   cursor: pointer;
   text-align: left;
   transition:
@@ -174,8 +172,9 @@
 
 .menuItem:hover {
   transform: translateX(3px);
-  border-color: rgba(148, 163, 184, 0.18);
-  background: rgba(30, 41, 59, 0.72);
+  border-color: var(--surface-4);
+  background: var(--surface-3);
+  color: var(--text-hi);
 }
 
 .menuIcon {
@@ -185,8 +184,8 @@
   width: 36px;
   height: 36px;
   border-radius: 12px;
-  background: rgba(148, 163, 184, 0.12);
-  color: #dbeafe;
+  background: var(--surface-3);
+  color: inherit;
 }
 
 .menuLabel {
@@ -195,9 +194,10 @@
 }
 
 .active {
-  border-color: rgba(125, 211, 252, 0.25);
-  background: linear-gradient(135deg, rgba(14, 165, 233, 0.18), rgba(37, 99, 235, 0.22));
-  color: white;
+  border-color: var(--surface-4);
+  background: var(--surface-3);
+  color: var(--text-hi);
+  font-weight: var(--font-weight-bold);
 }
 
 .main {

@@ -1,4 +1,4 @@
-﻿.page {
+.page {
   background: var(--bg);
   padding: var(--spacing-8) 0;
   min-height: 100vh;
@@ -55,7 +55,8 @@
 }
 
 .card {
-  background: white;
+  background: var(--surface-2);
+  color: var(--text-hi);
   border: 1px solid var(--hairline-soft);
   border-radius: var(--radius-xl);
   padding: var(--spacing-5);
@@ -95,7 +96,8 @@
   border-radius: 8px;
   border: 1px solid var(--hairline-soft);
   font-size: var(--font-size-sm);
-  background: white;
+  background: var(--surface-3);
+  color: var(--text-hi);
   cursor: pointer;
   min-width: 120px;
   max-width: 100%;
@@ -123,8 +125,8 @@
 }
 
 .segmentBtn.active {
-  background: white;
-  color: var(--brass);
+  background: var(--surface-3);
+  color: var(--text-hi);
   box-shadow: var(--shadow-sm);
 }
 
@@ -184,11 +186,11 @@
   padding: 0.4rem 0.75rem;
   border: 1px solid var(--hairline-soft);
   border-radius: 8px;
-  background: white;
+  background: var(--surface-3);
   font-size: var(--font-size-sm);
   cursor: pointer;
   transition: all 0.2s ease;
-  color: var(--text-mid);
+  color: var(--text-hi);
   white-space: nowrap;
 }
 
@@ -362,7 +364,7 @@
   top: 3px;
   width: 4px;
   height: 26px;
-  background: #1f2937;
+  background: var(--text-hi);
   border-radius: 2px;
   transform: translateX(-50%);
   transition: left 0.3s ease;
@@ -458,7 +460,7 @@
 .donutHole {
   width: 140px;
   height: 140px;
-  background: white;
+  background: var(--surface-2);
   border-radius: 50%;
   position: absolute;
 }
@@ -514,7 +516,7 @@
 
 .donutCenterMeta {
   font-size: var(--font-size-xs);
-  color: var(--text-mid);
+  color: var(--text-low);
   line-height: 1.4;
 }
 
@@ -560,7 +562,8 @@
 }
 
 .pnlCard {
-  background: white;
+  background: var(--surface-2);
+  color: var(--text-hi);
   border: 1px solid var(--hairline-soft);
   border-radius: var(--radius-xl);
   padding: var(--spacing-4);
@@ -578,7 +581,8 @@
 }
 
 .hedgingCard {
-  background: white;
+  background: var(--surface-2);
+  color: var(--text-hi);
   border: 1px solid var(--hairline-soft);
   border-radius: var(--radius-xl);
   padding: var(--spacing-4);
@@ -611,7 +615,8 @@
 }
 
 .currencyAmountCard {
-  background: white;
+  background: var(--surface-2);
+  color: var(--text-hi);
   border: 1px solid var(--hairline-soft);
   border-radius: var(--radius-lg);
   padding: var(--spacing-4);
@@ -656,12 +661,12 @@
   padding: var(--spacing-4);
   border: 2px dashed var(--hairline-soft);
   border-radius: var(--radius-lg);
-  background: white;
+  background: var(--surface-3);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   cursor: pointer;
   transition: all 0.2s ease;
-  color: var(--text-mid);
+  color: var(--text-hi);
   text-align: center;
 }
 
@@ -720,15 +725,18 @@
 }
 
 .insightBlue {
-  background: #eff6ff;
+  background: color-mix(in srgb, var(--act-hedge) 10%, var(--surface));
+  color: var(--text-hi);
 }
 
 .insightOrange {
-  background: #fff7ed;
+  background: color-mix(in srgb, var(--act-wait) 10%, var(--surface));
+  color: var(--text-hi);
 }
 
 .insightGreen {
-  background: #f0fdf4;
+  background: color-mix(in srgb, var(--act-convert) 10%, var(--surface));
+  color: var(--text-hi);
 }
 
 .insightHeader {
@@ -843,11 +851,13 @@
 }
 
 .alertItem.yellow {
-  background: #fefce8;
+  background: color-mix(in srgb, var(--act-wait) 10%, var(--surface));
+  color: var(--text-hi);
 }
 
 .alertItem.blue {
-  background: #eff6ff;
+  background: color-mix(in srgb, var(--act-hedge) 10%, var(--surface));
+  color: var(--text-hi);
 }
 
 .alertIcon {
@@ -897,8 +907,8 @@
   padding: var(--spacing-3);
   border: 2px dashed var(--hairline-soft);
   border-radius: var(--radius-lg);
-  background: white;
-  color: var(--text-mid);
+  background: var(--surface-3);
+  color: var(--text-hi);
   font-size: var(--font-size-sm);
   cursor: pointer;
   transition: all 0.2s ease;
@@ -947,7 +957,8 @@
   justify-content: center;
   gap: var(--spacing-2);
   padding: var(--spacing-3);
-  background: white;
+  background: var(--surface-3);
+  color: var(--text-hi);
   border: 1px solid var(--hairline-soft);
   border-radius: var(--radius-lg);
   font-weight: var(--font-weight-medium);
@@ -1203,7 +1214,7 @@
   flex: 1;
   overflow: visible;
   border-radius: var(--radius-md);
-  background: linear-gradient(180deg, rgba(248, 250, 252, 1) 0%, rgba(255, 255, 255, 1) 100%);
+  background: transparent;
 }
 
 /* Badge Color Variants */

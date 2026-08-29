@@ -12,6 +12,7 @@ import client from '@/lib/api/client';
 import { formatApiError } from '@/lib/api/errors';
 import { hasConnectedIntegration } from '@/lib/api/integrations';
 import { Recommendation } from '@/lib/types/recommendation';
+import { logConversion } from '@/lib/api/engine';
 import {
   BackendInvoiceRecord,
   InvoiceEditorState,
@@ -360,6 +361,17 @@ export default function InvoiceReviewPage() {
       saveInvoiceDraft(nextDraft);
       setCopyLinkStatus('idle');
       setSuccess('Payment link generated successfully.');
+
+      // Log finalized conversion to the FX Engine seamlessly
+      if (fxRate !== null && draft?.invoiceCurrency && draft?.settlementCurrency) {
+        logConversion({
+          invoice_id: invoice.id,
+          base_currency: draft.invoiceCurrency,
+          target_currency: draft.settlementCurrency,
+          amount: totals?.total ?? 0,
+          rate: fxRate,
+        } as any).catch(console.error);
+      }
     } catch (linkErr: unknown) {
       setLinkError(formatApiError(linkErr, 'Failed to generate payment link. Please try again.'));
     } finally {

@@ -97,8 +97,8 @@
 }
 
 .primaryAction {
-  color: var(--bg);
-  background: linear-gradient(180deg, var(--text-hi) 0%, var(--text-mid) 100%);
+  color: var(--surface);
+  background: var(--text-hi);
   box-shadow: 0 12px 28px rgba(15, 23, 42, 0.16);
 }
 
@@ -540,13 +540,11 @@
 .briefStatLabel,
 .queueAmountLabel,
 .queueScheduleLabel {
-  font-size: var(--font-size-xs);
-  letter-spacing: 0.07em;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-}
-
-.briefStatLabel {
-  color: var(--text-mid);
+  color: var(--text-low);
 }
 
 .briefStatValue {
@@ -598,12 +596,14 @@
     background var(--transition-base);
   backface-visibility: hidden;
   transform: translate3d(0, 0, 0);
+  text-decoration: none;
 }
 
 .queueRow:hover {
   transform: translateY(-2px);
-  border-color: var(--brass-hi);
+  border-color: var(--surface-4);
   background: var(--surface-2);
+  box-shadow: var(--shadow-sm);
 }
 
 .queueIdentity {
@@ -613,9 +613,9 @@
 }
 
 .queueAvatar {
-  color: var(--brass-hi);
-  background: rgba(201, 162, 77, 0.08);
-  border: 1px solid rgba(201, 162, 77, 0.18);
+  color: var(--text-hi);
+  background: var(--surface-2);
+  border: 1px solid var(--surface-3);
 }
 
 .queueCopy {
@@ -628,6 +628,9 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-family: var(--font-family-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
 }
 
 .queueNameRow {
@@ -673,6 +676,7 @@
 .queueAmountValue {
   font-size: 1.28rem;
   line-height: 1;
+  color: var(--text-hi);
 }
 
 .queueDueValue {
@@ -923,27 +927,31 @@
 .high,
 .watch {
   color: #9a3412;
-  background: #fed7aa;
+  background: #fff7ed;
+  border: 1px solid #ffedd5;
 }
 
 .critical,
 .blocked,
 .overdue {
-  color: #B3261E;
-  background: rgba(179, 38, 30, 0.09);
+  color: #b91c1c;
+  background: #fef2f2;
+  border: 1px solid #fee2e2;
 }
 
 .steady {
   color: #1d4ed8;
-  background: #dbeafe;
+  background: #eff6ff;
+  border: 1px solid #dbeafe;
 }
 
 .stale,
 .pending,
 .draft,
 .sent {
-  color: #FFFFFF;
-  background: var(--brass);
+  color: var(--text-mid);
+  background: var(--surface-2);
+  border: 1px solid var(--surface-3);
 }
 
 .positive {
@@ -982,14 +990,6 @@
 :global([data-theme="dark"]) .steady {
   color: #93c5fd;
   background: rgba(30, 58, 138, 0.6);
-}
-
-:global([data-theme="dark"]) .stale,
-:global([data-theme="dark"]) .pending,
-:global([data-theme="dark"]) .draft,
-:global([data-theme="dark"]) .sent {
-  color: #fcd34d;
-  background: rgba(120, 53, 15, 0.6);
 }
 
 :global([data-theme="dark"]) .positive {

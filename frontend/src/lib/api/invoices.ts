@@ -1,4 +1,5 @@
 import client from './client';
+import { mapBackendInvoice } from '@/lib/invoices/editor';
 import {
   Invoice,
   InvoiceListResponseSchema,
@@ -134,9 +135,15 @@ export const fetchInvoiceById = async (id: string): Promise<Invoice> => {
 
   try {
     const response = await client.get(`/invoices/${id}`);
-    const validated = InvoiceResponseSchema.parse(response.data);
-    return validated.data;
-  } catch (error) {
+    const mappedInvoice = mapBackendInvoice(response.data);
+    return mappedInvoice as unknown as Invoice;
+  } catch (error: any) {
+    console.error('[API] Exact Fetch Error:', {
+      message: error.message,
+      status: error.response?.status,
+      url: error.config?.url,
+      requestedId: id
+    });
     console.warn('[API] Invoice fetch failed, checking mock data');
     const invoice = mockInvoices.find((inv) => inv.id === id);
     if (!invoice) {

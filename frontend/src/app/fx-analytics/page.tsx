@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import Link from 'next/link';
 import { useState, useEffect, useCallback } from 'react';
@@ -7,7 +7,7 @@ import { AUTH_USER_UPDATED_EVENT, getPreferredCurrency, getUser } from '@/lib/ap
 import { fetchRealFXCandles } from '@/lib/api/fx';
 import { fetchRecommendation } from '@/lib/api/recommendation';
 import { formatApiError } from '@/lib/api/errors';
-import { useMonthlySavingsReport, useMultiCurrencyExposure, useRateAlerts } from '@/hooks/useEngine';
+import { useMonthlySavingsReport, useMultiCurrencyExposure, useRateAlerts, useLostRevenue } from '@/hooks/useEngine';
 import { CurrencyCode, CurrencyCodeSchema } from '@/types/currency';
 import { FXHistoryPoint } from '@/lib/types/fx';
 import { Recommendation, getActionDisplayText } from '@/lib/types/recommendation';
@@ -325,6 +325,11 @@ export default function FxAnalyticsHub() {
     error: alertsError,
     remove: removeAlert,
   } = useRateAlerts();
+  const {
+    report: lostRevenue,
+    loading: lostRevenueLoading,
+    error: lostRevenueError,
+  } = useLostRevenue('30d');
 
   useEffect(() => {
     const syncViewportWidth = () => {
@@ -583,7 +588,7 @@ export default function FxAnalyticsHub() {
       <div className={styles.chartArea}>
         <div className={styles.chartYAxis}>
           {yLabels.map((label, i) => (
-            <span key={i}>{label}</span>
+            <span key={i} style={{ color: 'var(--text-low)' }}>{label}</span>
           ))}
         </div>
         <div className={styles.chartContent}>
@@ -607,7 +612,7 @@ export default function FxAnalyticsHub() {
                 y1={(i / 5) * height}
                 x2={width}
                 y2={(i / 5) * height}
-                stroke="rgba(0,0,0,0.05)"
+                stroke="var(--hairline-soft)"
                 strokeWidth="0.2"
               />
             ))}
@@ -635,7 +640,7 @@ export default function FxAnalyticsHub() {
           </svg>
           <div className={`${styles.chartXAxis} ${isSinglePoint ? styles.chartXAxisSingle : ''}`}>
             {xLabels.map((point, i) => (
-              <span key={i}>{formatDate(point.date)}</span>
+              <span key={i} style={{ color: 'var(--text-low)' }}>{formatDate(point.date)}</span>
             ))}
           </div>
           {isSinglePoint && (
@@ -790,7 +795,7 @@ export default function FxAnalyticsHub() {
                         const yMax = Math.ceil(maxVal * 10) / 10 + 0.2;
                         return Array.from({ length: 6 }, (_, i) => {
                           const val = yMax - (i * yMax / 5);
-                          return <span key={i}>{val.toFixed(1)}</span>;
+                          return <span key={i} style={{ color: 'var(--text-low)' }}>{val.toFixed(1)}</span>;
                         });
                       })()}
                     </div>
@@ -806,7 +811,7 @@ export default function FxAnalyticsHub() {
                                 style={{ height: `${(item.value / yMax) * 100}%` }}
                                 title={`${item.value}%`}
                               ></div>
-                              <span className={styles.barLabel}>{item.day}</span>
+                              <span className={styles.barLabel} style={{ color: 'var(--text-low)' }}>{item.day}</span>
                             </div>
                           );
                         }) : (
@@ -881,9 +886,9 @@ export default function FxAnalyticsHub() {
                 <div className={styles.currencyLayout}>
                   <div className={styles.donutContainer}>
                     <svg className={styles.donutSvg} viewBox="0 0 100 100">
-                      <circle cx="50" cy="50" r={DONUT_RADIUS} fill="none" stroke="#e5e7eb" strokeWidth="20" />
+                      <circle cx="50" cy="50" r={DONUT_RADIUS} fill="none" stroke="var(--surface-3)" strokeWidth="20" />
                       {currencyDistributionArcs}
-                      <circle cx="50" cy="50" r="25" fill="white" />
+                      <circle cx="50" cy="50" r="25" fill="var(--surface-2)" />
                     </svg>
                     <div className={styles.donutCenter}>
                       <span className={styles.donutCenterLabel}>{distributionSummary.reportingCurrency} Exposure</span>
@@ -1083,12 +1088,12 @@ export default function FxAnalyticsHub() {
                     >
                       <div className={styles.alertIcon}>
                         {alert.is_triggered ? (
-                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2">
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--act-hedge)" strokeWidth="2">
                             <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
                             <polyline points="17 6 23 6 23 12"></polyline>
                           </svg>
                         ) : (
-                          <svg width="20" height="20" viewBox="0 0 24 24" fill="#eab308">
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="var(--act-wait)">
                             <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
                             <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
                           </svg>
@@ -1195,6 +1200,35 @@ export default function FxAnalyticsHub() {
               ) : (
                 <div style={{ padding: 'var(--spacing-4)', color: 'var(--text-mid)' }}>
                   {monthlySavingsError ?? 'No savings report available yet.'}
+                </div>
+              )}
+            </div>
+
+            {/* Revenue Leakage */}
+            <div className={styles.card}>
+              <h3>Revenue Leakage (30d)</h3>
+              {lostRevenueLoading ? (
+                <div style={{ padding: 'var(--spacing-4)', color: 'var(--text-mid)' }}>
+                  Calculating leakage data...
+                </div>
+              ) : lostRevenue ? (
+                <div className={styles.hedgingRows}>
+                  <div className={styles.hedgingRow}>
+                    <span>Unrealized Loss</span>
+                    <strong className={styles.textRed}>{(lostRevenue as any).unrealized_loss?.toLocaleString() ?? '0'}</strong>
+                  </div>
+                  <div className={styles.hedgingRow}>
+                    <span>Realized Leakage</span>
+                    <strong className={styles.textOrange}>{(lostRevenue as any).realized_leakage?.toLocaleString() ?? '0'}</strong>
+                  </div>
+                  <div className={styles.hedgingRow}>
+                    <span>Total Exposure</span>
+                    <strong>{(lostRevenue as any).total_exposure?.toLocaleString() ?? '0'}</strong>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ padding: 'var(--spacing-4)', color: 'var(--text-mid)' }}>
+                  {lostRevenueError ?? 'No leakage data available.'}
                 </div>
               )}
             </div>

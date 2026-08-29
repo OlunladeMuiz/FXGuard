@@ -46,13 +46,13 @@
 .successMessage {
   background: var(--act-convert-bg);
   color: var(--act-convert);
-  border: 1px solid color-mix(in srgb, var(--act-convert) 18%, white);
+  border: 1px solid color-mix(in srgb, var(--act-convert) 18%, var(--surface));
 }
 
 .errorMessage {
-  background: color-mix(in srgb, var(--conf-low) 10%, white);
+  background: color-mix(in srgb, var(--conf-low) 10%, var(--surface));
   color: var(--conf-low);
-  border: 1px solid color-mix(in srgb, var(--conf-low) 18%, white);
+  border: 1px solid color-mix(in srgb, var(--conf-low) 18%, var(--surface));
 }
 
 .layout {
@@ -72,7 +72,7 @@
 }
 
 .card {
-  background: white;
+  background: var(--surface-2);
   border: 1px solid var(--hairline-soft);
   border-radius: var(--radius-xl);
   padding: var(--spacing-6);
@@ -99,7 +99,7 @@
 
 .linkButton {
   color: var(--brass);
-  background: white;
+  background: var(--surface-2);
   border: 1px solid var(--brass);
   border-radius: 8px;
   padding: 0.45rem 0.8rem;
@@ -159,7 +159,7 @@
 }
 
 .badgeDraft {
-  background: color-mix(in srgb, var(--act-wait) 14%, white);
+  background: color-mix(in srgb, var(--act-wait) 14%, var(--surface));
   color: var(--act-wait);
 }
 
@@ -272,7 +272,7 @@
 }
 
 .recommendationBadge {
-  background: color-mix(in srgb, var(--brass) 12%, white);
+  background: color-mix(in srgb, var(--brass) 12%, var(--surface));
   color: var(--brass);
   border-radius: 999px;
   padding: 0.35rem 0.7rem;
@@ -377,8 +377,36 @@
   padding: 0.7rem 0.8rem;
   border-radius: 10px;
   border: 1px solid var(--hairline-soft);
-  background: white;
+  background: var(--surface-2);
   box-sizing: border-box;
+  appearance: none;
+  -webkit-appearance: none;
+  outline: none;
+  color: var(--text-hi);
+}
+
+.input::placeholder,
+.textarea::placeholder {
+  color: var(--text-low);
+}
+
+.input:-webkit-autofill,
+.textarea:-webkit-autofill,
+.input:-webkit-autofill:hover,
+.textarea:-webkit-autofill:hover,
+.input:-webkit-autofill:focus,
+.textarea:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--text-hi);
+  -webkit-box-shadow: 0 0 0px 1000px var(--surface-2) inset;
+  box-shadow: 0 0 0px 1000px var(--surface-2) inset;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+.input:focus,
+.textarea:focus {
+  outline: none;
+  border-color: var(--act-hedge);
+  box-shadow: 0 0 0 3px var(--act-hedge-bg);
 }
 
 .textarea {
@@ -420,8 +448,9 @@
 
 .secondary,
 .tertiary {
-  background: white;
-  border: 1px solid var(--hairline-soft);
+  background: var(--surface-3);
+  border: 1px solid var(--hairline);
+  color: var(--text-hi);
 }
 
 .primary:disabled,

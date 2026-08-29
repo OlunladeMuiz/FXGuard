@@ -264,7 +264,10 @@ class InvoiceService:
         Returns:
             List of Invoice objects
         """
-        query = db.query(Invoice).filter(Invoice.user_id == user.id)
+        query = db.query(Invoice).filter(
+            Invoice.user_id == user.id,
+            Invoice.is_deleted == False
+        )
         
         if status_filter:
             query = query.filter(Invoice.status == status_filter)
@@ -362,7 +365,8 @@ class InvoiceService:
         """
         invoice = db.query(Invoice).filter(
             Invoice.id == invoice_id,
-            Invoice.user_id == user.id
+            Invoice.user_id == user.id,
+            Invoice.is_deleted == False
         ).first()
         
         if not invoice:
@@ -371,10 +375,10 @@ class InvoiceService:
                 detail="Invoice not found"
             )
             
-        if invoice.status == "paid" or invoice.payment_reference is not None:
+        if invoice.status == "paid":
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Cannot delete an invoice that has been paid or has an active payment reference."
+                detail="Cannot delete an invoice that has already been paid."
             )
         
         invoice.is_deleted = True
