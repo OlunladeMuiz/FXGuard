@@ -21,6 +21,8 @@
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: var(--spacing-6);
+  flex-wrap: wrap;
+  gap: var(--spacing-4);
 }
 
 .titleGroup {
@@ -30,10 +32,11 @@
 }
 
 .titleGroup h1 {
-  font-size: 2rem;
+  font-size: clamp(1.25rem, 4vw, 2rem);
   font-weight: 600;
   color: var(--text-hi);
   margin: 0;
+  word-break: break-all;
 }
 
 .badge {
@@ -109,7 +112,7 @@
 
 .table th {
   text-align: left;
-  padding-bottom: var(--spacing-3);
+  padding: var(--spacing-2);
   border-bottom: 1px solid var(--surface-3);
   color: var(--text-mid);
   font-size: 0.875rem;
@@ -117,7 +120,7 @@
 }
 
 .table td {
-  padding: var(--spacing-3) 0;
+  padding: var(--spacing-3) var(--spacing-2);
   border-bottom: 1px solid var(--surface-3);
   color: var(--text-hi);
   font-size: 0.875rem;
@@ -150,4 +153,15 @@
   font-size: 2.5rem;
   font-weight: 600;
   color: var(--text-hi);
+}
+
+@media (max-width: 768px) {
+  .layoutGrid {
+    grid-template-columns: 1fr;
+  }
+  .table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
 }

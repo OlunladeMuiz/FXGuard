@@ -451,6 +451,13 @@
   gap: var(--spacing-4);
 }
 
+.briefTop {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  flex-wrap: wrap;
+}
+
 .briefTag {
   color: var(--brass-hi);
   background: rgba(201, 162, 77, 0.08);
@@ -619,23 +626,27 @@
 }
 
 .queueCopy {
-  min-width: 0;
-}
-
-.queueCopy p {
-  margin-top: 0.25rem;
-  color: var(--text-mid);
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   font-family: var(--font-family-mono);
   font-size: 0.75rem;
   letter-spacing: 0.05em;
+  min-width: 0;
 }
 
 .queueNameRow {
-  flex-wrap: wrap;
+  display: flex;
+  align-items: center;
   gap: var(--spacing-2);
+}
+
+.queueNameRow strong {
+  color: var(--text-hi);
+  font-family: var(--font-family-base);
 }
 
 .queueFlag {
@@ -644,9 +655,10 @@
   justify-content: center;
   padding: 0.25rem 0.55rem;
   border-radius: 999px;
-  background: #dbeafe;
-  color: #1d4ed8;
-  font-size: 0.68rem;
+  background: var(--surface-3);
+  color: var(--text-mid);
+  border: 1px solid var(--surface-4);
+  font-size: 0.65rem;
   font-weight: var(--font-weight-semibold);
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -714,16 +726,32 @@
 
 @container (max-width: 640px) {
   .queueRow {
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(120px, 1fr) auto 24px;
     grid-template-areas:
-      "identity status"
-      "amount schedule";
+      "identity status chevron"
+      "amount schedule chevron";
     row-gap: var(--spacing-3);
+    column-gap: var(--spacing-2);
   }
-  .queueIdentity { grid-area: identity; }
-  .queueStatus { grid-area: status; }
-  .queueAmount { grid-area: amount; }
-  .queueSchedule { grid-area: schedule; justify-items: start; text-align: left; }
+  .queueIdentity { grid-area: identity; min-width: 0; }
+  .queueStatus { 
+    grid-area: status; 
+    justify-self: flex-end;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.65rem;
+  }
+  .queueAmount { 
+    grid-area: amount; 
+    border-top: none; 
+    padding-top: 0; 
+  }
+  .queueAmountValue { font-size: 1.1rem; }
+  .queueSchedule { grid-area: schedule; justify-items: flex-end; text-align: right; }
+  .queueDueValue {
+    font-size: 0.85rem;
+    padding: 0.15rem 0.4rem;
+  }
+  .queueChevron { grid-area: chevron; align-self: center; justify-self: center; }
 }
 
 .queueSchedule small {
@@ -950,7 +978,7 @@
 .draft,
 .sent {
   color: var(--text-mid);
-  background: var(--surface-2);
+  background: var(--surface-3);
   border: 1px solid var(--surface-3);
 }
 
