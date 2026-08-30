@@ -6,6 +6,7 @@ All background job functions. Each must be fully self-contained:
 """
 import os
 import logging
+from sqlalchemy.orm import Session
 from app.db.database import SessionLocal
 from app.services.scrapers.cbn_scraper import scrape_cbn_rates
 from app.services.scrapers.abokifx_scraper import scrape_abokifx_rates
@@ -36,30 +37,48 @@ def _read_backfill_days() -> int:
 FX_HISTORY_BACKFILL_DAYS = _read_backfill_days()
 
 
-async def job_sync_exchange_rate_api() -> None:
+async def _sync_exchange_rate_pairs(db: Session) -> list[tuple[str, str, Exception]]:
     from app.services.fx import ensure_history_window
+    errors = []
+    for base, quote in NGN_PAIRS:
+        try:
+            await ensure_history_window(
+                db,
+                base=base,
+                quote=quote,
+                days=FX_HISTORY_BACKFILL_DAYS,
+            )
+        except Exception as exc:
+            errors.append((base, quote, exc))
+    return errors
+
+
+async def run_sync_exchange_rate_api(db: Session) -> None:
+    errors = await _sync_exchange_rate_pairs(db)
+    if errors:
+        raise RuntimeError(f"Exchange Rate API sync failed for {len(errors)} pairs")
+
+
+async def job_sync_exchange_rate_api() -> None:
     db = SessionLocal()
     try:
-        for base, quote in NGN_PAIRS:
-            try:
-                await ensure_history_window(
-                    db,
-                    base=base,
-                    quote=quote,
-                    days=FX_HISTORY_BACKFILL_DAYS,
-                )
-            except Exception as exc:
-                logger.warning("Exchange Rate API sync failed for %s/%s: %s", base, quote, exc)
+        errors = await _sync_exchange_rate_pairs(db)
+        for base, quote, exc in errors:
+            logger.warning("Exchange Rate API sync failed for %s/%s: %s", base, quote, exc)
     except Exception as exc:
         logger.error("Exchange Rate API job failed: %s", exc, exc_info=True)
     finally:
         db.close()
 
 
+async def run_scrape_cbn(db: Session) -> int:
+    return await scrape_cbn_rates(db)
+
+
 async def job_scrape_cbn() -> None:
     db = SessionLocal()
     try:
-        count = await scrape_cbn_rates(db)
+        count = await run_scrape_cbn(db)
         logger.info("CBN scraper job completed: %d rates stored", count)
     except Exception as exc:
         logger.error("CBN scraper job failed: %s", exc, exc_info=True)
@@ -78,10 +97,14 @@ async def job_scrape_abokifx() -> None:
         db.close()
 
 
+async def run_scrape_nairatoday(db: Session) -> int:
+    return await scrape_nairatoday_rates(db)
+
+
 async def job_scrape_nairatoday() -> None:
     db = SessionLocal()
     try:
-        count = await scrape_nairatoday_rates(db)
+        count = await run_scrape_nairatoday(db)
         logger.info("Nairatoday scraper job completed: %d rates stored", count)
     except Exception as exc:
         logger.error("Nairatoday scraper job failed: %s", exc, exc_info=True)
@@ -103,10 +126,14 @@ def job_compute_spread() -> None:
         db.close()
 
 
+async def run_fetch_brent_crude(db: Session) -> dict | None:
+    return await fetch_brent_crude(db)
+
+
 async def job_fetch_brent_crude() -> None:
     db = SessionLocal()
     try:
-        result = await fetch_brent_crude(db)
+        result = await run_fetch_brent_crude(db)
         if result:
             logger.info("Brent crude job: $%.2f/bbl, signal=%s", result["current_price"], result["signal"])
     except Exception as exc:
@@ -115,10 +142,14 @@ async def job_fetch_brent_crude() -> None:
         db.close()
 
 
+async def run_ingest_news(db: Session) -> int:
+    return await ingest_news_feeds(db)
+
+
 async def job_ingest_news() -> None:
     db = SessionLocal()
     try:
-        count = await ingest_news_feeds(db)
+        count = await run_ingest_news(db)
         logger.info("News ingest job completed: %d headlines stored", count)
     except Exception as exc:
         logger.error("News ingest job failed: %s", exc, exc_info=True)
