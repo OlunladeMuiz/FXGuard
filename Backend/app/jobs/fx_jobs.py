@@ -112,10 +112,14 @@ async def job_scrape_nairatoday() -> None:
         db.close()
 
 
+def run_compute_spread(db: Session) -> dict | None:
+    return compute_and_store_spread(db)
+
+
 def job_compute_spread() -> None:
     db = SessionLocal()
     try:
-        result = compute_and_store_spread(db)
+        result = run_compute_spread(db)
         if result:
             logger.info("Spread computed: %.2f%% (%s)", result["spread_pct"], result["risk_level"])
         else:
@@ -157,10 +161,14 @@ async def job_ingest_news() -> None:
         db.close()
 
 
+def run_check_alerts(db: Session) -> int:
+    return check_and_trigger_alerts(db)
+
+
 def job_check_alerts() -> None:
     db = SessionLocal()
     try:
-        triggered = check_and_trigger_alerts(db)
+        triggered = run_check_alerts(db)
         if triggered:
             logger.info("Alert checker job triggered %d alerts", triggered)
     except Exception as exc:
@@ -169,10 +177,14 @@ def job_check_alerts() -> None:
         db.close()
 
 
+def run_scrape_reserves(db: Session) -> int:
+    return ingest_cbn_reserves(db)
+
+
 def job_scrape_reserves() -> None:
     db = SessionLocal()
     try:
-        count = ingest_cbn_reserves(db)
+        count = run_scrape_reserves(db)
         logger.info("CBN reserves scraper ingested %d rows", count)
     except Exception as exc:
         logger.error("CBN reserves scraper job failed: %s", exc, exc_info=True)
