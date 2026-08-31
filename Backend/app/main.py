@@ -11,6 +11,7 @@ from slowapi.middleware import SlowAPIMiddleware
 from slowapi import _rate_limit_exceeded_handler
 
 from app.api.router import limiter, router
+from app.api import internal
 from app.db.database import close_database, initialize_database
 
 MAX_REQUEST_BODY_SIZE = 1024 * 1024
@@ -157,4 +158,4 @@ def health_check():
 
 
 app.include_router(router, prefix="/api")
- 
+app.include_router(internal.router)
