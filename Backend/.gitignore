@@ -74,3 +74,4 @@ build/
 # Temporary files
 *.tmp
 *.temp
+.neon
