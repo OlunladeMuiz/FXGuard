@@ -338,6 +338,22 @@ export const Navbar: React.FC = () => {
                         </li>
                       );
                     })}
+                    {isAdmin && (
+                      <li key="admin" className={styles.menuItem}>
+                        <Link
+                          href="/admin"
+                          className={`${styles.menuLink} ${pathname.startsWith('/admin') ? styles.menuLinkActive : ''}`}
+                          onClick={() => setMenuOpen(false)}
+                        >
+                          <span className={styles.menuIcon}>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+                            </svg>
+                          </span>
+                          <span className={styles.menuLabel}>Admin</span>
+                        </Link>
+                      </li>
+                    )}
                   </ul>
                   <div className={styles.menuDivider} />
                   <button
