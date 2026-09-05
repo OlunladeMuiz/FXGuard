@@ -12,7 +12,6 @@ if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
 from app.db import database
-from app.models.auth import User
 from app.models.fx_candle import FXCandle
 from app.models.fx_rate import FXRate
 
@@ -28,57 +27,7 @@ class InitializeDatabaseTests(unittest.TestCase):
         database.engine = self.original_engine
         database.SessionLocal.configure(bind=database.engine)
 
-    def test_initialize_database_backfills_missing_nullable_user_columns(self) -> None:
-        db_path = Path(__file__).resolve().parent / f"legacy_{next(tempfile._get_candidate_names())}.db"
-        self.addCleanup(lambda: db_path.exists() and db_path.unlink())
-        temp_url = f"sqlite:///{db_path}"
 
-        connection = sqlite3.connect(str(db_path))
-        try:
-            connection.execute(
-                """
-                CREATE TABLE users (
-                    id VARCHAR PRIMARY KEY,
-                    email VARCHAR NOT NULL UNIQUE,
-                    password VARCHAR NOT NULL,
-                    is_verified BOOLEAN NOT NULL DEFAULT 0,
-                    created_at DATETIME,
-                    updated_at DATETIME,
-                    verification_code INTEGER
-                )
-                """
-            )
-            connection.commit()
-        finally:
-            connection.close()
-
-        database.DATABASE_URL = temp_url
-        database.engine = database._create_engine(temp_url)
-        database.SessionLocal.configure(bind=database.engine)
-
-        # Importing the model ensures Base.metadata contains the users table definition.
-        self.assertEqual(User.__tablename__, "users")
-
-        database.initialize_database()
-
-        connection = sqlite3.connect(str(db_path))
-        try:
-            columns = {
-                row[1]: row[2]
-                for row in connection.execute("PRAGMA table_info(users)").fetchall()
-            }
-        finally:
-            connection.close()
-
-        self.assertIn("verification_code_expires_at", columns)
-        self.assertIn("company_name", columns)
-        self.assertIn("first_name", columns)
-        self.assertIn("last_name", columns)
-        self.assertIn("phone", columns)
-        self.assertIn("country", columns)
-        self.assertIn("business_type", columns)
-        self.assertIn("time_zone", columns)
-        self.assertIn("preferred_currency", columns)
 
     def test_initialize_database_creates_fx_rates_table(self) -> None:
         db_path = Path(__file__).resolve().parent / f"fx_{next(tempfile._get_candidate_names())}.db"

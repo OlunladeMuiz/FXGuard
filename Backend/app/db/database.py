@@ -1,15 +1,13 @@
 import importlib.util
 import logging
 import os
-import re
 from pathlib import Path
-from sqlalchemy import create_engine, inspect, text
+from sqlalchemy import create_engine, text
 from sqlalchemy.exc import OperationalError, SQLAlchemyError
 from sqlalchemy.orm import sessionmaker, declarative_base
 from dotenv import load_dotenv
 
 logger = logging.getLogger(__name__)
-SAFE_SQL_IDENTIFIER = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 BASE_DIR = Path(__file__).resolve().parents[2]
 DEFAULT_SQLITE_PATH = (BASE_DIR / "test.db").resolve()
@@ -108,47 +106,10 @@ def _ensure_database_connection() -> None:
         ) from exc
 
 
-def _sync_user_columns() -> None:
-    with engine.begin() as connection:
-        inspector = inspect(connection)
-        if "users" not in inspector.get_table_names():
-            return
-
-        existing_columns = {column["name"] for column in inspector.get_columns("users")}
-        missing_columns = []
-
-        # Import here to avoid circular imports during module load.
-        from app.models.auth import User
-
-        for column in User.__table__.columns:
-            if column.name in existing_columns or column.primary_key:
-                continue
-            if not column.nullable:
-                logger.warning(
-                    "Column '%s' is missing from the 'users' table but is defined as "
-                    "non-nullable in the ORM model. This will cause query failures. "
-                    "Create and run an Alembic migration to add this column manually.",
-                    column.name,
-                )
-                continue
-            missing_columns.append(column)
-
-        for column in missing_columns:
-            if not SAFE_SQL_IDENTIFIER.fullmatch(column.name):
-                raise RuntimeError(
-                    f"Unsafe column name generated during user schema sync: {column.name}"
-                )
-            column_type = column.type.compile(dialect=engine.dialect)
-            connection.execute(
-                text(f'ALTER TABLE "users" ADD COLUMN "{column.name}" {column_type}')
-            )
-
-
 def initialize_database() -> None:
     _ensure_database_connection()
     _load_models()
     Base.metadata.create_all(bind=engine)
-    _sync_user_columns()
 
 
 def close_database() -> None:
