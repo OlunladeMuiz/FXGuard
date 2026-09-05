@@ -53,6 +53,10 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class GoogleLoginRequest(BaseModel):
+    id_token: str
+
+
 class LoginResponse(BaseModel):
     access_token: str
     refresh_token: str

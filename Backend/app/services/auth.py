@@ -9,6 +9,8 @@ from datetime import datetime, timedelta, timezone
 from fastapi import HTTPException, status, Depends
 from fastapi.security import HTTPBearer
 from sqlalchemy.orm import Session
+from google.oauth2 import id_token
+from google.auth.transport import requests as google_requests
 
 from app.models.auth import User
 from app.schemas.auth import (
@@ -16,6 +18,7 @@ from app.schemas.auth import (
     VerifyOtpRequest,
     ResendOtpRequest,
     LoginRequest,
+    GoogleLoginRequest,
     ProfileUpdateRequest,
     RefreshRequest,
 )
@@ -32,6 +35,7 @@ if not SECRET_KEY:
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 REFRESH_TOKEN_EXPIRE_DAYS = 2
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 
 
 def hash_password(password: str) -> str:
@@ -212,6 +216,66 @@ def login_user(db: Session, payload: LoginRequest) -> dict:
 
     access_token = create_access_token({"sub": user.id, "email": user.email, "is_admin": user.is_admin})
     refresh_token = create_refresh_token({"sub": user.id, "email": user.email})
+    return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer", "user": user}
+
+
+def login_user_google(db: Session, payload: GoogleLoginRequest) -> dict:
+    if not GOOGLE_CLIENT_ID:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Google Client ID is not configured on the server."
+        )
+    
+    try:
+        id_info = id_token.verify_oauth2_token(
+            payload.id_token, google_requests.Request(), GOOGLE_CLIENT_ID
+        )
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid Google ID token"
+        )
+        
+    email = id_info.get("email")
+    google_id = id_info.get("sub")
+    email_verified = id_info.get("email_verified")
+    
+    if not email or not google_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incomplete token data"
+        )
+        
+    if not email_verified:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Google account email is not verified"
+        )
+
+    user = db.query(User).filter(User.email == email).first()
+    if user:
+        if not user.google_id:
+            user.google_id = google_id
+            db.add(user)
+            db.flush()
+    else:
+        user = User(
+            id=str(uuid.uuid4()),
+            email=email,
+            google_id=google_id,
+            password=None,
+            is_verified=True,
+            preferred_currency="NGN"
+        )
+        db.add(user)
+        db.flush()
+
+    access_token = create_access_token({"sub": user.id, "email": user.email, "is_admin": user.is_admin})
+    refresh_token = create_refresh_token({"sub": user.id, "email": user.email})
+    
+    db.commit()
+    db.refresh(user)
+    
     return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer", "user": user}
 
 

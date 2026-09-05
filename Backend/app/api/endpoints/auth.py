@@ -6,7 +6,7 @@ from app.db.database import get_db
 from app.schemas.auth import (
     RegisterRequest, RegisterResponse,
     VerifyOtpRequest, ResendOtpRequest,
-    LoginRequest, LoginResponse, MessageResponse, User, ProfileUpdateRequest,
+    LoginRequest, GoogleLoginRequest, LoginResponse, MessageResponse, User, ProfileUpdateRequest,
     RefreshRequest, RefreshResponse
 )
 from app.services.auth import (
@@ -14,6 +14,7 @@ from app.services.auth import (
     verify_otp as verify_user_otp,
     resend_otp as resend_user_otp,
     login_user,
+    login_user_google,
     refresh_user_token,
     update_user_profile,
     get_current_user,
@@ -52,6 +53,12 @@ def login(request: Request, payload: LoginRequest, db: Session = Depends(get_db)
     return login_user(db=db, payload=payload)
 
 
+@router.post("/google", response_model=LoginResponse)
+@limiter.limit("10/minute")
+def google_login(request: Request, payload: GoogleLoginRequest, db: Session = Depends(get_db)):
+    return login_user_google(db=db, payload=payload)
+
+
 @router.post("/refresh", response_model=RefreshResponse)
 @limiter.limit("10/minute")
 def refresh(request: Request, payload: RefreshRequest, db: Session = Depends(get_db)):
@@ -70,3 +77,8 @@ def update_profile(
     current_user: UserModel = Depends(get_current_user),
 ):
     return update_user_profile(db=db, current_user=current_user, payload=payload)
+
+
+@router.post("/logout", response_model=MessageResponse)
+def logout(current_user: UserModel = Depends(get_current_user)):
+    return MessageResponse(message="Successfully logged out")
