@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
+import { getUser } from '@/lib/api/auth';
 
 const PROTECTED_PREFIXES = [
+  '/complete-profile',
   '/dashboard',
   '/fx-analytics',
   '/invoice-generator',
@@ -35,6 +37,16 @@ export function ProtectedRouteGate({ children }: ProtectedRouteGateProps) {
     if (!token) {
       setIsAuthorized(false);
       router.replace('/login');
+      return;
+    }
+
+    const user = getUser();
+    const isCompleteProfile = pathname === '/complete-profile' || pathname.startsWith('/complete-profile/');
+    const isMissingCompanyName = Boolean(user && (!user.company_name || !user.company_name.trim()));
+
+    if (isMissingCompanyName && !isCompleteProfile) {
+      setIsAuthorized(false);
+      router.replace('/complete-profile');
       return;
     }
 
