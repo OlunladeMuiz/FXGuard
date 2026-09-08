@@ -1,10 +1,11 @@
-﻿'use client';
+'use client';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { GoogleLogin, CredentialResponse } from '@react-oauth/google';
 import styles from './page.module.css';
-import { login, setAuthTokens, setUser } from '@/lib/api/auth';
+import { googleLogin, login, setAuthTokens, setUser } from '@/lib/api/auth';
 import { formatApiError } from '@/lib/api/errors';
 
 export default function LoginPage() {
@@ -30,6 +31,35 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleGoogleSuccess = async (credentialResponse: CredentialResponse) => {
+    if (loading) {
+      return;
+    }
+
+    if (!credentialResponse.credential) {
+      setError('No credential returned from Google. Please try again.');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await googleLogin({ id_token: credentialResponse.credential });
+      setAuthTokens(response.access_token, response.refresh_token);
+      setUser(response.user);
+      router.push('/dashboard');
+    } catch (err: unknown) {
+      setError(formatApiError(err, 'Google sign-in failed. Please try again.'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleError = () => {
+    setError('Google sign-in was cancelled or failed. Please try again.');
   };
 
   const isVerificationError = error.toLowerCase().includes('not verified') || error.toLowerCase().includes('verify');
@@ -127,7 +157,7 @@ export default function LoginPage() {
           <div className={styles.divider}><span>Or continue with</span></div>
 
           <div className={styles.socials}>
-            <button type="button" className={styles.socialBtn} onClick={() => alert('Google sign-in coming soon!')}>Google</button>
+            <GoogleLogin onSuccess={handleGoogleSuccess} onError={handleGoogleError} />
             <button type="button" className={styles.socialBtn} onClick={() => alert('Microsoft sign-in coming soon!')}>Microsoft</button>
           </div>
 
