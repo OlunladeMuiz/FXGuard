@@ -25,20 +25,23 @@ interface RootLayoutProps {
   children: React.ReactNode;
 }
 
+import { GoogleOAuthProvider } from '@react-oauth/google';
 import { ThemeProvider } from '@/components/ThemeProvider';
 
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${plusJakarta.className} ${spaceGrotesk.variable}`}>
-        <ThemeProvider>
-          <ErrorBoundary>
-            <ConditionalNavbar />
-            <main className="app-main">
-              <ProtectedRouteGate>{children}</ProtectedRouteGate>
-            </main>
-          </ErrorBoundary>
-        </ThemeProvider>
+        <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!}>
+          <ThemeProvider>
+            <ErrorBoundary>
+              <ConditionalNavbar />
+              <main className="app-main">
+                <ProtectedRouteGate>{children}</ProtectedRouteGate>
+              </main>
+            </ErrorBoundary>
+          </ThemeProvider>
+        </GoogleOAuthProvider>
       </body>
     </html>
   );

@@ -135,6 +135,14 @@ export async function login(payload: LoginPayload): Promise<LoginResponse> {
 }
 
 /**
+ * Authenticate with Google id_token
+ */
+export async function googleLogin(payload: { id_token: string }): Promise<LoginResponse> {
+  const response = await client.post<LoginResponse>('/auth/google', payload);
+  return response.data;
+}
+
+/**
  * Verify OTP code
  */
 export async function verifyOtp(payload: VerifyOtpPayload): Promise<MessageResponse> {
