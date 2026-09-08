@@ -1,10 +1,11 @@
-﻿'use client';
+'use client';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { GoogleLogin, CredentialResponse } from '@react-oauth/google';
 import styles from './page.module.css';
-import { register } from '@/lib/api/auth';
+import { googleLogin, register, setAuthTokens, setUser } from '@/lib/api/auth';
 import { formatApiError } from '@/lib/api/errors';
 
 export default function SignupPage() {
@@ -55,6 +56,41 @@ export default function SignupPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleGoogleSuccess = async (credentialResponse: CredentialResponse) => {
+    if (loading) {
+      return;
+    }
+
+    if (!credentialResponse.credential) {
+      setError('No credential returned from Google. Please try again.');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await googleLogin({ id_token: credentialResponse.credential });
+      setAuthTokens(response.access_token, response.refresh_token);
+      setUser(response.user);
+
+      const hasCompanyName = Boolean(response.user.company_name && response.user.company_name.trim());
+      if (hasCompanyName) {
+        router.push('/dashboard');
+      } else {
+        router.push('/complete-profile');
+      }
+    } catch (err: unknown) {
+      setError(formatApiError(err, 'Google sign-up failed. Please try again.'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleError = () => {
+    setError('Google sign-up was cancelled or failed. Please try again.');
   };
 
   return (
@@ -237,7 +273,7 @@ export default function SignupPage() {
 
           <div className={styles.divider}><span>Or sign up with</span></div>
           <div className={styles.socials}>
-            <button type="button" className={styles.socialBtn} onClick={() => alert('Google sign-up coming soon!')}>Google</button>
+            <GoogleLogin onSuccess={handleGoogleSuccess} onError={handleGoogleError} />
             <button type="button" className={styles.socialBtn} onClick={() => alert('Microsoft sign-up coming soon!')}>Microsoft</button>
           </div>
 
