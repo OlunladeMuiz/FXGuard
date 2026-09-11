@@ -1,8 +1,10 @@
 import '@/styles/globals.css';
 import type { Metadata } from 'next';
 import { Plus_Jakarta_Sans, Space_Grotesk } from 'next/font/google';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 import { ConditionalNavbar, ErrorBoundary } from '@/components';
 import { ProtectedRouteGate } from '@/components/ProtectedRouteGate';
+import { ThemeProvider } from '@/components/ThemeProvider';
 
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -25,14 +27,13 @@ interface RootLayoutProps {
   children: React.ReactNode;
 }
 
-import { GoogleOAuthProvider } from '@react-oauth/google';
-import { ThemeProvider } from '@/components/ThemeProvider';
+const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '';
 
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${plusJakarta.className} ${spaceGrotesk.variable}`}>
-        <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!}>
+        <GoogleOAuthProvider clientId={googleClientId}>
           <ThemeProvider>
             <ErrorBoundary>
               <ConditionalNavbar />
