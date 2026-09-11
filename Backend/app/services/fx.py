@@ -16,11 +16,13 @@ from app.models.fx_rate import FXRate
 
 logger = logging.getLogger(__name__)
 
-EXCHANGE_RATE_API_KEY = os.getenv("EXCHANGE_RATE_API_KEY")
-EXCHANGE_RATE_API_BASE_URL = os.getenv(
-    "EXCHANGE_RATE_API_BASE_URL",
-    "https://v6.exchangerate-api.com/v6",
+OPENEXCHANGERATES_APP_ID = os.getenv("OPENEXCHANGERATES_APP_ID") or os.getenv("EXCHANGE_RATE_API_KEY")
+OPENEXCHANGERATES_BASE_URL = os.getenv(
+    "OPENEXCHANGERATES_BASE_URL",
+    "https://openexchangerates.org/api",
 )
+EXCHANGE_RATE_API_KEY = OPENEXCHANGERATES_APP_ID
+EXCHANGE_RATE_API_BASE_URL = OPENEXCHANGERATES_BASE_URL
 TWELVE_DATA_API_KEY = os.getenv("TWELVE_DATA_API_KEY")
 TWELVE_DATA_BASE_URL = os.getenv(
     "TWELVE_DATA_BASE_URL",
@@ -475,6 +477,9 @@ def _query_latest_rows(
 
 
 def _parse_provider_date(payload: dict[str, Any], fallback: date) -> date:
+    timestamp = payload.get("timestamp")
+    if isinstance(timestamp, (int, float)):
+        return datetime.fromtimestamp(timestamp, tz=timezone.utc).date()
     last_update_unix = payload.get("time_last_update_unix")
     if isinstance(last_update_unix, int):
         return datetime.fromtimestamp(last_update_unix, tz=timezone.utc).date()
@@ -488,14 +493,36 @@ def _is_historical_unavailable_error(*, observed_on: date | None, error_type: st
 
 
 def _extract_conversion_rates(payload: dict[str, Any]) -> dict[str, float]:
-    conversion_rates = payload.get("conversion_rates")
-    if not isinstance(conversion_rates, dict):
-        raise FXProviderError("invalid-response", "Provider response did not include conversion_rates")
+    rates = payload.get("rates") or payload.get("conversion_rates")
+    if not isinstance(rates, dict):
+        raise FXProviderError("invalid-response", "Provider response did not include rates")
     return {
         str(currency).upper(): float(rate)
-        for currency, rate in conversion_rates.items()
+        for currency, rate in rates.items()
         if isinstance(currency, str)
     }
+
+
+def _calculate_cross_rate(
+    rates: dict[str, float],
+    *,
+    base: str,
+    quote: str,
+) -> float:
+    normalized_base = normalize_currency_code(base)
+    normalized_quote = normalize_currency_code(quote)
+    if normalized_base == normalized_quote:
+        return 1.0
+
+    usd_to_base = 1.0 if normalized_base == "USD" else rates.get(normalized_base)
+    usd_to_quote = 1.0 if normalized_quote == "USD" else rates.get(normalized_quote)
+
+    if usd_to_base is None or usd_to_base <= 0:
+        raise FXProviderError("missing-rate", f"Provider response omitted base currency {normalized_base}")
+    if usd_to_quote is None:
+        raise FXProviderError("missing-rate", f"Provider response omitted quote currency {normalized_quote}")
+
+    return float(usd_to_quote) / float(usd_to_base)
 
 
 async def _fetch_twelve_data_payload(
@@ -577,27 +604,30 @@ def _extract_twelve_candles(payload: dict[str, Any]) -> list[dict[str, Any]]:
 async def _fetch_provider_payload(
     client: httpx.AsyncClient,
     *,
-    base: str,
+    base: str = "USD",
     observed_on: date | None = None,
 ) -> dict[str, Any]:
-    if not EXCHANGE_RATE_API_KEY:
-        raise FXProviderError("missing-api-key", "EXCHANGE_RATE_API_KEY is not configured")
+    if not OPENEXCHANGERATES_APP_ID:
+        raise FXProviderError("missing-api-key", "OPENEXCHANGERATES_APP_ID is not configured")
 
     if observed_on is None or observed_on >= _utc_today():
-        path = f"latest/{base}"
+        url = f"{OPENEXCHANGERATES_BASE_URL}/latest.json"
         fallback_date = _utc_today()
         resolve_date_from_payload = True
     else:
-        path = f"history/{base}/{observed_on.year}/{observed_on.month}/{observed_on.day}"
+        date_str = observed_on.strftime("%Y-%m-%d")
+        url = f"{OPENEXCHANGERATES_BASE_URL}/historical/{date_str}.json"
         fallback_date = observed_on
         resolve_date_from_payload = False
 
+    params = {"app_id": OPENEXCHANGERATES_APP_ID}
+
     try:
-        response = await client.get(f"{EXCHANGE_RATE_API_BASE_URL}/{EXCHANGE_RATE_API_KEY}/{path}")
+        response = await client.get(url, params=params)
         response.raise_for_status()
     except httpx.HTTPStatusError as exc:
         error_type = f"http-{exc.response.status_code}"
-        message = f"ExchangeRate API request failed with status {exc.response.status_code}"
+        message = f"Open Exchange Rates request failed with status {exc.response.status_code}"
 
         try:
             payload = exc.response.json()
@@ -605,23 +635,22 @@ async def _fetch_provider_payload(
             payload = None
 
         if isinstance(payload, dict):
-            provider_error_type = payload.get("error-type")
-            if provider_error_type:
-                error_type = str(provider_error_type)
-                message = f"ExchangeRate API request failed: {provider_error_type}"
-
-        if _is_historical_unavailable_error(observed_on=observed_on, error_type=error_type):
-            raise HistoricalRatesUnavailable(error_type, f"Historical FX data is unavailable: {error_type}") from exc
+            desc = payload.get("description") or payload.get("message")
+            if desc:
+                message = f"Open Exchange Rates: {desc}"
+            if payload.get("status"):
+                error_type = f"http-{payload.get('status')}"
 
         raise FXProviderError(error_type, message) from exc
+    except httpx.RequestError as exc:
+        raise FXProviderError("network-timeout", f"Open Exchange Rates network error: {exc}") from exc
 
     payload = response.json()
 
-    if payload.get("result") == "error":
-        error_type = str(payload.get("error-type", "unknown-provider-error"))
-        if observed_on is not None and observed_on < _utc_today():
-            raise HistoricalRatesUnavailable(error_type, f"Historical FX data is unavailable: {error_type}")
-        raise FXProviderError(error_type, f"ExchangeRate API returned: {error_type}")
+    if payload.get("error") is True:
+        desc = payload.get("description") or payload.get("message") or "unknown provider error"
+        status_code = payload.get("status", 400)
+        raise FXProviderError(f"http-{status_code}", f"Open Exchange Rates error: {desc}")
 
     payload["_observed_on"] = _parse_provider_date(payload, fallback_date) if resolve_date_from_payload else fallback_date
     return payload
@@ -640,43 +669,21 @@ async def _sync_provider_snapshot(
         return
 
     async with httpx.AsyncClient(timeout=15.0) as client:
-        try:
-            payload = await _fetch_provider_payload(client, base=base, observed_on=observed_on)
-            rates = _extract_conversion_rates(payload)
-            snapshot_date = payload["_observed_on"]
-            for quote in quotes_to_sync:
-                if quote not in rates:
-                    raise FXProviderError("missing-rate", f"Provider response omitted {base}/{quote}")
-                _upsert_fx_rate(
-                    db,
-                    base=base,
-                    quote=quote,
-                    observed_on=snapshot_date,
-                    rate=rates[quote],
-                    source="exchange_rate_api",
-                    is_synthetic=False,
-                )
-            db.commit()
-            return
-        except HistoricalRatesUnavailable:
-            if not allow_synthetic or observed_on is None:
-                raise
-
-            latest_payload = await _fetch_provider_payload(client, base=base)
-            latest_rates = _extract_conversion_rates(latest_payload)
-            for quote in quotes_to_sync:
-                if quote not in latest_rates:
-                    raise FXProviderError("missing-rate", f"Provider response omitted {base}/{quote}")
-                _upsert_fx_rate(
-                    db,
-                    base=base,
-                    quote=quote,
-                    observed_on=observed_on,
-                    rate=latest_rates[quote],
-                    source="seeded_history",
-                    is_synthetic=True,
-                )
-            db.commit()
+        payload = await _fetch_provider_payload(client, base=base, observed_on=observed_on)
+        rates = _extract_conversion_rates(payload)
+        snapshot_date = payload["_observed_on"]
+        for quote in quotes_to_sync:
+            cross_rate = _calculate_cross_rate(rates, base=base, quote=quote)
+            _upsert_fx_rate(
+                db,
+                base=base,
+                quote=quote,
+                observed_on=snapshot_date,
+                rate=cross_rate,
+                source="open_exchange_rates",
+                is_synthetic=False,
+            )
+        db.commit()
 
 
 async def _fetch_pair_history_for_dates(
@@ -697,9 +704,8 @@ async def _fetch_pair_history_for_dates(
         async with semaphore:
             payload = await _fetch_provider_payload(client, base=base, observed_on=observed_on)
             rates = _extract_conversion_rates(payload)
-            if quote not in rates:
-                raise FXProviderError("missing-rate", f"Provider response omitted {base}/{quote}")
-            return observed_on, float(rates[quote])
+            rate = _calculate_cross_rate(rates, base=base, quote=quote)
+            return observed_on, float(rate)
 
     first_observed_on, first_rate = await fetch_one(first_date)
     remaining_dates = [observed_on for observed_on in ordered_dates if observed_on != first_date]
@@ -757,57 +763,23 @@ async def ensure_history_window(
 
             if historical_dates:
                 async with httpx.AsyncClient(timeout=15.0) as client:
-                    try:
-                        historical_rates = await _fetch_pair_history_for_dates(
-                            client,
+                    historical_rates = await _fetch_pair_history_for_dates(
+                        client,
+                        base=normalized_base,
+                        quote=normalized_quote,
+                        missing_dates=historical_dates,
+                    )
+                    for observed_on, rate in historical_rates.items():
+                        _upsert_fx_rate(
+                            db,
                             base=normalized_base,
                             quote=normalized_quote,
-                            missing_dates=historical_dates,
+                            observed_on=observed_on,
+                            rate=rate,
+                            source="open_exchange_rates",
+                            is_synthetic=False,
                         )
-                        for observed_on, rate in historical_rates.items():
-                            _upsert_fx_rate(
-                                db,
-                                base=normalized_base,
-                                quote=normalized_quote,
-                                observed_on=observed_on,
-                                rate=rate,
-                                source="exchange_rate_api",
-                                is_synthetic=False,
-                            )
-                        db.commit()
-                    except HistoricalRatesUnavailable:
-                        anchor_row = (
-                            db.query(FXRate)
-                            .filter(
-                                FXRate.base_currency == normalized_base,
-                                FXRate.quote_currency == normalized_quote,
-                            )
-                            .order_by(FXRate.observed_on.desc())
-                            .first()
-                        )
-                        if anchor_row is None:
-                            raise FXProviderError(
-                                "insufficient-anchor-rate",
-                                f"No stored or live anchor rate is available for {normalized_base}/{normalized_quote}",
-                            )
-
-                        seed_window_start = min(
-                            start_date,
-                            end_date - timedelta(days=DEFAULT_SYNTHETIC_SEED_DAYS - 1),
-                        )
-                        for observed_on in _daterange(seed_window_start, end_date):
-                            if observed_on >= end_date:
-                                continue
-                            _upsert_fx_rate(
-                                db,
-                                base=normalized_base,
-                                quote=normalized_quote,
-                                observed_on=observed_on,
-                                rate=anchor_row.rate,
-                                source="seeded_history",
-                                is_synthetic=True,
-                            )
-                        db.commit()
+                    db.commit()
         except FXProviderError as exc:
             logger.warning(
                 "FX history sync failed for %s/%s: %s",
