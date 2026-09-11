@@ -251,7 +251,15 @@ export default function SignupPage() {
                 checked={termsAccepted}
                 onChange={(e) => setTermsAccepted(e.target.checked)}
               />
-              I agree to the <span>Terms of Service*</span>
+              I agree to the{' '}
+              <Link
+                href="/terms"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <span>Terms of Service*</span>
+              </Link>
             </label>
             <label className={styles.checkbox}>
               <input 
@@ -259,7 +267,15 @@ export default function SignupPage() {
                 checked={privacyAccepted}
                 onChange={(e) => setPrivacyAccepted(e.target.checked)}
               />
-              I acknowledge the <span>Privacy Policy*</span>
+              I acknowledge the{' '}
+              <Link
+                href="/privacy"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <span>Privacy Policy*</span>
+              </Link>
             </label>
             <label className={styles.checkbox}>
               <input type="checkbox" />

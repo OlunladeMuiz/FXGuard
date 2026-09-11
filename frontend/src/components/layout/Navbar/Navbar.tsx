@@ -4,7 +4,7 @@ import React, { useMemo, useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import styles from './Navbar.module.css';
-import { AUTH_USER_UPDATED_EVENT, clearAuthTokens, getUser, getUserDisplayName, User } from '@/lib/api/auth';
+import { AUTH_USER_UPDATED_EVENT, clearAuthTokens, getUser, getUserDisplayName, isAuthenticated, User } from '@/lib/api/auth';
 import { useTheme } from '@/components';
 
 const marketingLinks = [
@@ -82,6 +82,7 @@ export const Navbar: React.FC = () => {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [displayName, setDisplayName] = useState('User');
   const [isAdmin, setIsAdmin] = useState(false);
+  const [authed, setAuthed] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   
   // Theme context might not be available on marketing pages if layout.tsx doesn't wrap marketing
@@ -119,6 +120,7 @@ export const Navbar: React.FC = () => {
       const finalUser = updatedUser ?? getUser();
       setDisplayName(getUserDisplayName(finalUser));
       setIsAdmin(finalUser?.is_admin ?? false);
+      setAuthed(isAuthenticated());
     };
 
     syncDisplayName();
@@ -152,6 +154,7 @@ export const Navbar: React.FC = () => {
   };
 
   if (isAuth || isMinimal) return null;
+  if (!isMarketing && !authed) return null;
 
   return (
     <header className={styles.navbar}>

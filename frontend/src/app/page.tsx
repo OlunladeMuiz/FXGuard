@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import Link from 'next/link';
 import { useState } from 'react';
@@ -665,6 +665,31 @@ export default function Home() {
               <a href="#">Contact</a>
             </div>
           </div>
+        </div>
+        <div
+          style={{
+            maxWidth: '1100px',
+            margin: '3rem auto 0',
+            paddingTop: '1.5rem',
+            borderTop: '1px solid #1e293b',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '1rem',
+            fontSize: '0.85rem',
+            color: '#64748b',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+            <Link href="/privacy" style={{ color: '#64748b', textDecoration: 'none' }}>
+              Privacy Policy
+            </Link>
+            <Link href="/terms" style={{ color: '#64748b', textDecoration: 'none' }}>
+              Terms of Service
+            </Link>
+          </div>
+          <span>© 2026 FXGuard. All rights reserved.</span>
         </div>
       </footer>
     </div>

@@ -184,8 +184,15 @@ export default function LoginPage() {
       </div>
 
       <p className={styles.legal}>
-        By signing in, you agree to our Terms of Service and Privacy Policy.
-        We&apos;ll remember this device for 30 days for your convenience.
+        By signing in, you agree to our{' '}
+        <Link href="/terms" target="_blank" rel="noopener noreferrer" className={styles.link}>
+          Terms of Service
+        </Link>{' '}
+        and{' '}
+        <Link href="/privacy" target="_blank" rel="noopener noreferrer" className={styles.link}>
+          Privacy Policy
+        </Link>
+        . We&apos;ll remember this device for 30 days for your convenience.
       </p>
     </div>
   );

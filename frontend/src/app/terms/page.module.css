@@ -1,0 +1,117 @@
+.page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--spacing-12) var(--spacing-4) var(--spacing-16);
+  background: var(--bg);
+  gap: var(--spacing-8);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  text-decoration: none;
+}
+
+.logo {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--brass), #4f8cff);
+  color: white;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.brand {
+  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-lg);
+  color: var(--text-hi);
+}
+
+.container {
+  width: 100%;
+  max-width: 720px;
+  background: var(--surface-2);
+  border: 1px solid var(--hairline-soft);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-8) var(--spacing-10);
+  box-shadow: var(--shadow-sm);
+}
+
+.title {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-hi);
+  margin-bottom: var(--spacing-2);
+}
+
+.dateline {
+  font-size: var(--font-size-sm);
+  color: var(--text-low);
+  margin-bottom: var(--spacing-6);
+  display: block;
+}
+
+.intro {
+  font-size: var(--font-size-sm);
+  line-height: 1.7;
+  color: var(--text-mid);
+  margin-bottom: var(--spacing-6);
+}
+
+.section {
+  margin-bottom: var(--spacing-6);
+}
+
+.sectionHeading {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-hi);
+  margin-bottom: var(--spacing-2);
+}
+
+.paragraph {
+  font-size: var(--font-size-sm);
+  line-height: 1.7;
+  color: var(--text-mid);
+  margin-bottom: var(--spacing-2);
+}
+
+.list {
+  font-size: var(--font-size-sm);
+  line-height: 1.7;
+  color: var(--text-mid);
+  padding-left: var(--spacing-6);
+  margin-bottom: var(--spacing-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.footerNav {
+  margin-top: var(--spacing-8);
+  padding-top: var(--spacing-6);
+  border-top: 1px solid var(--hairline-soft);
+  text-align: center;
+}
+
+.backLink {
+  color: var(--brass);
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-sm);
+  text-decoration: none;
+}
+
+.backLink:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 600px) {
+  .container {
+    padding: var(--spacing-6) var(--spacing-4);
+  }
+}
